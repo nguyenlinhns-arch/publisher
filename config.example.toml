@@ -1,0 +1,14 @@
+[app]
+timezone = "Asia/Ho_Chi_Minh"
+minimum_schedule_lead_minutes = 30
+caption_soft_limit = 2200
+
+[facebook]
+graph_version = "v25.0"
+page_id = ""
+
+[tiktok]
+studio_upload_url = "https://www.tiktok.com/tiktokstudio/upload"
+studio_content_url = "https://www.tiktok.com/tiktokstudio/content"
+browser_channel = "msedge"
+

@@ -1,0 +1,651 @@
+from __future__ import annotations
+
+import tkinter as tk
+from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from tkinter import filedialog, messagebox, simpledialog, ttk
+from typing import Any, Callable
+
+from ..config import AppConfig, write_basic_config
+from ..models import Platform, Post
+from ..repository import Repository
+from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
+from ..services.doctor import format_doctor, run_doctor
+from ..services.media import ingest_video, inspect_video
+from ..services.orchestrator import ActionResult, PublishingOrchestrator
+
+
+DATE_FORMAT = "%Y-%m-%d %H:%M"
+DEFAULT_HASHTAGS = "#ThầyLinhTuyểnThợMỏ #NghềMỏ #TKV #ViệcLàm"
+
+STATUS_VI = {
+    "draft": "Nháp",
+    "approved": "Đã duyệt",
+    "ready": "Sẵn sàng",
+    "scheduled": "Đã đặt lịch",
+    "publishing": "Đang xử lý",
+    "published": "Đã đăng",
+    "completed": "Hoàn tất",
+    "partial": "Đăng một phần",
+    "needs_action": "Cần xử lý",
+    "failed": "Lỗi",
+    "cancelled": "Đã hủy",
+    "pending": "Chờ",
+    "preparing": "Đang chuẩn bị",
+    "uploading": "Đang tải",
+    "processing": "Đang xử lý",
+    "awaiting_confirmation": "Chờ xác nhận",
+    "retry_wait": "Chờ thử lại",
+    "unknown": "Chưa rõ kết quả",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class DraftInput:
+    post_id: str | None
+    source: Path
+    title: str
+    caption: str
+    hashtags: str
+    expected_updated_at: datetime | None
+
+
+class MainWindow(tk.Tk):
+    def __init__(self, config: AppConfig, repository: Repository) -> None:
+        super().__init__()
+        self.config_data = config
+        self.repository = repository
+        self.secret_store = SecretStore()
+        self.orchestrator = PublishingOrchestrator(
+            repository, config, secret_store=self.secret_store
+        )
+        self.executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="publisher"
+        )
+        self.selected_post_id: str | None = None
+        self.video_source = tk.StringVar()
+        self.title_var = tk.StringVar()
+        self.hashtags_var = tk.StringVar(value=DEFAULT_HASHTAGS)
+        self.schedule_var = tk.StringVar(
+            value=(datetime.now(config.timezone) + timedelta(hours=2)).strftime(
+                DATE_FORMAT
+            )
+        )
+        self.status_var = tk.StringVar(value="Sẵn sàng.")
+        self._busy_widgets: list[ttk.Button] = []
+        self._busy = False
+
+        self.title("MXH Publisher V1 — Facebook & TikTok")
+        self.geometry("1180x760")
+        self.minsize(980, 650)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._build_ui()
+        self.refresh_posts()
+
+    def _build_ui(self) -> None:
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        outer = ttk.Frame(self, padding=12)
+        outer.grid(sticky="nsew")
+        outer.columnconfigure(0, weight=2)
+        outer.columnconfigure(1, weight=3)
+        outer.rowconfigure(0, weight=1)
+
+        list_frame = ttk.LabelFrame(outer, text="Danh sách bài", padding=8)
+        list_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        list_frame.columnconfigure(0, weight=1)
+        list_frame.rowconfigure(0, weight=1)
+        self.tree = ttk.Treeview(
+            list_frame,
+            columns=("time", "status", "facebook", "tiktok"),
+            show="tree headings",
+            selectmode="browse",
+        )
+        self.tree.heading("#0", text="Bài/video")
+        self.tree.heading("time", text="Giờ đăng")
+        self.tree.heading("status", text="Trạng thái")
+        self.tree.heading("facebook", text="Facebook")
+        self.tree.heading("tiktok", text="TikTok")
+        self.tree.column("#0", width=180)
+        self.tree.column("time", width=125)
+        self.tree.column("status", width=95)
+        self.tree.column("facebook", width=95)
+        self.tree.column("tiktok", width=95)
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(
+            list_frame, orient="vertical", command=self.tree.yview
+        )
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.bind("<<TreeviewSelect>>", self._on_select_post)
+        ttk.Button(list_frame, text="Làm mới", command=self.refresh_posts).grid(
+            row=1, column=0, sticky="w", pady=(8, 0)
+        )
+
+        form = ttk.LabelFrame(outer, text="Nội dung và lịch đăng", padding=12)
+        form.grid(row=0, column=1, sticky="nsew")
+        form.columnconfigure(1, weight=1)
+        form.rowconfigure(2, weight=1)
+
+        ttk.Label(form, text="Tiêu đề quản lý").grid(
+            row=0, column=0, sticky="w", pady=4
+        )
+        ttk.Entry(form, textvariable=self.title_var).grid(
+            row=0, column=1, columnspan=2, sticky="ew", pady=4
+        )
+
+        ttk.Label(form, text="Video MP4").grid(row=1, column=0, sticky="w", pady=4)
+        ttk.Entry(form, textvariable=self.video_source, state="readonly").grid(
+            row=1, column=1, sticky="ew", pady=4
+        )
+        ttk.Button(form, text="Chọn video", command=self.choose_video).grid(
+            row=1, column=2, padx=(6, 0), pady=4
+        )
+
+        ttk.Label(form, text="Caption chung").grid(row=2, column=0, sticky="nw", pady=4)
+        self.caption_text = tk.Text(form, height=9, wrap="word", undo=True)
+        self.caption_text.grid(row=2, column=1, columnspan=2, sticky="nsew", pady=4)
+
+        ttk.Label(form, text="Hashtag").grid(row=3, column=0, sticky="nw", pady=4)
+        ttk.Entry(form, textvariable=self.hashtags_var).grid(
+            row=3, column=1, columnspan=2, sticky="new", pady=4
+        )
+
+        ttk.Label(form, text="Giờ đăng (VN)").grid(row=4, column=0, sticky="w", pady=4)
+        ttk.Entry(form, textvariable=self.schedule_var).grid(
+            row=4, column=1, sticky="ew", pady=4
+        )
+        ttk.Label(form, text="YYYY-MM-DD HH:MM").grid(
+            row=4, column=2, sticky="w", padx=(6, 0)
+        )
+
+        actions = ttk.Frame(form)
+        actions.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(12, 0))
+        for index in range(4):
+            actions.columnconfigure(index, weight=1)
+
+        buttons = [
+            ("Bài mới", self.clear_form),
+            ("1. Lưu nháp", self.save_draft),
+            ("2. Duyệt + đặt lịch", self.approve_and_schedule),
+            ("3. Dry-run", self.dry_run),
+            ("4. Chuẩn bị TikTok", self.prepare_tiktok),
+            ("5. Xác nhận TikTok + lịch FB", self.confirm_and_schedule_facebook),
+            ("Ghi nhận link đã đăng", self.record_published),
+            ("Thử lại sau kiểm tra", self.requeue_after_check),
+            ("Thiết lập/kiểm tra", self.open_settings),
+        ]
+        for index, (label, command) in enumerate(buttons):
+            button = ttk.Button(actions, text=label, command=command)
+            button.grid(row=index // 4, column=index % 4, sticky="ew", padx=3, pady=3)
+            self._busy_widgets.append(button)
+
+        ttk.Separator(form).grid(row=6, column=0, columnspan=3, sticky="ew", pady=12)
+        ttk.Label(
+            form,
+            text=(
+                "TikTok: ứng dụng chỉ upload và điền caption, sau đó Thầy tự bấm Lên lịch. "
+                "Facebook chỉ được lên lịch sau bước xác nhận TikTok."
+            ),
+            wraplength=650,
+            foreground="#444444",
+        ).grid(row=7, column=0, columnspan=3, sticky="w")
+
+        status = ttk.Label(
+            self, textvariable=self.status_var, relief="sunken", anchor="w"
+        )
+        status.grid(row=1, column=0, sticky="ew")
+
+    def _set_busy(self, busy: bool, message: str | None = None) -> None:
+        self._busy = busy
+        for widget in self._busy_widgets:
+            widget.state(["disabled"] if busy else ["!disabled"])
+        if message:
+            self.status_var.set(message)
+
+    def _run_background(
+        self,
+        function: Callable[[], Any],
+        *,
+        working_message: str,
+        success: Callable[[Any], None] | None = None,
+    ) -> None:
+        self._set_busy(True, working_message)
+        future = self.executor.submit(function)
+
+        def done(completed: Future) -> None:
+            self.after(0, lambda: self._complete_future(completed, success))
+
+        future.add_done_callback(done)
+
+    def _complete_future(
+        self, future: Future, success: Callable[[Any], None] | None
+    ) -> None:
+        self._set_busy(False)
+        try:
+            result = future.result()
+        except Exception as exc:
+            self.status_var.set("Lỗi: " + str(exc))
+            messagebox.showerror("Không thực hiện được", str(exc), parent=self)
+            self.refresh_posts()
+            return
+        if success:
+            success(result)
+        self.refresh_posts()
+
+    def choose_video(self) -> None:
+        filename = filedialog.askopenfilename(
+            parent=self,
+            title="Chọn video MP4",
+            filetypes=[("Video MP4", "*.mp4"), ("Tất cả tệp", "*.*")],
+        )
+        if filename:
+            self.video_source.set(filename)
+            if not self.title_var.get().strip():
+                self.title_var.set(Path(filename).stem)
+
+    def clear_form(self) -> None:
+        self.selected_post_id = None
+        self.title_var.set("")
+        self.video_source.set("")
+        self.caption_text.delete("1.0", "end")
+        self.hashtags_var.set(DEFAULT_HASHTAGS)
+        self.schedule_var.set(
+            (datetime.now(self.config_data.timezone) + timedelta(hours=2)).strftime(
+                DATE_FORMAT
+            )
+        )
+        self.tree.selection_remove(self.tree.selection())
+        self.status_var.set("Đang tạo bài mới.")
+
+    def _local_schedule_utc(self) -> datetime:
+        value = datetime.strptime(self.schedule_var.get().strip(), DATE_FORMAT)
+        aware = value.replace(tzinfo=self.config_data.timezone)
+        scheduled = aware.astimezone(UTC)
+        if scheduled < datetime.now(UTC) + timedelta(
+            minutes=self.config_data.minimum_schedule_lead_minutes
+        ):
+            raise ValueError(
+                f"Giờ đăng phải cách hiện tại ít nhất "
+                f"{self.config_data.minimum_schedule_lead_minutes} phút."
+            )
+        return scheduled
+
+    def _capture_draft_input(self) -> DraftInput:
+        source = Path(self.video_source.get().strip())
+        current = (
+            self.repository.get_post(self.selected_post_id)
+            if self.selected_post_id
+            else None
+        )
+        return DraftInput(
+            post_id=self.selected_post_id,
+            source=source,
+            title=self.title_var.get().strip() or source.stem,
+            caption=self.caption_text.get("1.0", "end-1c").strip(),
+            hashtags=self.hashtags_var.get().strip(),
+            expected_updated_at=current.updated_at if current else None,
+        )
+
+    def _save_draft_task(self, draft: DraftInput) -> Post:
+        info = inspect_video(draft.source)
+        if not info.is_valid:
+            errors = "\n".join(
+                "- " + issue.message
+                for issue in info.issues
+                if issue.severity == "error"
+            )
+            raise ValueError("Video chưa đạt chuẩn:\n" + errors)
+        managed = ingest_video(draft.source, self.config_data.media_dir, info.sha256)
+        if draft.post_id:
+            return self.repository.update_post(
+                draft.post_id,
+                title=draft.title,
+                video_path=str(managed),
+                video_sha256=info.sha256,
+                caption=draft.caption,
+                hashtags=draft.hashtags,
+                timezone_name=self.config_data.timezone_name,
+                expected_updated_at=draft.expected_updated_at,
+            )
+        return self.repository.create_post(
+            title=draft.title,
+            video_path=str(managed),
+            video_sha256=info.sha256,
+            caption=draft.caption,
+            hashtags=draft.hashtags,
+            timezone_name=self.config_data.timezone_name,
+        )
+
+    def save_draft(self) -> None:
+        if not self.video_source.get().strip():
+            messagebox.showwarning(
+                "Thiếu video", "Hãy chọn video MP4 trước.", parent=self
+            )
+            return
+        draft = self._capture_draft_input()
+
+        def success(post: Post) -> None:
+            self.selected_post_id = post.id
+            self.status_var.set("Đã lưu nháp và sao chép video vào thư mục an toàn.")
+
+        self._run_background(
+            lambda: self._save_draft_task(draft),
+            working_message="Đang kiểm tra và sao chép video…",
+            success=success,
+        )
+
+    def _require_selected(self) -> str | None:
+        if not self.selected_post_id:
+            messagebox.showwarning(
+                "Chưa chọn bài", "Hãy lưu hoặc chọn một bài.", parent=self
+            )
+            return None
+        return self.selected_post_id
+
+    def approve_and_schedule(self) -> None:
+        post_id = self._require_selected()
+        if not post_id:
+            return
+        try:
+            scheduled = self._local_schedule_utc()
+            draft = self._capture_draft_input()
+        except ValueError as exc:
+            messagebox.showerror("Giờ đăng không hợp lệ", str(exc), parent=self)
+            return
+
+        def task() -> Post:
+            saved = self._save_draft_task(draft)
+            self.repository.approve_post(saved.id)
+            return self.repository.schedule_post(
+                saved.id,
+                scheduled,
+                destinations=[Platform.FACEBOOK, Platform.TIKTOK],
+            )
+
+        self._run_background(
+            task,
+            working_message="Đang khóa nội dung và đặt lịch…",
+            success=lambda saved_post: self._approved_success(saved_post),
+        )
+
+    def _approved_success(self, post: Post) -> None:
+        self.selected_post_id = post.id
+        self.status_var.set(
+            "Đã lưu nội dung hiện tại, duyệt và đặt lịch trong ứng dụng."
+        )
+
+    def dry_run(self) -> None:
+        post_id = self._require_selected()
+        if not post_id:
+            return
+
+        def success(report) -> None:
+            self.status_var.set("Dry-run hoàn tất.")
+            messagebox.showinfo("Kết quả dry-run", report.as_text(), parent=self)
+
+        self._run_background(
+            lambda: self.orchestrator.dry_run(post_id),
+            working_message="Đang kiểm tra dry-run…",
+            success=success,
+        )
+
+    def prepare_tiktok(self) -> None:
+        post_id = self._require_selected()
+        if not post_id:
+            return
+
+        def success(result: ActionResult) -> None:
+            self.status_var.set("TikTok đang chờ Thầy xác nhận trong trình duyệt.")
+            messagebox.showinfo("TikTok Studio", result.message, parent=self)
+
+        self._run_background(
+            lambda: self.orchestrator.prepare_tiktok(post_id),
+            working_message="Đang mở TikTok Studio và upload video…",
+            success=success,
+        )
+
+    def confirm_and_schedule_facebook(self) -> None:
+        post_id = self._require_selected()
+        if not post_id:
+            return
+        confirmed = messagebox.askyesno(
+            "Xác nhận TikTok",
+            "Thầy đã kiểm tra và tự bấm Lên lịch trong TikTok Studio chưa?\n\n"
+            "Chỉ chọn Có khi video đã xuất hiện trong danh sách hẹn giờ TikTok.",
+            parent=self,
+        )
+        if not confirmed:
+            return
+
+        def success(result: ActionResult) -> None:
+            self.status_var.set("Đã ghi nhận TikTok và xử lý lịch Facebook.")
+            messagebox.showinfo("Kết quả", result.message, parent=self)
+
+        self._run_background(
+            lambda: self.orchestrator.confirm_tiktok_and_schedule_facebook(post_id),
+            working_message="Đang upload và lên lịch Facebook qua API…",
+            success=success,
+        )
+
+    def record_published(self) -> None:
+        post_id = self._require_selected()
+        if not post_id:
+            return
+        platform_text = simpledialog.askstring(
+            "Nền tảng", "Nhập facebook hoặc tiktok:", parent=self
+        )
+        if not platform_text:
+            return
+        try:
+            platform = Platform(platform_text.strip().lower())
+        except ValueError:
+            messagebox.showerror(
+                "Sai nền tảng", "Chỉ nhập facebook hoặc tiktok.", parent=self
+            )
+            return
+        remote_id = simpledialog.askstring(
+            "ID bài đăng", "Nhập ID bài đăng trên nền tảng:", parent=self
+        )
+        if not remote_id:
+            return
+        url = simpledialog.askstring(
+            "Đường dẫn", "Dán đường dẫn bài đăng (có thể để trống):", parent=self
+        )
+        confirmed = messagebox.askyesno(
+            "Xác nhận bằng chứng",
+            "Thầy đã trực tiếp mở nền tảng và xác nhận đúng ID/link này là bài đã "
+            "đăng của video đang chọn chưa?",
+            parent=self,
+        )
+        if not confirmed:
+            return
+        self._run_background(
+            lambda: self.orchestrator.record_manual_published(
+                post_id,
+                platform,
+                remote_post_id=remote_id,
+                permalink_url=url,
+            ),
+            working_message="Đang lưu kết quả đối soát…",
+            success=lambda result: self.status_var.set(result.message),
+        )
+
+    def requeue_after_check(self) -> None:
+        post_id = self._require_selected()
+        if not post_id:
+            return
+        platform_text = simpledialog.askstring(
+            "Nền tảng", "Nhập facebook hoặc tiktok:", parent=self
+        )
+        if not platform_text:
+            return
+        try:
+            platform = Platform(platform_text.strip().lower())
+        except ValueError:
+            messagebox.showerror(
+                "Sai nền tảng", "Chỉ nhập facebook hoặc tiktok.", parent=self
+            )
+            return
+        confirmed = messagebox.askyesno(
+            "Xác nhận không có bài trùng",
+            "Thầy đã kiểm tra trên nền tảng và chắc chắn tác vụ trước chưa tạo bài "
+            "đăng hoặc lịch đăng nào chưa?\n\nChỉ tiếp tục khi câu trả lời là Có.",
+            parent=self,
+        )
+        if not confirmed:
+            return
+        self._run_background(
+            lambda: self.orchestrator.requeue_after_manual_check(post_id, platform),
+            working_message="Đang đưa tác vụ về hàng chờ…",
+            success=lambda result: self.status_var.set(result.message),
+        )
+
+    def open_settings(self) -> None:
+        dialog = tk.Toplevel(self)
+        dialog.title("Thiết lập và kiểm tra")
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.columnconfigure(1, weight=1)
+        page_id = tk.StringVar(value=self.config_data.facebook_page_id)
+        token = tk.StringVar()
+        ttk.Label(dialog, text="Facebook Page ID").grid(
+            row=0, column=0, padx=10, pady=8, sticky="w"
+        )
+        ttk.Entry(dialog, textvariable=page_id, width=45).grid(
+            row=0, column=1, padx=10, pady=8, sticky="ew"
+        )
+        ttk.Label(dialog, text="Page access token").grid(
+            row=1, column=0, padx=10, pady=8, sticky="w"
+        )
+        ttk.Entry(dialog, textvariable=token, show="•", width=45).grid(
+            row=1, column=1, padx=10, pady=8, sticky="ew"
+        )
+        result_box = tk.Text(dialog, width=76, height=14, wrap="word")
+        result_box.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+
+        def save() -> None:
+            value = page_id.get().strip()
+            if not value.isdigit():
+                messagebox.showerror("Page ID", "Page ID phải là số.", parent=dialog)
+                return
+            try:
+                write_basic_config(self.config_data, page_id=value)
+                if token.get().strip():
+                    self.secret_store.set(FACEBOOK_TOKEN_NAME, token.get())
+            except Exception as exc:
+                messagebox.showerror("Không lưu được", str(exc), parent=dialog)
+                return
+            messagebox.showinfo(
+                "Đã lưu",
+                "Đã lưu cấu hình. Hãy khởi động lại ứng dụng để dùng Page ID mới.",
+                parent=dialog,
+            )
+
+        def doctor() -> None:
+            result_box.delete("1.0", "end")
+            result_box.insert("1.0", format_doctor(run_doctor(self.config_data)))
+
+        buttons = ttk.Frame(dialog)
+        buttons.grid(row=2, column=0, columnspan=2, pady=4)
+        ttk.Button(buttons, text="Lưu thiết lập", command=save).pack(
+            side="left", padx=5
+        )
+        ttk.Button(buttons, text="Chạy kiểm tra", command=doctor).pack(
+            side="left", padx=5
+        )
+        ttk.Button(buttons, text="Đóng", command=dialog.destroy).pack(
+            side="left", padx=5
+        )
+
+    def refresh_posts(self) -> None:
+        selected = self.selected_post_id
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        for post in self.repository.list_posts(limit=500):
+            deliveries = {
+                delivery.platform: delivery
+                for delivery in self.repository.list_deliveries(post_id=post.id)
+            }
+            local_time = (
+                post.scheduled_at.astimezone(self.config_data.timezone).strftime(
+                    DATE_FORMAT
+                )
+                if post.scheduled_at
+                else "—"
+            )
+            facebook = deliveries.get(Platform.FACEBOOK)
+            tiktok = deliveries.get(Platform.TIKTOK)
+            self.tree.insert(
+                "",
+                "end",
+                iid=post.id,
+                text=post.title or Path(post.video_path).name,
+                values=(
+                    local_time,
+                    STATUS_VI.get(post.status.value, post.status.value),
+                    STATUS_VI.get(facebook.status.value, facebook.status.value)
+                    if facebook
+                    else "—",
+                    STATUS_VI.get(tiktok.status.value, tiktok.status.value)
+                    if tiktok
+                    else "—",
+                ),
+            )
+        if selected and self.tree.exists(selected):
+            self.tree.selection_set(selected)
+            self.tree.see(selected)
+
+    def _on_select_post(self, _event=None) -> None:
+        selection = self.tree.selection()
+        if not selection:
+            return
+        post_id = selection[0]
+        post = self.repository.get_post(post_id)
+        self.selected_post_id = post_id
+        self.title_var.set(post.title)
+        self.video_source.set(post.video_path)
+        self.caption_text.delete("1.0", "end")
+        self.caption_text.insert("1.0", post.caption)
+        self.hashtags_var.set(" ".join(post.hashtags))
+        if post.scheduled_at:
+            self.schedule_var.set(
+                post.scheduled_at.astimezone(self.config_data.timezone).strftime(
+                    DATE_FORMAT
+                )
+            )
+        self.status_var.set(
+            f"Đã chọn bài {post.id[:8]} — {STATUS_VI.get(post.status.value, post.status.value)}"
+        )
+
+    def _on_close(self) -> None:
+        if self._busy:
+            messagebox.showwarning(
+                "Tác vụ đang chạy",
+                "Không thể đóng ứng dụng khi đang upload/đối soát. Hãy chờ tác vụ "
+                "hoàn tất để trạng thái được lưu an toàn.",
+                parent=self,
+            )
+            return
+        self._set_busy(True, "Đang đóng trình duyệt và ứng dụng…")
+        future = self.executor.submit(self.orchestrator.close)
+        try:
+            future.result(timeout=15)
+        except Exception as exc:
+            self._set_busy(False, "Chưa đóng được trình duyệt an toàn.")
+            messagebox.showwarning(
+                "Chưa thể đóng",
+                "Ứng dụng chưa đóng được phiên trình duyệt an toàn. Hãy chờ rồi thử "
+                f"lại.\n\nChi tiết: {exc}",
+                parent=self,
+            )
+            return
+        self.executor.shutdown(wait=True, cancel_futures=False)
+        self.destroy()
+
+
+def run_gui(config: AppConfig, repository: Repository) -> None:
+    window = MainWindow(config, repository)
+    window.mainloop()
