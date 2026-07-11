@@ -8,6 +8,22 @@ from .config import load_config, write_basic_config
 from .logging_utils import configure_logging
 
 
+def configure_console_encoding() -> None:
+    """Keep Vietnamese CLI output from crashing legacy Windows code pages."""
+
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not callable(reconfigure):
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            try:
+                reconfigure(errors="replace")
+            except (OSError, ValueError):
+                pass
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="MXHPublisher")
     parser.add_argument("--config", type=Path, help="Đường dẫn config.toml tùy chọn")
@@ -31,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_console_encoding()
     args = build_parser().parse_args(argv)
     command = args.command or "gui"
     config = load_config(args.config)

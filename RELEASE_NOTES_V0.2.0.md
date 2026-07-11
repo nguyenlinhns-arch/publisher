@@ -27,7 +27,7 @@ Ngày phát hành kỹ thuật: 11/07/2026.
 
 ## Xác minh
 
-- 77 kiểm thử tự động cục bộ đạt.
+- 78 kiểm thử tự động cục bộ đạt.
 - Ruff, Mypy và Compileall đạt.
 - Bản Windows phải đạt workflow `Windows build` và smoke test trước khi dùng.
 
