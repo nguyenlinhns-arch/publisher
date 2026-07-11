@@ -1,12 +1,19 @@
 # ffprobe cho bản Windows
 
-Trước khi chạy `scripts/build_windows.ps1`, đặt tệp Windows 64-bit:
+Trước khi chạy `scripts/build_windows.ps1`, dùng script có kiểm tra SHA-256:
+
+```powershell
+.\scripts\fetch_ffprobe.ps1
+```
+
+Script sẽ đặt tệp Windows 64-bit tại:
 
 ```text
 bin/ffprobe.exe
 ```
 
-Chỉ lấy từ bản phân phối FFmpeg đáng tin cậy được liên kết tại [ffmpeg.org/download.html](https://ffmpeg.org/download.html). Không commit toàn bộ FFmpeg hoặc tệp tải từ nguồn không rõ ràng.
+Nguồn/version/checksum được khóa trong script và ghi lại trong
+`THIRD_PARTY_NOTICES.md`. Không commit binary hoặc thay bằng tệp tải từ nguồn
+không rõ ràng.
 
 Build script cố ý dừng nếu thiếu `ffprobe.exe`; ứng dụng không được phát hành khi chưa có khả năng kiểm tra video.
-

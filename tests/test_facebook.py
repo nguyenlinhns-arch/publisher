@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import hashlib
 from pathlib import Path
 from urllib.parse import parse_qs
 
@@ -73,6 +74,43 @@ def _complete_status() -> dict[str, object]:
             "publishing_phase": {"status": "complete"},
         }
     }
+
+
+def test_stops_before_remote_call_when_video_changed_after_approval(
+    tmp_path: Path,
+) -> None:
+    remote_calls = 0
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal remote_calls
+        remote_calls += 1
+        return httpx.Response(500)
+
+    request = _request(
+        tmp_path,
+        options={"video_sha256": hashlib.sha256(b"approved-bytes").hexdigest()},
+    )
+    publisher = _publisher(httpx.MockTransport(handler))
+
+    with pytest.raises(PublisherError) as captured:
+        publisher.publish(request)
+
+    assert captured.value.code == "facebook.video_changed"
+    assert remote_calls == 0
+
+
+def test_page_identity_check_is_read_only_and_uses_auth_header() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == f"/v25.0/{PAGE_ID}"
+        assert request.url.params["fields"] == "id,name"
+        assert TOKEN not in str(request.url)
+        assert request.headers["authorization"] == f"Bearer {TOKEN}"
+        return httpx.Response(200, json={"id": PAGE_ID, "name": "Page thử"})
+
+    publisher = _publisher(httpx.MockTransport(handler))
+
+    assert publisher.verify_page_access() == {"id": PAGE_ID, "name": "Page thử"}
 
 
 def test_publishes_reel_and_verifies_permalink_without_token_in_url(

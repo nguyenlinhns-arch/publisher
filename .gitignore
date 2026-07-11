@@ -4,8 +4,10 @@ __pycache__/
 .coverage
 .venv/
 venv/
+*.egg-info/
 build/
 dist/
+release/
 *.spec
 data/
 logs/

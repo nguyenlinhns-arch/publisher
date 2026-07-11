@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 import tempfile
@@ -10,6 +11,12 @@ from zoneinfo import ZoneInfo
 
 
 APP_NAME = "MXHPublisher"
+
+
+def _toml_string(value: str) -> str:
+    """Encode a TOML basic string without allowing config-line injection."""
+
+    return json.dumps(str(value), ensure_ascii=False)
 
 
 def app_data_dir() -> Path:
@@ -37,10 +44,11 @@ class AppConfig:
     screenshots_dir: Path
     browser_profile_dir: Path
     timezone_name: str = "Asia/Ho_Chi_Minh"
-    minimum_schedule_lead_minutes: int = 30
+    minimum_schedule_lead_minutes: int = 60
     caption_soft_limit: int = 2200
     graph_version: str = "v25.0"
     facebook_page_id: str = ""
+    tiktok_account_id: str = ""
     tiktok_upload_url: str = "https://www.tiktok.com/tiktokstudio/upload"
     tiktok_content_url: str = "https://www.tiktok.com/tiktokstudio/content"
     browser_channel: str = "msedge"
@@ -79,10 +87,11 @@ def load_config(path: Path | None = None) -> AppConfig:
         screenshots_dir=root / "screenshots",
         browser_profile_dir=root / "browser_profile",
         timezone_name=str(app.get("timezone", "Asia/Ho_Chi_Minh")),
-        minimum_schedule_lead_minutes=int(app.get("minimum_schedule_lead_minutes", 30)),
+        minimum_schedule_lead_minutes=int(app.get("minimum_schedule_lead_minutes", 60)),
         caption_soft_limit=int(app.get("caption_soft_limit", 2200)),
         graph_version=str(facebook.get("graph_version", "v25.0")),
         facebook_page_id=str(facebook.get("page_id", "")),
+        tiktok_account_id=str(tiktok.get("account_id", "")),
         tiktok_upload_url=str(
             tiktok.get(
                 "studio_upload_url", "https://www.tiktok.com/tiktokstudio/upload"
@@ -99,22 +108,33 @@ def load_config(path: Path | None = None) -> AppConfig:
     return config
 
 
-def write_basic_config(config: AppConfig, *, page_id: str | None = None) -> Path:
+def write_basic_config(
+    config: AppConfig,
+    *,
+    page_id: str | None = None,
+    tiktok_account_id: str | None = None,
+) -> Path:
     """Write only non-secret settings. Tokens are never accepted here."""
     target = config.root_dir / "config.toml"
     safe_page_id = (page_id if page_id is not None else config.facebook_page_id).strip()
+    safe_tiktok_account_id = (
+        tiktok_account_id
+        if tiktok_account_id is not None
+        else config.tiktok_account_id
+    ).strip()
     text = (
         "[app]\n"
-        f'timezone = "{config.timezone_name}"\n'
+        f"timezone = {_toml_string(config.timezone_name)}\n"
         f"minimum_schedule_lead_minutes = {config.minimum_schedule_lead_minutes}\n"
         f"caption_soft_limit = {config.caption_soft_limit}\n\n"
         "[facebook]\n"
-        f'graph_version = "{config.graph_version}"\n'
-        f'page_id = "{safe_page_id}"\n\n'
+        f"graph_version = {_toml_string(config.graph_version)}\n"
+        f"page_id = {_toml_string(safe_page_id)}\n\n"
         "[tiktok]\n"
-        f'studio_upload_url = "{config.tiktok_upload_url}"\n'
-        f'studio_content_url = "{config.tiktok_content_url}"\n'
-        f'browser_channel = "{config.browser_channel}"\n'
+        f"account_id = {_toml_string(safe_tiktok_account_id)}\n"
+        f"studio_upload_url = {_toml_string(config.tiktok_upload_url)}\n"
+        f"studio_content_url = {_toml_string(config.tiktok_content_url)}\n"
+        f"browser_channel = {_toml_string(config.browser_channel)}\n"
     )
     target.write_text(text, encoding="utf-8")
     return target

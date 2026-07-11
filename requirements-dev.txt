@@ -2,4 +2,5 @@
 pytest==9.1.1
 ruff==0.15.21
 mypy==2.2.0
-pyinstaller>=6,<7
+pyinstaller==6.21.0
+pyinstaller-hooks-contrib==2026.6

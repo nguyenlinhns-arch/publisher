@@ -3,12 +3,14 @@ from __future__ import annotations
 import importlib.util
 import os
 import sqlite3
+import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from ..config import AppConfig
+from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
 from .media import MediaInspectionError, find_ffprobe
 
 
@@ -47,7 +49,71 @@ def _database_check(path: Path) -> DoctorCheck:
         return DoctorCheck("SQLite", False, f"SQLite lỗi: {exc}")
 
 
-def run_doctor(config: AppConfig) -> list[DoctorCheck]:
+def _ffprobe_check() -> DoctorCheck:
+    try:
+        executable = find_ffprobe()
+        completed = subprocess.run(
+            [executable, "-version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (MediaInspectionError, OSError, subprocess.TimeoutExpired) as exc:
+        return DoctorCheck("ffprobe", False, f"Không chạy được ffprobe: {exc}")
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"mã lỗi {completed.returncode}"
+        return DoctorCheck("ffprobe", False, f"ffprobe lỗi: {detail}")
+    first_line = (completed.stdout.splitlines() or ["ffprobe"])[0]
+    return DoctorCheck("ffprobe", True, f"ffprobe hoạt động: {first_line}")
+
+
+def _playwright_check() -> DoctorCheck:
+    try:
+        from playwright.sync_api import sync_playwright
+
+        manager = sync_playwright().start()
+        try:
+            _ = manager.chromium
+        finally:
+            manager.stop()
+    except Exception as exc:
+        return DoctorCheck(
+            "Playwright", False, f"Playwright driver không khởi động được: {exc}"
+        )
+    return DoctorCheck("Playwright", True, "Playwright driver hoạt động.")
+
+
+def _secret_store_check(store: SecretStore, *, blocking: bool) -> DoctorCheck:
+    try:
+        token = store.get(FACEBOOK_TOKEN_NAME)
+    except Exception as exc:
+        return DoctorCheck(
+            "Kho bí mật",
+            False,
+            f"Không đọc được kho bí mật hệ điều hành: {exc}",
+            blocking=blocking,
+        )
+    return DoctorCheck(
+        "Kho bí mật",
+        bool(token) if blocking else True,
+        "Đã tìm thấy Facebook Page token trong kho bí mật."
+        if token
+        else (
+            "Kho bí mật hoạt động nhưng chưa có Facebook Page token."
+            if blocking
+            else "Kho bí mật có thể truy cập; bỏ qua token ở chế độ system-only."
+        ),
+        blocking=blocking,
+    )
+
+
+def run_doctor(
+    config: AppConfig,
+    *,
+    include_accounts: bool = True,
+    secret_store: SecretStore | None = None,
+) -> list[DoctorCheck]:
     checks = [
         DoctorCheck(
             "Python",
@@ -58,24 +124,40 @@ def run_doctor(config: AppConfig) -> list[DoctorCheck]:
         _directory_check(config.logs_dir, "Thư mục log"),
         _directory_check(config.screenshots_dir, "Thư mục ảnh chụp"),
         _database_check(config.database_path),
+        _ffprobe_check(),
+        _playwright_check(),
     ]
-    try:
-        ffprobe = find_ffprobe()
-        checks.append(DoctorCheck("ffprobe", True, f"Đã tìm thấy ffprobe: {ffprobe}"))
-    except MediaInspectionError as exc:
-        checks.append(DoctorCheck("ffprobe", False, str(exc)))
-
-    for module, label in (
-        ("httpx", "HTTP client"),
-        ("playwright", "Playwright"),
-        ("keyring", "Kho bí mật"),
-    ):
+    for module, label in (("httpx", "HTTP client"), ("keyring", "Keyring")):
         installed = importlib.util.find_spec(module) is not None
         checks.append(
             DoctorCheck(
                 label,
                 installed,
                 f"{label}: " + ("đã cài." if installed else "chưa cài dependency."),
+            )
+        )
+
+    store = secret_store or SecretStore()
+    checks.append(_secret_store_check(store, blocking=include_accounts))
+    if include_accounts:
+        page_id = config.facebook_page_id.strip()
+        checks.append(
+            DoctorCheck(
+                "Facebook Page ID",
+                page_id.isdigit(),
+                f"Facebook Page ID: {page_id}."
+                if page_id.isdigit()
+                else "Facebook Page ID chưa được cấu hình hợp lệ.",
+            )
+        )
+        tiktok_account = config.tiktok_account_id.strip()
+        checks.append(
+            DoctorCheck(
+                "TikTok account",
+                bool(tiktok_account),
+                f"TikTok đích: {tiktok_account}."
+                if tiktok_account
+                else "Chưa cấu hình tài khoản TikTok đích.",
             )
         )
 

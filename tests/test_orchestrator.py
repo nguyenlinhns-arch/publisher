@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -71,9 +72,12 @@ class FakeFacebook:
         return PublishResult(
             state="published",
             remote_id=post_id or video_id,
-            permalink_url="https://facebook.example/post",
+            permalink_url="https://www.facebook.com/post",
             metadata={"video_id": video_id},
         )
+
+    def verify_page_access(self):
+        return {"id": "123456", "name": "Page thử"}
 
     def close(self) -> None:
         self.closed += 1
@@ -88,6 +92,7 @@ def _config(tmp_path: Path) -> AppConfig:
         screenshots_dir=tmp_path / "screenshots",
         browser_profile_dir=tmp_path / "profile",
         facebook_page_id="123456",
+        tiktok_account_id="@test_account",
     )
 
 
@@ -105,7 +110,10 @@ def test_tiktok_must_be_confirmed_before_facebook(monkeypatch, tmp_path: Path) -
     repository.schedule_post(
         post.id,
         datetime.now(UTC) + timedelta(hours=2),
-        destinations=[Platform.FACEBOOK, Platform.TIKTOK],
+        destinations={
+            Platform.FACEBOOK: "123456",
+            Platform.TIKTOK: "@test_account",
+        },
     )
     monkeypatch.setattr(
         "mxh_publisher.services.orchestrator.run_dry_run",
@@ -159,15 +167,49 @@ def test_tiktok_must_be_confirmed_before_facebook(monkeypatch, tmp_path: Path) -
         post.id,
         Platform.TIKTOK,
         remote_post_id="tt-123",
-        permalink_url="https://tiktok.example/post",
+        permalink_url="https://www.tiktok.com/@test/video/123",
     )
     orchestrator.record_manual_published(
         post.id,
         Platform.FACEBOOK,
         remote_post_id="fb-123",
-        permalink_url="https://facebook.example/post",
+        permalink_url="https://www.facebook.com/post",
     )
     assert repository.get_post(post.id).status is PostStatus.COMPLETED
+
+
+def test_changed_page_is_blocked_before_tiktok_upload(tmp_path: Path) -> None:
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"dummy-video")
+    repository = Repository(tmp_path / "db.sqlite3")
+    post = repository.create_post(
+        video_path=str(video),
+        video_sha256=sha256_file(video),
+        caption="Nội dung",
+    )
+    repository.approve_post(post.id)
+    repository.schedule_post(
+        post.id,
+        datetime.now(UTC) + timedelta(hours=2),
+        destinations={
+            Platform.FACEBOOK: "123456",
+            Platform.TIKTOK: "@test_account",
+        },
+    )
+    tiktok = FakeTikTok()
+    changed_config = replace(_config(tmp_path), facebook_page_id="999999")
+    orchestrator = PublishingOrchestrator(
+        repository,
+        changed_config,
+        tiktok=tiktok,
+        facebook_factory=lambda _checkpoint=None: FakeFacebook(),
+        secret_store=FakeSecrets(),
+    )
+
+    with pytest.raises(OrchestrationError, match="khác Page đã khóa"):
+        orchestrator.prepare_tiktok(post.id)
+
+    assert tiktok.calls == []
 
 
 def test_unknown_facebook_outcome_keeps_checkpoint_and_cannot_requeue(
@@ -186,7 +228,10 @@ def test_unknown_facebook_outcome_keeps_checkpoint_and_cannot_requeue(
     repository.schedule_post(
         post.id,
         datetime.now(UTC) + timedelta(hours=2),
-        destinations=[Platform.FACEBOOK, Platform.TIKTOK],
+        destinations={
+            Platform.FACEBOOK: "123456",
+            Platform.TIKTOK: "@test_account",
+        },
     )
     monkeypatch.setattr(
         "mxh_publisher.services.orchestrator.run_dry_run",

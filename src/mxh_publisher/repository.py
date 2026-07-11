@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterable, Mapping
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from .db import Database
@@ -24,6 +25,7 @@ from .models import (
     Setting,
     ValidationError,
     compute_content_hash,
+    compute_delivery_idempotency_key,
     normalise_hashtags,
 )
 
@@ -124,6 +126,7 @@ def _delivery_from_row(row: sqlite3.Row) -> Delivery:
         post_id=row["post_id"],
         platform=Platform(row["platform"]),
         account_id=row["account_id"],
+        idempotency_key=row["idempotency_key"],
         status=DeliveryStatus(row["status"]),
         remote_upload_id=row["remote_upload_id"],
         remote_post_id=row["remote_post_id"],
@@ -826,6 +829,33 @@ class Repository:
                         f"Cannot schedule while {delivery.platform.value} is "
                         f"{delivery.status.value}."
                     )
+            for row in rows:
+                delivery = _delivery_from_row(row)
+                key = compute_delivery_idempotency_key(
+                    platform=delivery.platform,
+                    account_id=delivery.account_id,
+                    video_sha256=post.video_sha256 or post.content_hash,
+                    caption=post.caption,
+                    hashtags=post.hashtags,
+                    scheduled_at=due,
+                )
+                try:
+                    conn.execute(
+                        "UPDATE deliveries SET idempotency_key = ? WHERE id = ?",
+                        (key, delivery.id),
+                    )
+                except sqlite3.IntegrityError as exc:
+                    conflict = conn.execute(
+                        "SELECT post_id FROM deliveries "
+                        "WHERE idempotency_key = ? AND id != ? AND status != 'cancelled'",
+                        (key, delivery.id),
+                    ).fetchone()
+                    conflict_post = conflict["post_id"] if conflict else "khác"
+                    raise InvalidStateError(
+                        "Phát hiện lịch đăng trùng cùng nền tảng, tài khoản, video và "
+                        f"nội dung (bài {str(conflict_post)[:8]}). Hãy kiểm tra bài "
+                        "đã có thay vì tạo thêm một lần đăng."
+                    ) from exc
             conn.execute(
                 """
                 UPDATE posts SET scheduled_at = ?, status = 'scheduled',
@@ -893,6 +923,7 @@ class Repository:
             conn.execute(
                 """
                 UPDATE deliveries SET status = 'pending', next_attempt_at = NULL,
+                    idempotency_key = NULL,
                     lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL,
                     updated_at = ?
                 WHERE post_id = ? AND status = 'pending'
@@ -949,6 +980,7 @@ class Repository:
                         "claimed for another mutation. Resolve or verify it instead."
                     )
                 self._assert_current_approval(conn, post, stamp)
+                self._assert_delivery_identity(delivery, post)
             elif not post.is_approved:
                 raise InvalidStateError(
                     "The post approval was revoked after remote preparation."
@@ -999,6 +1031,8 @@ class Repository:
                 clauses = [
                     "(d.status IN ('awaiting_confirmation', 'scheduled', 'processing') "
                     "OR (d.status = 'retry_wait' AND "
+                    "(d.remote_upload_id IS NOT NULL OR d.remote_post_id IS NOT NULL)) "
+                    "OR (d.status = 'unknown' AND "
                     "(d.remote_upload_id IS NOT NULL OR d.remote_post_id IS NOT NULL)))",
                     "(d.next_attempt_at IS NULL OR d.next_attempt_at <= ?)",
                     "(d.lease_expires_at IS NULL OR d.lease_expires_at <= ?)",
@@ -1038,6 +1072,8 @@ class Repository:
                       AND (
                         status IN ('awaiting_confirmation', 'scheduled', 'processing')
                         OR (status = 'retry_wait' AND
+                            (remote_upload_id IS NOT NULL OR remote_post_id IS NOT NULL))
+                        OR (status = 'unknown' AND
                             (remote_upload_id IS NOT NULL OR remote_post_id IS NOT NULL))
                       )
                       AND (lease_expires_at IS NULL OR lease_expires_at <= ?)
@@ -1283,6 +1319,7 @@ class Repository:
                 DeliveryStatus.PROCESSING,
                 DeliveryStatus.AWAITING_CONFIRMATION,
                 DeliveryStatus.SCHEDULED,
+                DeliveryStatus.UNKNOWN,
             }:
                 raise InvalidStateError(
                     f"Cannot mark {delivery.status.value} as processing."
@@ -1377,6 +1414,7 @@ class Repository:
                 DeliveryStatus.PROCESSING,
                 DeliveryStatus.AWAITING_CONFIRMATION,
                 DeliveryStatus.SCHEDULED,
+                DeliveryStatus.UNKNOWN,
             }:
                 raise InvalidStateError(
                     f"Cannot mark {delivery.status.value} as scheduled."
@@ -1421,6 +1459,7 @@ class Repository:
         remote_post_id: str | None = None,
         error_code: str = "unknown_remote_outcome",
         error_message: str = "Check the platform before retrying.",
+        next_check_at: datetime | None = None,
         now: datetime | None = None,
     ) -> Delivery:
         remote_upload_id = (
@@ -1442,9 +1481,22 @@ class Repository:
                 remote_upload_id=remote_upload_id,
                 remote_post_id=remote_post_id,
             )
+            check_at = next_check_at
+            if check_at is None and (
+                remote_upload_id
+                or remote_post_id
+                or delivery.remote_upload_id
+                or delivery.remote_post_id
+            ):
+                check_at = stamp + timedelta(minutes=15)
+            check_at_text = (
+                _datetime_text(_as_utc(check_at, field_name="next_check_at"))
+                if check_at is not None
+                else None
+            )
             conn.execute(
                 """
-                UPDATE deliveries SET status = 'unknown', next_attempt_at = NULL,
+                UPDATE deliveries SET status = 'unknown', next_attempt_at = ?,
                     remote_upload_id = COALESCE(remote_upload_id, ?),
                     remote_post_id = COALESCE(remote_post_id, ?),
                     last_error_code = ?, last_error_message = ?,
@@ -1452,6 +1504,7 @@ class Repository:
                     lease_expires_at = NULL, updated_at = ? WHERE id = ?
                 """,
                 (
+                    check_at_text,
                     remote_upload_id,
                     remote_post_id,
                     error_code,
@@ -1496,6 +1549,43 @@ class Repository:
                         self._require_delivery_row(conn, delivery_id)
                     )
                 return delivery
+            if delivery.lease_expires_at and delivery.lease_expires_at > stamp:
+                raise LeaseConflictError(
+                    "Không thể xác nhận thủ công khi một worker vẫn đang xử lý bài."
+                )
+            if delivery.status not in {
+                DeliveryStatus.SCHEDULED,
+                DeliveryStatus.PROCESSING,
+                DeliveryStatus.UNKNOWN,
+                DeliveryStatus.NEEDS_ACTION,
+                DeliveryStatus.FAILED,
+            }:
+                raise InvalidStateError(
+                    "Chỉ được xác nhận đã đăng sau khi nền tảng đã nhận lịch hoặc "
+                    "khi đang đối soát một kết quả chưa rõ."
+                )
+            if url:
+                try:
+                    parsed_url = urlsplit(url.strip())
+                except ValueError as exc:
+                    raise ValidationError("Đường dẫn bài đăng không hợp lệ.") from exc
+                hostname = (parsed_url.hostname or "").casefold()
+                allowed_hosts = (
+                    ("facebook.com", "fb.watch")
+                    if delivery.platform is Platform.FACEBOOK
+                    else ("tiktok.com",)
+                )
+                if (
+                    parsed_url.scheme.casefold() != "https"
+                    or not hostname
+                    or not any(
+                        hostname == suffix or hostname.endswith("." + suffix)
+                        for suffix in allowed_hosts
+                    )
+                ):
+                    raise ValidationError(
+                        f"Đường dẫn không thuộc {delivery.platform.value}."
+                    )
 
             max_row = conn.execute(
                 "SELECT COALESCE(MAX(attempt_no), 0) AS n FROM attempts "
@@ -1580,6 +1670,7 @@ class Repository:
                 DeliveryStatus.PROCESSING,
                 DeliveryStatus.AWAITING_CONFIRMATION,
                 DeliveryStatus.SCHEDULED,
+                DeliveryStatus.UNKNOWN,
             }:
                 raise InvalidStateError(
                     f"Cannot publish a delivery in state {delivery.status.value}."
@@ -2029,6 +2120,27 @@ class Repository:
                 "Review and approve it again."
             )
 
+    @staticmethod
+    def _assert_delivery_identity(delivery: Delivery, post: Post) -> None:
+        if post.scheduled_at is None or not delivery.idempotency_key:
+            raise InvalidStateError(
+                "Lịch/tài khoản đích chưa được khóa bằng phiên bản hiện tại. "
+                "Hãy duyệt và khóa lịch lại trước khi đăng."
+            )
+        expected = compute_delivery_idempotency_key(
+            platform=delivery.platform,
+            account_id=delivery.account_id,
+            video_sha256=post.video_sha256 or post.content_hash,
+            caption=post.caption,
+            hashtags=post.hashtags,
+            scheduled_at=post.scheduled_at,
+        )
+        if expected != delivery.idempotency_key:
+            raise InvalidStateError(
+                "Lịch hoặc tài khoản đích đã thay đổi sau khi duyệt; không được "
+                "tiếp tục tác vụ từ xa."
+            )
+
     def _invalidate_approval_locked(
         self,
         conn: sqlite3.Connection,
@@ -2049,6 +2161,7 @@ class Repository:
         conn.execute(
             """
             UPDATE deliveries SET status = 'pending', next_attempt_at = NULL,
+                idempotency_key = NULL,
                 last_error_code = ?, last_error_message = ?,
                 lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL,
                 updated_at = ?

@@ -23,12 +23,13 @@ from ..publishers.tiktok import (
 )
 from ..repository import Repository
 from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
-from .dry_run import DryRunReport, run_dry_run
+from .dry_run import CheckResult, DryRunReport, run_dry_run
 from .lease import LeaseHeartbeat, LeaseHeartbeatError
 
 
 LOGGER = logging.getLogger(__name__)
 REMOTE_MUTATION_LEASE_SECONDS = 3600
+SAFE_OPERATION_LEAD_MINUTES = 60
 
 
 class OrchestrationError(RuntimeError):
@@ -105,12 +106,30 @@ class PublishingOrchestrator:
             return self.facebook_factory(checkpoint_callback)
         return self._default_facebook_factory(checkpoint_callback)
 
-    def assert_platform_setup(self) -> None:
-        if not self.config.facebook_page_id.strip():
-            raise OrchestrationError("Chưa cấu hình Facebook Page ID.")
+    def assert_platform_setup(self, post_id: str | None = None) -> None:
+        page_id = self.config.facebook_page_id.strip()
+        if not page_id.isdigit():
+            raise OrchestrationError("Chưa cấu hình Facebook Page ID hợp lệ.")
+        tiktok_account = self.config.tiktok_account_id.strip()
+        if not tiktok_account:
+            raise OrchestrationError("Chưa cấu hình tài khoản TikTok đích.")
         token = self.secret_store.get(FACEBOOK_TOKEN_NAME)
         if not token:
             raise OrchestrationError("Chưa lưu Facebook Page access token.")
+        if post_id is not None:
+            facebook = self.repository.get_delivery_for_platform(
+                post_id, Platform.FACEBOOK
+            )
+            tiktok = self.repository.get_delivery_for_platform(post_id, Platform.TIKTOK)
+            if facebook.account_id != page_id:
+                raise OrchestrationError(
+                    "Page ID hiện tại khác Page đã khóa khi duyệt bài. Hãy đổi lại "
+                    "Page hoặc tạo và duyệt một bài mới."
+                )
+            if (tiktok.account_id or "").casefold() != tiktok_account.casefold():
+                raise OrchestrationError(
+                    "Tài khoản TikTok hiện tại khác tài khoản đã khóa khi duyệt bài."
+                )
 
     def dry_run(self, post_id: str) -> DryRunReport:
         post = self.repository.get_post(post_id)
@@ -118,19 +137,119 @@ class PublishingOrchestrator:
             raise OrchestrationError("Bài chưa có thời gian đăng.")
         if not post.video_sha256:
             raise OrchestrationError("Bài chưa có SHA-256 của video.")
-        return run_dry_run(
+        report = run_dry_run(
             video_path=Path(post.video_path),
             expected_sha256=post.video_sha256,
             caption=post.caption,
             hashtags=" ".join(post.hashtags),
             scheduled_at_utc=post.scheduled_at,
             approved=post.is_approved,
-            minimum_lead_minutes=self.config.minimum_schedule_lead_minutes,
+            minimum_lead_minutes=max(
+                self.config.minimum_schedule_lead_minutes,
+                SAFE_OPERATION_LEAD_MINUTES,
+            ),
             caption_soft_limit=self.config.caption_soft_limit,
         )
+        page_id = self.config.facebook_page_id.strip()
+        tiktok_account = self.config.tiktok_account_id.strip()
+        setup_checks = [
+            CheckResult(
+                page_id.isdigit(),
+                "FACEBOOK_PAGE_ID",
+                "Facebook Page ID hợp lệ."
+                if page_id.isdigit()
+                else "Facebook Page ID chưa được cấu hình hoặc không hợp lệ.",
+            ),
+            CheckResult(
+                bool(tiktok_account),
+                "TIKTOK_ACCOUNT",
+                f"Tài khoản TikTok đích: {tiktok_account}."
+                if tiktok_account
+                else "Chưa cấu hình tài khoản TikTok đích.",
+            ),
+        ]
+        try:
+            token_available = bool(self.secret_store.get(FACEBOOK_TOKEN_NAME))
+            token_message = (
+                "Đã tìm thấy Facebook Page token trong kho bí mật."
+                if token_available
+                else "Chưa lưu Facebook Page access token."
+            )
+        except Exception as exc:
+            token_available = False
+            token_message = f"Không đọc được kho bí mật Facebook: {exc}"
+        setup_checks.append(
+            CheckResult(token_available, "FACEBOOK_TOKEN", token_message)
+        )
+        accounts_match = False
+        try:
+            facebook = self.repository.get_delivery_for_platform(
+                post_id, Platform.FACEBOOK
+            )
+            tiktok = self.repository.get_delivery_for_platform(post_id, Platform.TIKTOK)
+        except Exception:
+            setup_checks.append(
+                CheckResult(False, "DESTINATIONS", "Bài chưa khóa đủ hai tài khoản đích.")
+            )
+        else:
+            accounts_match = (
+                facebook.account_id == page_id
+                and (tiktok.account_id or "").casefold() == tiktok_account.casefold()
+            )
+            setup_checks.append(
+                CheckResult(
+                    accounts_match,
+                    "DESTINATION_ACCOUNTS",
+                    "Tài khoản đích khớp với lúc duyệt bài."
+                    if accounts_match
+                    else "Tài khoản đích đã thay đổi; không được tiếp tục đăng.",
+                )
+            )
+        if token_available and page_id.isdigit() and tiktok_account and accounts_match:
+            publisher: FacebookPublisher | None = None
+            try:
+                publisher = self._facebook_publisher()
+                identity = publisher.verify_page_access()
+                page_name = str(identity.get("name") or page_id)
+            except PublisherError as exc:
+                setup_checks.append(
+                    CheckResult(
+                        False,
+                        "FACEBOOK_PAGE_ACCESS",
+                        f"Không xác minh được Page/token Facebook: {exc.message}",
+                    )
+                )
+            except Exception as exc:
+                setup_checks.append(
+                    CheckResult(
+                        False,
+                        "FACEBOOK_PAGE_ACCESS",
+                        f"Không xác minh được Page/token Facebook: {exc}",
+                    )
+                )
+            else:
+                setup_checks.append(
+                    CheckResult(
+                        True,
+                        "FACEBOOK_PAGE_ACCESS",
+                        f"Meta xác nhận token truy cập đúng Page: {page_name}.",
+                    )
+                )
+            finally:
+                if publisher is not None:
+                    publisher.close()
+        else:
+            setup_checks.append(
+                CheckResult(
+                    False,
+                    "FACEBOOK_PAGE_ACCESS",
+                    "Chưa đủ cấu hình để xác minh Page/token trực tiếp với Meta.",
+                )
+            )
+        return DryRunReport(report.checks + tuple(setup_checks), report.video_info)
 
     def prepare_tiktok(self, post_id: str) -> ActionResult:
-        self.assert_platform_setup()
+        self.assert_platform_setup(post_id)
         report = self.dry_run(post_id)
         if not report.ready:
             raise OrchestrationError(report.as_text())
@@ -158,7 +277,10 @@ class PublishingOrchestrator:
             video_path=Path(post.video_path),
             caption=combined_caption(post),
             scheduled_at_utc=post.scheduled_at,
-            options={"timezone": post.timezone},
+            options={
+                "timezone": post.timezone,
+                "video_sha256": post.video_sha256,
+            },
         )
         try:
             result = self.tiktok.publish(request)
@@ -225,10 +347,16 @@ class PublishingOrchestrator:
     def confirm_tiktok_and_schedule_facebook(self, post_id: str) -> ActionResult:
         """Record the human TikTok confirmation, then schedule Facebook."""
 
-        self.assert_platform_setup()
+        self.assert_platform_setup(post_id)
         post = self.repository.get_post(post_id)
         if post.scheduled_at is None:
             raise OrchestrationError("Bài chưa có thời gian đăng.")
+        final_report = self.dry_run(post_id)
+        if not final_report.ready:
+            raise OrchestrationError(
+                "Không gửi Facebook vì điều kiện đã thay đổi sau khi chuẩn bị "
+                "TikTok:\n" + final_report.as_text()
+            )
         tiktok = self.repository.get_delivery_for_platform(post_id, Platform.TIKTOK)
         if tiktok.status is DeliveryStatus.AWAITING_CONFIRMATION:
             claimed_tiktok = self.repository.claim_delivery(tiktok.id, self.worker_id)
@@ -300,7 +428,7 @@ class PublishingOrchestrator:
                         video_path=Path(post.video_path),
                         caption=combined_caption(post),
                         scheduled_at_utc=post.scheduled_at,
-                        options={},
+                        options={"video_sha256": post.video_sha256},
                     )
                 )
             video_id = (
@@ -450,6 +578,17 @@ class PublishingOrchestrator:
         if delivery is None:
             return False
         token = delivery.lease_token or ""
+        if delivery.account_id != self.config.facebook_page_id.strip():
+            self.repository.mark_needs_action(
+                delivery.id,
+                token,
+                error_code="facebook.account_changed",
+                error_message=(
+                    "Page ID hiện tại khác Page đã khóa cho bài; không đối soát bằng "
+                    "tài khoản khác."
+                ),
+            )
+            return True
         if not delivery.remote_upload_id:
             self.repository.mark_needs_action(
                 delivery.id,

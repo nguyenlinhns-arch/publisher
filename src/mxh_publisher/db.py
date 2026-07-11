@@ -11,7 +11,7 @@ from typing import Callable, Iterator, Sequence
 from uuid import uuid4
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class DatabaseError(RuntimeError):
@@ -156,9 +156,34 @@ def _migration_002_indexes(conn: sqlite3.Connection) -> None:
     )
 
 
+def _migration_003_delivery_identity(conn: sqlite3.Connection) -> None:
+    columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(deliveries)").fetchall()
+    }
+    if "idempotency_key" not in columns:
+        conn.execute("ALTER TABLE deliveries ADD COLUMN idempotency_key TEXT")
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_delivery_idempotency_active "
+        "ON deliveries(idempotency_key) "
+        "WHERE idempotency_key IS NOT NULL AND status != 'cancelled'"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_delivery_remote_upload "
+        "ON deliveries(platform, remote_upload_id) "
+        "WHERE remote_upload_id IS NOT NULL"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_delivery_remote_post "
+        "ON deliveries(platform, remote_post_id) "
+        "WHERE remote_post_id IS NOT NULL"
+    )
+
+
 MIGRATIONS: Sequence[Migration] = (
     Migration(1, "core_tables", _migration_001_core),
     Migration(2, "query_indexes", _migration_002_indexes),
+    Migration(3, "delivery_identity", _migration_003_delivery_identity),
 )
 
 

@@ -7,7 +7,7 @@ timezone-aware in Python and are normalised to UTC by the repository layer.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from hashlib import sha256
 import json
@@ -133,6 +133,40 @@ def compute_content_hash(
     return sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def compute_delivery_idempotency_key(
+    *,
+    platform: Platform | str,
+    account_id: str | None,
+    video_sha256: str | None,
+    caption: str,
+    hashtags: str | Iterable[str] | None,
+    scheduled_at: datetime,
+) -> str:
+    """Identify one intended remote delivery across different local posts.
+
+    The key deliberately excludes local paths and post ids.  Two drafts that
+    target the same account with the same media, text and UTC minute therefore
+    collide before either can create remote work.
+    """
+
+    if scheduled_at.tzinfo is None or scheduled_at.utcoffset() is None:
+        raise ValueError("scheduled_at must include a timezone")
+    payload = {
+        "account_id": (account_id or "").strip().casefold(),
+        "caption": caption,
+        "hashtags": list(normalise_hashtags(hashtags)),
+        "platform": str(platform),
+        "scheduled_at_utc": scheduled_at.astimezone(timezone.utc)
+        .replace(second=0, microsecond=0)
+        .isoformat(),
+        "video_sha256": (video_sha256 or "").strip().lower(),
+    }
+    canonical = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
 @dataclass(frozen=True, slots=True)
 class Post:
     id: str
@@ -161,6 +195,7 @@ class Delivery:
     post_id: str
     platform: Platform
     account_id: str | None
+    idempotency_key: str | None
     status: DeliveryStatus
     remote_upload_id: str | None
     remote_post_id: str | None

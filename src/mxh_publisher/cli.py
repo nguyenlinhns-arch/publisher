@@ -14,7 +14,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--verbose", action="store_true")
     subparsers = parser.add_subparsers(dest="command")
     subparsers.add_parser("gui", help="Mở giao diện Windows")
-    subparsers.add_parser("doctor", help="Kiểm tra môi trường")
+    doctor = subparsers.add_parser("doctor", help="Kiểm tra môi trường")
+    doctor.add_argument(
+        "--system-only",
+        action="store_true",
+        help="Chỉ kiểm tra bản đóng gói/máy tính, không yêu cầu tài khoản hoặc token",
+    )
 
     configure = subparsers.add_parser("configure-facebook", help="Lưu Page ID và token")
     configure.add_argument("--page-id", required=True)
@@ -34,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
     if command == "doctor":
         from .services.doctor import format_doctor, run_doctor
 
-        checks = run_doctor(config)
+        checks = run_doctor(config, include_accounts=not args.system_only)
         print(format_doctor(checks))
         return 1 if any(not check.passed and check.blocking for check in checks) else 0
 

@@ -15,17 +15,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import hashlib
 import os
 from pathlib import Path
 import re
 from time import monotonic
-from typing import Callable, Protocol, Sequence
+from typing import Any, Callable, Protocol, Sequence
 from urllib.parse import urlsplit, urlunsplit
 
 from .base import PublishRequest, PublishResult, PublisherError
 
 
 DEFAULT_UPLOAD_URL = "https://www.tiktok.com/tiktokstudio/upload"
+SCREENSHOT_RETENTION_DAYS = 7
 
 STATE_AWAITING_CONFIRMATION = "awaiting_confirmation"
 STATE_AUTHENTICATION_REQUIRED = "authentication_required"
@@ -154,15 +156,71 @@ def _default_app_data_dir() -> Path:
 
 
 def _safe_url(value: str) -> str:
-    """Drop query/fragment data before placing a browser URL in logs."""
+    """Drop credentials, query and fragment before placing a URL in logs."""
 
     try:
         parts = urlsplit(value)
+        port = parts.port
     except ValueError:
         return ""
     if not parts.scheme:
         return value.split("?", 1)[0].split("#", 1)[0]
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    hostname = parts.hostname or ""
+    if not hostname:
+        return ""
+    netloc = hostname if port is None else f"{hostname}:{port}"
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+
+def _validate_configured_upload_url(value: str) -> str:
+    """Accept only TikTok Studio's exact, non-parameterised upload URL."""
+
+    try:
+        parts = urlsplit(value)
+        port = parts.port
+    except ValueError as exc:
+        raise ValueError("URL tải lên TikTok không hợp lệ.") from exc
+    if (
+        parts.scheme != "https"
+        or parts.hostname != "www.tiktok.com"
+        or parts.username is not None
+        or parts.password is not None
+        or port is not None
+        or parts.path != "/tiktokstudio/upload"
+        or bool(parts.query)
+        or bool(parts.fragment)
+    ):
+        raise ValueError(
+            "URL tải lên TikTok phải chính xác là "
+            "https://www.tiktok.com/tiktokstudio/upload."
+        )
+    return DEFAULT_UPLOAD_URL
+
+
+def _is_trusted_studio_url(value: str) -> bool:
+    """Return whether a post-navigation URL remains inside TikTok Studio."""
+
+    try:
+        parts = urlsplit(value)
+        port = parts.port
+    except ValueError:
+        return False
+    return (
+        parts.scheme == "https"
+        and parts.hostname == "www.tiktok.com"
+        and parts.username is None
+        and parts.password is None
+        and port is None
+        and parts.path.startswith("/tiktokstudio/")
+    )
+
+
+def _sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _contains_any(value: str, markers: Sequence[str]) -> str | None:
@@ -198,38 +256,36 @@ class _PlaywrightBrowserSession:
             from playwright.sync_api import sync_playwright
         except ImportError as exc:  # pragma: no cover - environment-dependent
             raise RuntimeError(
-                "Chưa cài Playwright. Hãy cài playwright và trình duyệt Chromium."
+                "Chưa cài Playwright. Hãy cài playwright và Microsoft Edge."
             ) from exc
 
-        self._manager = sync_playwright().start()
+        requested = browser_channel.strip().lower()
+        if not requested or requested == "chromium":
+            raise RuntimeError(
+                "Phải cấu hình một kênh trình duyệt đã cài đặt, ví dụ msedge; "
+                "không dùng Chromium dự phòng."
+            )
+
+        self._manager: Any | None = sync_playwright().start()
         self._context = None
+        self._closed = False
         profile_dir.mkdir(parents=True, exist_ok=True)
 
-        requested = browser_channel.strip().lower()
-        channel_candidates: list[str | None] = []
-        if requested and requested != "chromium":
-            channel_candidates.append(requested)
-        channel_candidates.append(None)  # bundled Chromium fallback
-
-        failures: list[str] = []
-        for channel in channel_candidates:
-            try:
-                self._context = self._manager.chromium.launch_persistent_context(
-                    str(profile_dir),
-                    channel=channel,
-                    headless=headless,
-                    no_viewport=True,
-                    args=["--start-maximized"],
-                )
-                break
-            except Exception as exc:  # pragma: no cover - browser installation-specific
-                label = channel or "chromium"
-                failures.append(f"{label}: {exc}")
-
-        if self._context is None:  # pragma: no cover - browser installation-specific
-            self._manager.stop()
-            summary = "; ".join(failures)
-            raise RuntimeError(f"Không mở được Edge/Chromium: {summary}")
+        try:
+            self._context = self._manager.chromium.launch_persistent_context(
+                str(profile_dir),
+                channel=requested,
+                headless=headless,
+                no_viewport=True,
+                args=["--start-maximized"],
+            )
+        except Exception as exc:  # pragma: no cover - browser installation-specific
+            manager = self._manager
+            self._manager = None
+            manager.stop()
+            raise RuntimeError(
+                f"Không mở được kênh trình duyệt bắt buộc {requested}: {exc}"
+            ) from exc
 
         self._page = (
             self._context.pages[0] if self._context.pages else self._context.new_page()
@@ -286,11 +342,18 @@ class _PlaywrightBrowserSession:
         self._page.screenshot(path=str(path), full_page=True)
 
     def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
         try:
             if self._context is not None:
                 self._context.close()
+                self._context = None
         finally:
-            self._manager.stop()
+            manager = self._manager
+            self._manager = None
+            if manager is not None:
+                manager.stop()
 
 
 def _start_playwright_session(
@@ -328,7 +391,7 @@ class TikTokPublisher:
             .expanduser()
             .resolve()
         )
-        self.upload_url = upload_url
+        self.upload_url = _validate_configured_upload_url(upload_url)
         self.browser_channel = browser_channel
         self._session_factory = session_factory or _start_playwright_session
         self.navigation_timeout_ms = navigation_timeout_ms
@@ -358,7 +421,7 @@ class TikTokPublisher:
         except Exception as exc:
             raise PublisherError(
                 "TIKTOK_BROWSER_START_FAILED",
-                f"Không mở được Edge/Chromium cho TikTok: {exc}",
+                f"Không mở được kênh trình duyệt bắt buộc cho TikTok: {exc}",
                 retryable=True,
                 unknown_outcome=False,
             ) from exc
@@ -367,7 +430,13 @@ class TikTokPublisher:
     def _capture(
         self, session: BrowserSession, request: PublishRequest, label: str
     ) -> tuple[str | None, str | None]:
+        # Authentication and verification screens can contain QR codes, account
+        # details or one-time challenges.  Guard centrally so every capture path
+        # (including an upload exception) observes the no-screenshot rule.
+        if _detect_challenge(session) is not None:
+            return None, "screenshot_skipped_sensitive_authentication_challenge"
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
+        self._purge_old_screenshots()
         timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
         safe_label = re.sub(r"[^a-z0-9_-]+", "-", label.casefold()).strip("-")
         path = self.screenshots_dir / (
@@ -379,6 +448,18 @@ class TikTokPublisher:
             return None, str(exc)
         return str(path), None
 
+    def _purge_old_screenshots(self) -> None:
+        cutoff = datetime.now(UTC).timestamp() - (
+            SCREENSHOT_RETENTION_DAYS * 24 * 60 * 60
+        )
+        for path in self.screenshots_dir.glob("tiktok_*.png"):
+            try:
+                if path.stat().st_mtime < cutoff:
+                    path.unlink()
+            except OSError:
+                # Screenshot retention must not hide the primary publishing state.
+                continue
+
     def _challenge_result(
         self,
         session: BrowserSession,
@@ -387,14 +468,11 @@ class TikTokPublisher:
         *,
         phase: str,
     ) -> PublishResult:
-        screenshot, screenshot_error = self._capture(
-            session, request, f"{challenge.kind}-{phase}"
-        )
         if challenge.kind == "login":
             state = STATE_AUTHENTICATION_REQUIRED
             message = (
                 "TikTok yêu cầu đăng nhập. Hãy đăng nhập trực tiếp trong cửa sổ "
-                "Edge/Chromium rồi chạy lại; ứng dụng không lưu mật khẩu."
+                "Edge rồi chạy lại; ứng dụng không lưu mật khẩu."
             )
         else:
             state = STATE_VERIFICATION_REQUIRED
@@ -410,8 +488,9 @@ class TikTokPublisher:
                 "challenge_evidence": challenge.evidence,
                 "phase": phase,
                 "current_url": _safe_url(session.url),
-                "screenshot_path": screenshot,
-                "screenshot_error": screenshot_error,
+                "screenshot_path": None,
+                "screenshot_error": None,
+                "screenshot_skipped_reason": "sensitive_authentication_challenge",
                 "publish_action_performed": False,
                 "schedule_action_performed": False,
             },
@@ -477,6 +556,20 @@ class TikTokPublisher:
                 session, request, challenge, phase="before_upload"
             )
 
+        if not _is_trusted_studio_url(session.url):
+            raise PublisherError(
+                "TIKTOK_UNTRUSTED_PAGE",
+                "TikTok Studio đã chuyển sang một trang không được tin cậy; "
+                "ứng dụng đã chặn việc chọn video.",
+                retryable=False,
+                unknown_outcome=False,
+                metadata={
+                    "current_url": _safe_url(session.url),
+                    "publish_action_performed": False,
+                    "schedule_action_performed": False,
+                },
+            )
+
         # File inputs are commonly hidden behind TikTok's styled upload card.
         # Playwright can safely assign a file to a hidden input, so presence—not
         # visual visibility—is the correct test here.
@@ -492,6 +585,57 @@ class TikTokPublisher:
                     "Không tìm thấy vùng chọn video của TikTok Studio. Ứng dụng đã "
                     "dừng để tránh thao tác nhầm; có thể giao diện TikTok đã thay đổi."
                 ),
+            )
+
+        expected_sha256_value = request.options.get("video_sha256")
+        if expected_sha256_value is not None:
+            if not isinstance(expected_sha256_value, str) or re.fullmatch(
+                r"[0-9a-fA-F]{64}", expected_sha256_value.strip()
+            ) is None:
+                raise PublisherError(
+                    "TIKTOK_INVALID_VIDEO_SHA256",
+                    "SHA-256 dùng để kiểm tra video TikTok không hợp lệ.",
+                    retryable=False,
+                    unknown_outcome=False,
+                )
+            expected_sha256 = expected_sha256_value.strip().lower()
+            try:
+                actual_sha256 = _sha256_file(video_path)
+            except OSError as exc:
+                raise PublisherError(
+                    "TIKTOK_VIDEO_UNREADABLE",
+                    f"Không đọc được video ngay trước khi tải lên TikTok: {exc}",
+                    retryable=False,
+                    unknown_outcome=False,
+                ) from exc
+            if actual_sha256 != expected_sha256:
+                raise PublisherError(
+                    "TIKTOK_VIDEO_CHANGED",
+                    "Video đã thay đổi sau khi được duyệt; ứng dụng đã chặn tải lên.",
+                    retryable=False,
+                    unknown_outcome=False,
+                    metadata={
+                        "expected_video_sha256": expected_sha256,
+                        "actual_video_sha256": actual_sha256,
+                        "publish_action_performed": False,
+                        "schedule_action_performed": False,
+                    },
+                )
+
+        # Re-check immediately before exposing the local file.  The page can
+        # navigate while controls are being discovered or the digest is read.
+        if not _is_trusted_studio_url(session.url):
+            raise PublisherError(
+                "TIKTOK_UNTRUSTED_PAGE",
+                "TikTok Studio đã chuyển sang một trang không được tin cậy; "
+                "ứng dụng đã chặn việc chọn video.",
+                retryable=False,
+                unknown_outcome=False,
+                metadata={
+                    "current_url": _safe_url(session.url),
+                    "publish_action_performed": False,
+                    "schedule_action_performed": False,
+                },
             )
 
         try:
