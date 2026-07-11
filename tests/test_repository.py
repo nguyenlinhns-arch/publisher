@@ -13,6 +13,7 @@ from mxh_publisher.models import (
     LeaseConflictError,
     Platform,
     PostStatus,
+    ValidationError,
 )
 from mxh_publisher.repository import Repository
 
@@ -116,6 +117,71 @@ def test_schedule_requires_approval(repo: Repository, tmp_path: Path) -> None:
         repo.schedule_post(post.id, BASE_TIME + timedelta(hours=1), now=BASE_TIME)
 
 
+def test_cross_post_duplicate_schedule_is_blocked(
+    repo: Repository, tmp_path: Path
+) -> None:
+    video = make_video(tmp_path)
+    posts = []
+    for _ in range(2):
+        post = repo.create_post(
+            video_path=str(video),
+            caption="Caption chung",
+            hashtags=("#TKV", "#ViecLam"),
+            now=BASE_TIME,
+        )
+        repo.set_destinations(post.id, (Platform.FACEBOOK,), now=BASE_TIME)
+        posts.append(repo.approve_post(post.id, now=BASE_TIME))
+    first, second = posts
+    due = BASE_TIME + timedelta(hours=2)
+
+    repo.schedule_post(first.id, due, now=BASE_TIME)
+
+    with pytest.raises(InvalidStateError, match="lịch đăng trùng"):
+        repo.schedule_post(second.id, due, now=BASE_TIME)
+
+
+def test_manual_resolution_requires_safe_state_and_matching_url(
+    repo: Repository, tmp_path: Path
+) -> None:
+    post = create_ready_post(repo, tmp_path)
+    repo.schedule_post(post.id, BASE_TIME + timedelta(hours=2), now=BASE_TIME)
+    delivery = repo.get_delivery_for_platform(post.id, Platform.FACEBOOK)
+
+    with pytest.raises(InvalidStateError):
+        repo.resolve_as_published(
+            delivery.id,
+            remote_post_id="remote-post",
+            confirmed_by="operator",
+            now=BASE_TIME,
+        )
+
+    claimed = repo.claim_delivery(delivery.id, "worker", now=BASE_TIME)
+    with pytest.raises(LeaseConflictError):
+        repo.resolve_as_published(
+            delivery.id,
+            remote_post_id="remote-post",
+            confirmed_by="operator",
+            now=BASE_TIME,
+        )
+    repo.mark_preparing(delivery.id, claimed.lease_token, now=BASE_TIME)
+    repo.mark_scheduled(
+        delivery.id,
+        claimed.lease_token,
+        remote_upload_id="video-id",
+        next_check_at=BASE_TIME + timedelta(hours=2),
+        now=BASE_TIME,
+    )
+
+    with pytest.raises(ValidationError, match="không thuộc facebook"):
+        repo.resolve_as_published(
+            delivery.id,
+            remote_post_id="remote-post",
+            url="https://attacker.example/post",
+            confirmed_by="operator",
+            now=BASE_TIME + timedelta(minutes=1),
+        )
+
+
 def test_manual_preparation_remote_schedule_and_due_polling(
     repo: Repository, tmp_path: Path
 ) -> None:
@@ -181,7 +247,7 @@ def test_manual_preparation_remote_schedule_and_due_polling(
         delivery.id,
         final_claim.lease_token,
         remote_post_id="post-1",
-        remote_url="https://example.test/post-1",
+        remote_url="https://www.facebook.com/post-1",
         now=final_time,
     )
     repo.finish_attempt(final_poll.id, AttemptStatus.SUCCEEDED, now=final_time)
@@ -236,8 +302,19 @@ def test_confirmation_processing_and_unknown_are_non_duplicate_states(
     )
     assert unknown.status is DeliveryStatus.UNKNOWN
     assert unknown.lease_token is None
-    assert repo.claim_due_delivery("poll", now=poll_time + timedelta(hours=1)) is None
-    assert repo.get_post(post.id).status is PostStatus.NEEDS_ACTION
+    reconcile = repo.claim_due_delivery(
+        "poll", now=poll_time + timedelta(hours=1)
+    )
+    assert reconcile is not None
+    assert reconcile.status is DeliveryStatus.UNKNOWN
+    assert reconcile.remote_upload_id == "tt-upload"
+    repo.mark_processing(
+        reconcile.id,
+        reconcile.lease_token,
+        remote_upload_id="tt-upload",
+        next_check_at=poll_time + timedelta(hours=1, minutes=15),
+        now=poll_time + timedelta(hours=1),
+    )
 
 
 def test_expired_upload_lease_requires_human_review(
@@ -428,7 +505,7 @@ def test_manual_resolution_records_audit_and_is_idempotent(
     resolved = repo.resolve_as_published(
         delivery.id,
         remote_post_id="verified-post",
-        url="https://example.test/verified-post",
+        url="https://www.facebook.com/verified-post",
         confirmed_by="teacher-linh",
         now=BASE_TIME + timedelta(minutes=1),
     )
@@ -442,7 +519,7 @@ def test_manual_resolution_records_audit_and_is_idempotent(
     again = repo.resolve_as_published(
         delivery.id,
         remote_post_id="verified-post",
-        url="https://example.test/verified-post",
+        url="https://www.facebook.com/verified-post",
         confirmed_by="teacher-linh",
         now=BASE_TIME + timedelta(minutes=2),
     )

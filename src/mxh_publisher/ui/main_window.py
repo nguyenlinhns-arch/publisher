@@ -57,6 +57,14 @@ class MainWindow(tk.Tk):
         super().__init__()
         self.config_data = config
         self.repository = repository
+        recovery_error: str | None = None
+        try:
+            recovered_tasks = repository.recover_expired_leases()
+            startup_status = f"Đã kiểm tra và phục hồi {recovered_tasks} tác vụ bị gián đoạn."
+        except Exception as exc:
+            recovered_tasks = 0
+            recovery_error = str(exc)
+            startup_status = "Không kiểm tra được tác vụ bị gián đoạn; dữ liệu chưa bị thay đổi."
         self.secret_store = SecretStore()
         self.orchestrator = PublishingOrchestrator(
             repository, config, secret_store=self.secret_store
@@ -73,7 +81,7 @@ class MainWindow(tk.Tk):
                 DATE_FORMAT
             )
         )
-        self.status_var = tk.StringVar(value="Sẵn sàng.")
+        self.status_var = tk.StringVar(value=startup_status)
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
@@ -83,6 +91,23 @@ class MainWindow(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._build_ui()
         self.refresh_posts()
+        if recovered_tasks:
+            self.after_idle(
+                lambda: messagebox.showinfo(
+                    "Phục hồi tác vụ",
+                    f"Đã phục hồi {recovered_tasks} tác vụ bị gián đoạn từ lần chạy trước.",
+                    parent=self,
+                )
+            )
+        elif recovery_error is not None:
+            self.after_idle(
+                lambda: messagebox.showwarning(
+                    "Chưa kiểm tra được tác vụ",
+                    "Ứng dụng vẫn được mở nhưng chưa thể kiểm tra các tác vụ bị gián đoạn.\n\n"
+                    f"Chi tiết: {recovery_error}",
+                    parent=self,
+                )
+            )
 
     def _build_ui(self) -> None:
         self.columnconfigure(0, weight=1)
@@ -169,7 +194,7 @@ class MainWindow(tk.Tk):
         buttons = [
             ("Bài mới", self.clear_form),
             ("1. Lưu nháp", self.save_draft),
-            ("2. Duyệt + đặt lịch", self.approve_and_schedule),
+            ("2. Duyệt nội dung + khóa lịch", self.approve_and_schedule),
             ("3. Dry-run", self.dry_run),
             ("4. Chuẩn bị TikTok", self.prepare_tiktok),
             ("5. Xác nhận TikTok + lịch FB", self.confirm_and_schedule_facebook),
@@ -349,6 +374,21 @@ class MainWindow(tk.Tk):
         post_id = self._require_selected()
         if not post_id:
             return
+        page_id = self.config_data.facebook_page_id.strip()
+        tiktok_account_id = self.config_data.tiktok_account_id.strip()
+        setup_errors = []
+        if not page_id.isdigit():
+            setup_errors.append("Facebook Page ID phải là số.")
+        if not tiktok_account_id:
+            setup_errors.append("Chưa cấu hình TikTok @username/account.")
+        if setup_errors:
+            messagebox.showerror(
+                "Thiết lập chưa đầy đủ",
+                "\n".join(setup_errors)
+                + "\n\nHãy mở Thiết lập/kiểm tra, lưu thông tin rồi khởi động lại ứng dụng.",
+                parent=self,
+            )
+            return
         try:
             scheduled = self._local_schedule_utc()
             draft = self._capture_draft_input()
@@ -362,7 +402,10 @@ class MainWindow(tk.Tk):
             return self.repository.schedule_post(
                 saved.id,
                 scheduled,
-                destinations=[Platform.FACEBOOK, Platform.TIKTOK],
+                destinations={
+                    Platform.FACEBOOK: page_id,
+                    Platform.TIKTOK: tiktok_account_id,
+                },
             )
 
         self._run_background(
@@ -396,10 +439,22 @@ class MainWindow(tk.Tk):
         post_id = self._require_selected()
         if not post_id:
             return
+        details = self._tiktok_schedule_details(post_id)
+        if details is None:
+            return
+        account_id, scheduled_text = details
 
         def success(result: ActionResult) -> None:
-            self.status_var.set("TikTok đang chờ Thầy xác nhận trong trình duyệt.")
-            messagebox.showinfo("TikTok Studio", result.message, parent=self)
+            self.status_var.set(
+                f"TikTok {account_id}: chờ xác nhận lịch {scheduled_text} (giờ Việt Nam)."
+            )
+            messagebox.showinfo(
+                "TikTok Studio",
+                f"Tài khoản TikTok: {account_id}\n"
+                f"Giờ cần chọn: {scheduled_text} (giờ Việt Nam)\n\n"
+                f"{result.message}",
+                parent=self,
+            )
 
         self._run_background(
             lambda: self.orchestrator.prepare_tiktok(post_id),
@@ -411,13 +466,28 @@ class MainWindow(tk.Tk):
         post_id = self._require_selected()
         if not post_id:
             return
-        confirmed = messagebox.askyesno(
+        details = self._tiktok_schedule_details(post_id)
+        if details is None:
+            return
+        account_id, scheduled_text = details
+        confirmation = simpledialog.askstring(
             "Xác nhận TikTok",
-            "Thầy đã kiểm tra và tự bấm Lên lịch trong TikTok Studio chưa?\n\n"
-            "Chỉ chọn Có khi video đã xuất hiện trong danh sách hẹn giờ TikTok.",
+            f"Tài khoản TikTok: {account_id}\n"
+            f"Giờ phải xuất hiện trong danh sách hẹn giờ: {scheduled_text} "
+            "(giờ Việt Nam)\n\n"
+            "Sau khi đã kiểm tra video và tự bấm Lên lịch trong TikTok Studio, "
+            f"hãy nhập lại chính xác chuỗi sau để xác nhận:\n\n{scheduled_text}",
             parent=self,
         )
-        if not confirmed:
+        if confirmation is None:
+            return
+        if confirmation.strip() != scheduled_text:
+            messagebox.showerror(
+                "Giờ xác nhận không khớp",
+                f"Cần nhập chính xác: {scheduled_text}\n\n"
+                f"Hãy kiểm tra lại lịch của tài khoản TikTok {account_id}.",
+                parent=self,
+            )
             return
 
         def success(result: ActionResult) -> None:
@@ -429,6 +499,32 @@ class MainWindow(tk.Tk):
             working_message="Đang upload và lên lịch Facebook qua API…",
             success=success,
         )
+
+    def _tiktok_schedule_details(self, post_id: str) -> tuple[str, str] | None:
+        post = self.repository.get_post(post_id)
+        if post.scheduled_at is None:
+            messagebox.showerror(
+                "Bài chưa khóa lịch",
+                "Hãy duyệt nội dung và khóa lịch trước khi chuẩn bị TikTok.",
+                parent=self,
+            )
+            return None
+        delivery = self.repository.get_delivery_for_platform(post_id, Platform.TIKTOK)
+        account_id = (
+            delivery.account_id or self.config_data.tiktok_account_id
+        ).strip()
+        if not account_id:
+            messagebox.showerror(
+                "Chưa cấu hình TikTok",
+                "Hãy nhập TikTok @username/account trong Thiết lập/kiểm tra, "
+                "sau đó khởi động lại ứng dụng.",
+                parent=self,
+            )
+            return None
+        scheduled_text = post.scheduled_at.astimezone(
+            self.config_data.timezone
+        ).strftime(DATE_FORMAT)
+        return account_id, scheduled_text
 
     def record_published(self) -> None:
         post_id = self._require_selected()
@@ -510,6 +606,7 @@ class MainWindow(tk.Tk):
         dialog.grab_set()
         dialog.columnconfigure(1, weight=1)
         page_id = tk.StringVar(value=self.config_data.facebook_page_id)
+        tiktok_account = tk.StringVar(value=self.config_data.tiktok_account_id)
         token = tk.StringVar()
         ttk.Label(dialog, text="Facebook Page ID").grid(
             row=0, column=0, padx=10, pady=8, sticky="w"
@@ -517,22 +614,40 @@ class MainWindow(tk.Tk):
         ttk.Entry(dialog, textvariable=page_id, width=45).grid(
             row=0, column=1, padx=10, pady=8, sticky="ew"
         )
-        ttk.Label(dialog, text="Page access token").grid(
+        ttk.Label(dialog, text="TikTok @username/account").grid(
             row=1, column=0, padx=10, pady=8, sticky="w"
         )
-        ttk.Entry(dialog, textvariable=token, show="•", width=45).grid(
+        ttk.Entry(dialog, textvariable=tiktok_account, width=45).grid(
             row=1, column=1, padx=10, pady=8, sticky="ew"
         )
+        ttk.Label(dialog, text="Page access token").grid(
+            row=2, column=0, padx=10, pady=8, sticky="w"
+        )
+        ttk.Entry(dialog, textvariable=token, show="•", width=45).grid(
+            row=2, column=1, padx=10, pady=8, sticky="ew"
+        )
         result_box = tk.Text(dialog, width=76, height=14, wrap="word")
-        result_box.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+        result_box.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
 
         def save() -> None:
             value = page_id.get().strip()
             if not value.isdigit():
                 messagebox.showerror("Page ID", "Page ID phải là số.", parent=dialog)
                 return
+            tiktok_value = tiktok_account.get().strip()
+            if not tiktok_value:
+                messagebox.showerror(
+                    "TikTok account",
+                    "TikTok @username/account không được để trống.",
+                    parent=dialog,
+                )
+                return
             try:
-                write_basic_config(self.config_data, page_id=value)
+                write_basic_config(
+                    self.config_data,
+                    page_id=value,
+                    tiktok_account_id=tiktok_value,
+                )
                 if token.get().strip():
                     self.secret_store.set(FACEBOOK_TOKEN_NAME, token.get())
             except Exception as exc:
@@ -540,7 +655,8 @@ class MainWindow(tk.Tk):
                 return
             messagebox.showinfo(
                 "Đã lưu",
-                "Đã lưu cấu hình. Hãy khởi động lại ứng dụng để dùng Page ID mới.",
+                "Đã lưu cấu hình. Hãy khởi động lại ứng dụng để dùng Page ID và "
+                "TikTok account mới.",
                 parent=dialog,
             )
 
@@ -549,7 +665,7 @@ class MainWindow(tk.Tk):
             result_box.insert("1.0", format_doctor(run_doctor(self.config_data)))
 
         buttons = ttk.Frame(dialog)
-        buttons.grid(row=2, column=0, columnspan=2, pady=4)
+        buttons.grid(row=3, column=0, columnspan=2, pady=4)
         ttk.Button(buttons, text="Lưu thiết lập", command=save).pack(
             side="left", padx=5
         )

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
+import hashlib
 from pathlib import Path
 import re
 import time
@@ -269,6 +270,33 @@ class FacebookPublisher:
             ),
         )
 
+    def verify_page_access(self) -> Mapping[str, Any]:
+        """Read the configured Page identity without creating remote content."""
+
+        token = self._get_token()
+        try:
+            response = self._client.get(
+                f"{self.graph_base_url}/{quote(self.page_id, safe='')}",
+                params={"fields": "id,name"},
+                headers=self._auth_headers(token),
+            )
+        except httpx.RequestError as exc:
+            raise PublisherError(
+                "facebook.page_check_network",
+                "Could not verify the Facebook Page because the network failed.",
+                retryable=True,
+            ) from exc
+        payload = self._decode_response(response, token=token, stage="page_identity")
+        remote_page_id = str(payload.get("id") or "")
+        if remote_page_id != self.page_id:
+            raise PublisherError(
+                "facebook.page_identity_mismatch",
+                "The stored token does not resolve to the configured Facebook Page.",
+                retryable=False,
+                metadata={"expected_page_id": self.page_id, "actual_page_id": remote_page_id},
+            )
+        return {"id": remote_page_id, "name": str(payload.get("name") or "")}
+
     def _validate_request(
         self, request: PublishRequest
     ) -> tuple[Path, int, datetime | None]:
@@ -289,6 +317,31 @@ class FacebookPublisher:
             raise PublisherError(
                 "facebook.empty_video", "Facebook cannot upload an empty video file."
             )
+        expected_sha256 = str(request.options.get("video_sha256") or "").strip().lower()
+        if expected_sha256:
+            if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
+                raise PublisherError(
+                    "facebook.invalid_video_hash",
+                    "Expected video SHA-256 is invalid.",
+                    retryable=False,
+                )
+            digest = hashlib.sha256()
+            try:
+                with video_path.open("rb") as handle:
+                    while chunk := handle.read(1024 * 1024):
+                        digest.update(chunk)
+            except OSError as exc:
+                raise PublisherError(
+                    "facebook.video_unreadable",
+                    f"Cannot verify the video before upload: {exc}",
+                    retryable=False,
+                ) from exc
+            if digest.hexdigest() != expected_sha256:
+                raise PublisherError(
+                    "facebook.video_changed",
+                    "Video content changed after approval; Facebook upload was stopped.",
+                    retryable=False,
+                )
 
         scheduled_at = request.scheduled_at_utc
         if scheduled_at is not None:

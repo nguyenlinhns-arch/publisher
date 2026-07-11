@@ -16,6 +16,8 @@
 - UI chỉ gọi service; không viết SQLite trực tiếp.
 - Publisher không tự đổi trạng thái database; orchestrator chịu trách nhiệm commit kết quả.
 - Repository không gọi mạng.
+- `content_hash` khóa media/nội dung; `idempotency_key` khóa thêm platform,
+  account và lịch UTC. Mutation chỉ chạy khi cả hai còn khớp.
 - Mọi bí mật được cung cấp cho adapter tại thời điểm chạy, không được serialize.
 - TikTok adapter trả về sau khi điền preview; không bấm nút cuối.
 
@@ -25,4 +27,5 @@
 - Database lưu ISO-8601 UTC.
 - Adapter nhận `datetime` timezone-aware.
 - Scheduler phía nền tảng giữ lịch xuất bản; Task Scheduler chỉ đối soát.
-
+- Khoảng đệm vận hành tối thiểu là 60 phút; dry-run được chạy lại ngay trước
+  khi gửi Facebook.

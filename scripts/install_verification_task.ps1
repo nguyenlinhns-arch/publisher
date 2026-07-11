@@ -1,8 +1,15 @@
-param(
-    [string]$Executable = "$PSScriptRoot\..\dist\MXHPublisher\MXHPublisher.exe"
-)
+param([string]$Executable)
 
 $ErrorActionPreference = "Stop"
+$PackagedExecutable = Join-Path $PSScriptRoot "..\MXHPublisher.exe"
+$DevelopmentExecutable = Join-Path $PSScriptRoot "..\dist\MXHPublisher\MXHPublisher.exe"
+if ([string]::IsNullOrWhiteSpace($Executable)) {
+    $Executable = if (Test-Path -LiteralPath $PackagedExecutable) {
+        $PackagedExecutable
+    } else {
+        $DevelopmentExecutable
+    }
+}
 $Executable = (Resolve-Path $Executable).Path
 $Action = New-ScheduledTaskAction -Execute $Executable -Argument "worker --verify-due"
 $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
@@ -14,11 +21,10 @@ $Settings = New-ScheduledTaskSettingsSet `
 
 Register-ScheduledTask `
     -TaskName "MXHPublisher-Verify" `
-    -Description "Kiểm tra trạng thái bài Facebook/TikTok đã lên lịch; không tự đăng bài." `
+    -Description "Đối soát chỉ-đọc trạng thái Facebook đã lên lịch; không tạo bài mới." `
     -Action $Action `
     -Trigger $Trigger `
     -Settings $Settings `
     -Force
 
 Write-Host "Đã tạo Task Scheduler MXHPublisher-Verify."
-
