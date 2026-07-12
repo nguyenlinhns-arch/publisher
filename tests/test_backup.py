@@ -12,8 +12,11 @@ def test_backup_is_consistent_and_rotates(tmp_path: Path) -> None:
     backup_dir = tmp_path / "backups"
     result = backup_database(source, backup_dir, keep=2)
     assert result is not None
-    with sqlite3.connect(result) as connection:
+    connection = sqlite3.connect(result)
+    try:
         assert connection.execute("SELECT value FROM sample").fetchone() == ("ok",)
+    finally:
+        connection.close()
     backup_database(source, backup_dir, keep=2)
     backup_database(source, backup_dir, keep=2)
     assert len(list(backup_dir.glob("*.sqlite3"))) == 2
