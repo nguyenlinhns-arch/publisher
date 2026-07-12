@@ -37,14 +37,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build and validate five-year export
-        run: python scripts/temp_vietlott_export.py
+      - name: Build and validate compact five-year export
+        run: python scripts/temp_vietlott_export_compact.py
 
-      - name: Upload Vietlott research export
+      - name: Upload compact Vietlott research export
         uses: actions/upload-artifact@v7
         with:
-          name: vietlott-5y-2021-07-12_2026-07-11-${{ github.sha }}
-          path: export/*
+          name: vietlott-5y-compact-2021-07-12_2026-07-11-${{ github.sha }}
+          path: |
+            export/vietlott_ket_qua_5_nam_2021-07-12_2026-07-11.zip
+            export/vietlott_ket_qua_5_nam_2021-07-12_2026-07-11.zip.sha256
+            export/export_summary.json
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
