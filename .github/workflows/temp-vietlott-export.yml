@@ -1,0 +1,50 @@
+name: Temporary Vietlott data export
+
+"on":
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vietlott-export-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  export-vietlott:
+    if: github.head_ref == 'codex/vietlott-data-export-20260712'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout temporary export code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Checkout pinned Vietlott snapshot
+        uses: actions/checkout@v7
+        with:
+          repository: NhanAZ-Data/vietlott-data-research
+          ref: c6b3e94d6680b26ab1289706f0964fcd6bac84d2
+          path: source
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build and validate five-year export
+        run: python scripts/temp_vietlott_export.py
+
+      - name: Upload Vietlott research export
+        uses: actions/upload-artifact@v7
+        with:
+          name: vietlott-5y-2021-07-12_2026-07-11-${{ github.sha }}
+          path: export/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
