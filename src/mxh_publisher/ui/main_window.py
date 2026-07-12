@@ -8,12 +8,14 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Any, Callable
 
-from ..config import AppConfig, write_basic_config
+from ..config import AppConfig, load_config, write_basic_config
 from ..models import Platform, Post
 from ..repository import Repository
 from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
 from ..services.doctor import format_doctor, run_doctor
 from ..services.media import ingest_video, inspect_video
+from ..services.backup import backup_database
+from ..services.next_action import next_action
 from ..services.orchestrator import ActionResult, PublishingOrchestrator
 
 
@@ -85,7 +87,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher V1 — Facebook & TikTok")
+        self.title("MXH Publisher v0.3 — Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -191,20 +193,19 @@ class MainWindow(tk.Tk):
         for index in range(4):
             actions.columnconfigure(index, weight=1)
 
+        self.primary_button = ttk.Button(actions, text="Tiếp tục", command=self.run_primary_action)
+        self.primary_button.grid(row=0, column=0, columnspan=4, sticky="ew", padx=3, pady=(3, 8))
+        self._busy_widgets.append(self.primary_button)
         buttons = [
             ("Bài mới", self.clear_form),
-            ("1. Lưu nháp", self.save_draft),
-            ("2. Duyệt nội dung + khóa lịch", self.approve_and_schedule),
-            ("3. Dry-run", self.dry_run),
-            ("4. Chuẩn bị TikTok", self.prepare_tiktok),
-            ("5. Xác nhận TikTok + lịch FB", self.confirm_and_schedule_facebook),
+            ("Dry-run chi tiết", self.dry_run),
             ("Ghi nhận link đã đăng", self.record_published),
             ("Thử lại sau kiểm tra", self.requeue_after_check),
             ("Thiết lập/kiểm tra", self.open_settings),
         ]
         for index, (label, command) in enumerate(buttons):
             button = ttk.Button(actions, text=label, command=command)
-            button.grid(row=index // 4, column=index % 4, sticky="ew", padx=3, pady=3)
+            button.grid(row=1 + index // 4, column=index % 4, sticky="ew", padx=3, pady=3)
             self._busy_widgets.append(button)
 
         ttk.Separator(form).grid(row=6, column=0, columnspan=3, sticky="ew", pady=12)
@@ -222,6 +223,25 @@ class MainWindow(tk.Tk):
             self, textvariable=self.status_var, relief="sunken", anchor="w"
         )
         status.grid(row=1, column=0, sticky="ew")
+
+    def run_primary_action(self) -> None:
+        action = next_action(self.repository, self.selected_post_id)
+        commands = {
+            "save": self.save_draft,
+            "approve": self.approve_and_schedule,
+            "prepare_tiktok": self.prepare_tiktok,
+            "verify_tiktok": self.confirm_and_schedule_facebook,
+            "recover": self.requeue_after_check,
+            "reconcile": self.record_published,
+        }
+        command = commands.get(action.key)
+        if command:
+            command()
+
+    def _refresh_primary_action(self) -> None:
+        action = next_action(self.repository, self.selected_post_id)
+        self.primary_button.configure(text=action.label)
+        self.primary_button.state(["!disabled"] if action.enabled else ["disabled"])
 
     def _set_busy(self, busy: bool, message: str | None = None) -> None:
         self._busy = busy
@@ -284,6 +304,7 @@ class MainWindow(tk.Tk):
         )
         self.tree.selection_remove(self.tree.selection())
         self.status_var.set("Đang tạo bài mới.")
+        self._refresh_primary_action()
 
     def _local_schedule_utc(self) -> datetime:
         value = datetime.strptime(self.schedule_var.get().strip(), DATE_FORMAT)
@@ -397,6 +418,9 @@ class MainWindow(tk.Tk):
             return
 
         def task() -> Post:
+            backup_database(
+                self.config_data.database_path, self.config_data.root_dir / "backups"
+            )
             saved = self._save_draft_task(draft)
             self.repository.approve_post(saved.id)
             return self.repository.schedule_post(
@@ -655,9 +679,12 @@ class MainWindow(tk.Tk):
                 return
             messagebox.showinfo(
                 "Đã lưu",
-                "Đã lưu cấu hình. Hãy khởi động lại ứng dụng để dùng Page ID và "
-                "TikTok account mới.",
+                "Đã lưu cấu hình. Thiết lập mới có hiệu lực ngay trong cửa sổ này.",
                 parent=dialog,
+            )
+            self.config_data = load_config()
+            self.orchestrator = PublishingOrchestrator(
+                self.repository, self.config_data, secret_store=self.secret_store
             )
 
         def doctor() -> None:
@@ -713,6 +740,7 @@ class MainWindow(tk.Tk):
         if selected and self.tree.exists(selected):
             self.tree.selection_set(selected)
             self.tree.see(selected)
+        self._refresh_primary_action()
 
     def _on_select_post(self, _event=None) -> None:
         selection = self.tree.selection()
