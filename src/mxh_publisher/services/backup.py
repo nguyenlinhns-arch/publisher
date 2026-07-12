@@ -23,5 +23,11 @@ def backup_database(database_path: Path, backup_dir: Path, *, keep: int = 12) ->
             raise RuntimeError("Bản sao lưu SQLite không vượt qua kiểm tra toàn vẹn.")
     copies = sorted(backup_dir.glob("publisher-*.sqlite3"), reverse=True)
     for old in copies[max(1, keep) :]:
-        old.unlink(missing_ok=True)
+        try:
+            old.unlink(missing_ok=True)
+        except PermissionError:
+            # Antivirus, backup software or a read-only inspection may briefly
+            # hold a file on Windows. Never fail a new valid backup merely
+            # because rotation of an older copy is temporarily blocked.
+            continue
     return target
