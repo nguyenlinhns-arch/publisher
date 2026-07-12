@@ -64,6 +64,7 @@ class AppConfig:
             self.logs_dir,
             self.screenshots_dir,
             self.browser_profile_dir,
+            self.root_dir / "backups",
         ):
             directory.mkdir(parents=True, exist_ok=True)
 
