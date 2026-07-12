@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 import sqlite3
@@ -16,7 +17,9 @@ def backup_database(database_path: Path, backup_dir: Path, *, keep: int = 12) ->
     backup_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     target = backup_dir / f"publisher-{stamp}.sqlite3"
-    with sqlite3.connect(database_path) as source, sqlite3.connect(target) as dest:
+    with closing(sqlite3.connect(database_path)) as source, closing(
+        sqlite3.connect(target)
+    ) as dest:
         source.backup(dest)
         row = dest.execute("PRAGMA integrity_check").fetchone()
         if not row or row[0] != "ok":
