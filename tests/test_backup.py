@@ -6,9 +6,13 @@ from mxh_publisher.services.backup import backup_database
 
 def test_backup_is_consistent_and_rotates(tmp_path: Path) -> None:
     source = tmp_path / "publisher.sqlite3"
-    with sqlite3.connect(source) as connection:
+    connection = sqlite3.connect(source)
+    try:
         connection.execute("CREATE TABLE sample(value TEXT)")
         connection.execute("INSERT INTO sample VALUES ('ok')")
+        connection.commit()
+    finally:
+        connection.close()
     backup_dir = tmp_path / "backups"
     result = backup_database(source, backup_dir, keep=2)
     assert result is not None
