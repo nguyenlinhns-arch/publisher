@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 
 APP_NAME = "MXHPublisher"
+DEFAULT_FACEBOOK_PAGE_ID = "1099792776546051"
 
 
 def _toml_string(value: str) -> str:
@@ -47,7 +48,7 @@ class AppConfig:
     minimum_schedule_lead_minutes: int = 60
     caption_soft_limit: int = 2200
     graph_version: str = "v25.0"
-    facebook_page_id: str = ""
+    facebook_page_id: str = DEFAULT_FACEBOOK_PAGE_ID
     tiktok_account_id: str = ""
     tiktok_upload_url: str = "https://www.tiktok.com/tiktokstudio/upload"
     tiktok_content_url: str = "https://www.tiktok.com/tiktokstudio/content"
@@ -91,7 +92,9 @@ def load_config(path: Path | None = None) -> AppConfig:
         minimum_schedule_lead_minutes=int(app.get("minimum_schedule_lead_minutes", 60)),
         caption_soft_limit=int(app.get("caption_soft_limit", 2200)),
         graph_version=str(facebook.get("graph_version", "v25.0")),
-        facebook_page_id=str(facebook.get("page_id", "")),
+        facebook_page_id=str(
+            facebook.get("page_id") or DEFAULT_FACEBOOK_PAGE_ID
+        ),
         tiktok_account_id=str(tiktok.get("account_id", "")),
         tiktok_upload_url=str(
             tiktok.get(

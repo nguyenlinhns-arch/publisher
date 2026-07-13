@@ -1,4 +1,4 @@
-# MXH Publisher V0.5.1 — bản pilot Windows
+# MXH Publisher V0.5.2 — bản pilot Windows
 
 Ứng dụng Windows hỗ trợ quản lý, duyệt và lên lịch cùng một video lên Facebook Fanpage và TikTok.
 
@@ -11,8 +11,9 @@ dùng chung 1080×1920, 30 fps, H.264/AAC cho cả Facebook và TikTok.
 - Facebook: Meta Graph API v25.
 - Kết nối: Facebook và TikTok mở trong cùng một hồ sơ Chrome bền vững; người dùng
   tự đăng nhập, ứng dụng dùng lại cookie/phiên đó và không đọc mật khẩu.
-- TikTok: Playwright mở TikTok Studio có giao diện, tự chọn video đã biên tập và
-  điền caption; người dùng tự kiểm tra và bấm `Lên lịch`.
+- TikTok: Playwright mở TikTok Studio có giao diện, tự chọn video đã biên tập,
+  điền caption, đặt lịch và bấm bước cuối khi đã nhận diện chắc chắn điều khiển.
+  CAPTCHA/2FA hoặc giao diện không chắc chắn luôn làm tác vụ dừng.
 - Dữ liệu: SQLite cục bộ; trạng thái, link và lỗi lưu riêng từng nền tảng.
 - Bảo mật: Page token lưu trong Windows Credential Manager; không lưu mật khẩu, cookie hay token trong mã nguồn/database/log.
 
@@ -34,17 +35,18 @@ Các ranh giới an toàn quan trọng:
 2. Đóng toàn bộ cửa sổ Chrome do app mở trước khi tải TikTok.
 3. Chọn MP4 nguồn, nhập tiêu đề, caption, hashtag và giờ Việt Nam.
 4. Bấm `Sửa video`; app dùng sẵn `nen.png`, cắt và lưu bản xuất vào `media/edited`.
-5. Bấm `Đăng TikTok`.
-6. Trong TikTok Studio, tự kiểm tra preview, chọn đúng giờ Việt Nam app hiển thị
-   và tự bấm nút cuối.
-7. Quay lại app, bấm `Đăng FB` rồi nhập lại chính xác giờ đã
-   thấy trong danh sách hẹn giờ TikTok.
-8. App mới upload và lên lịch Facebook bằng API.
-9. Sau giờ đăng, ghi nhận link TikTok; worker đối soát trạng thái Facebook.
+5. Bấm `Đăng TikTok` hoặc `Đăng FB`; hai nút độc lập và có thể dùng theo bất kỳ
+   thứ tự nào.
+6. App tải video, điền caption, chọn giờ Việt Nam và tự bấm nút cuối khi nhận
+   diện chắc chắn giao diện TikTok Studio. CAPTCHA/2FA hoặc giao diện lạ sẽ làm
+   app dừng để người dùng xử lý, không tự gửi lại.
+7. Nút `Đăng FB` upload và lên lịch Facebook Fanpage bằng Meta API, không còn
+   chờ trạng thái TikTok.
+8. Sau giờ đăng, worker đối soát trạng thái Facebook; TikTok được giữ trạng thái
+   đã ghi nhận để không gửi trùng.
 
-Không xác nhận bước 7 nếu sai TikTok account, sai giờ hoặc video chưa xuất hiện
-trong danh sách hẹn giờ. Lịch phải cách hiện tại ít nhất 60 phút để còn đủ thời
-gian thao tác và gửi lịch Facebook an toàn.
+Lịch phải cách hiện tại ít nhất 60 phút để còn đủ thời gian thao tác và gửi lịch
+an toàn. Mỗi nền tảng có trạng thái và khóa chống gửi trùng riêng.
 
 ## Biên tập và chuẩn video
 
@@ -109,9 +111,10 @@ Bộ test bao phủ:
 - Migration/SQLite/approval hash.
 - Trạng thái riêng Facebook–TikTok.
 - Lease và phục hồi sau crash.
-- TikTok không có lệnh click nút đăng.
+- TikTok chỉ click nút cuối sau khi nhận diện đủ video, caption, lịch và điều
+  khiển tin cậy; kết quả không rõ bị khóa chống gửi lại.
 - Facebook start/upload/finish/status/permalink và unknown outcome.
-- Luồng TikTok trước, Facebook sau và chống lặp thao tác.
+- Luồng Facebook/TikTok độc lập và chống lặp thao tác theo từng nền tảng.
 
 ## Build EXE
 

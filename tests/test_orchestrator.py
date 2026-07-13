@@ -13,7 +13,10 @@ from mxh_publisher.publishers.base import (
     PublishResult,
     PublisherError,
 )
-from mxh_publisher.publishers.tiktok import STATE_AWAITING_CONFIRMATION
+from mxh_publisher.publishers.tiktok import (
+    STATE_AWAITING_CONFIRMATION,
+    STATE_SCHEDULED,
+)
 from mxh_publisher.repository import InvalidStateError, Repository
 from mxh_publisher.services.dry_run import CheckResult, DryRunReport
 from mxh_publisher.services.media import sha256_file
@@ -42,6 +45,17 @@ class FakeTikTok:
 
     def close(self) -> None:
         return None
+
+
+class FakeAutomaticTikTok(FakeTikTok):
+    def publish(self, request):
+        self.calls.append(request)
+        return PublishResult(
+            state=STATE_SCHEDULED,
+            remote_id="tiktok-scheduled-123",
+            metadata={"schedule_action_performed": True},
+            message="TikTok đã được lên lịch tự động.",
+        )
 
 
 class FakeFacebook:
@@ -176,6 +190,99 @@ def test_tiktok_must_be_confirmed_before_facebook(monkeypatch, tmp_path: Path) -
         permalink_url="https://www.facebook.com/post",
     )
     assert repository.get_post(post.id).status is PostStatus.COMPLETED
+
+
+def test_automatic_tiktok_result_is_recorded_without_manual_confirmation(
+    monkeypatch, tmp_path: Path
+) -> None:
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"dummy-video")
+    repository = Repository(tmp_path / "db.sqlite3")
+    post = repository.create_post(
+        video_path=str(video),
+        video_sha256=sha256_file(video),
+        caption="Nội dung",
+    )
+    repository.approve_post(post.id)
+    repository.schedule_post(
+        post.id,
+        datetime.now(UTC) + timedelta(hours=2),
+        destinations={
+            Platform.FACEBOOK: "123456",
+            Platform.TIKTOK: "@test_account",
+        },
+    )
+    monkeypatch.setattr(
+        "mxh_publisher.services.orchestrator.run_dry_run",
+        lambda **_kwargs: DryRunReport((CheckResult(True, "OK", "OK"),)),
+    )
+    tiktok = FakeAutomaticTikTok()
+    orchestrator = PublishingOrchestrator(
+        repository,
+        _config(tmp_path),
+        tiktok=tiktok,
+        facebook_factory=lambda _checkpoint=None: FakeFacebook(),
+        secret_store=FakeSecrets(),
+    )
+
+    result = orchestrator.prepare_tiktok(post.id)
+
+    delivery = repository.get_delivery_for_platform(post.id, Platform.TIKTOK)
+    assert result.platform_result is not None
+    assert result.platform_result.state == STATE_SCHEDULED
+    assert delivery.status is DeliveryStatus.SCHEDULED
+    assert delivery.remote_upload_id == "tiktok-scheduled-123"
+
+
+def test_facebook_can_be_scheduled_while_tiktok_is_still_pending(
+    monkeypatch, tmp_path: Path
+) -> None:
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"dummy-video")
+    repository = Repository(tmp_path / "db.sqlite3")
+    post = repository.create_post(
+        video_path=str(video),
+        video_sha256=sha256_file(video),
+        caption="Nội dung",
+    )
+    repository.approve_post(post.id)
+    repository.schedule_post(
+        post.id,
+        datetime.now(UTC) + timedelta(hours=2),
+        destinations={
+            Platform.FACEBOOK: "123456",
+            Platform.TIKTOK: "@test_account",
+        },
+    )
+    monkeypatch.setattr(
+        "mxh_publisher.services.orchestrator.run_dry_run",
+        lambda **_kwargs: DryRunReport((CheckResult(True, "OK", "OK"),)),
+    )
+    facebook = FakeFacebook()
+
+    def facebook_factory(checkpoint=None):
+        facebook.checkpoint = checkpoint
+        return facebook
+
+    orchestrator = PublishingOrchestrator(
+        repository,
+        _config(tmp_path),
+        tiktok=FakeTikTok(),
+        facebook_factory=facebook_factory,
+        secret_store=FakeSecrets(),
+    )
+
+    orchestrator.schedule_facebook(post.id)
+
+    assert len(facebook.publish_calls) == 1
+    assert (
+        repository.get_delivery_for_platform(post.id, Platform.FACEBOOK).status
+        is DeliveryStatus.SCHEDULED
+    )
+    assert (
+        repository.get_delivery_for_platform(post.id, Platform.TIKTOK).status
+        is DeliveryStatus.PENDING
+    )
 
 
 def test_changed_tiktok_account_is_blocked_before_tiktok_upload(tmp_path: Path) -> None:

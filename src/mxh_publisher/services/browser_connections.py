@@ -156,15 +156,25 @@ class ChromeLoginManager:
     def open_tiktok(self) -> BrowserConnectionResult:
         connected = self._has_cookie(
             domain="tiktok.com",
-            cookie_names=("sessionid", "sessionid_ss", "sid_tt"),
+            cookie_names=(
+                "sessionid",
+                "sessionid_ss",
+                "sid_tt",
+                "sid_guard",
+                "uid_tt",
+                "uid_tt_ss",
+                "passport_auth_status",
+                "passport_auth_status_ss",
+            ),
         )
-        self._open(TIKTOK_LOGIN_URL)
         if connected:
+            self._open("https://www.tiktok.com/tiktokstudio/upload")
             return BrowserConnectionResult(
                 True,
                 "Đã kết nối TikTok bằng phiên Chrome đã lưu. Hãy đóng toàn bộ cửa sổ "
                 "Chrome này trước khi bấm Đăng TikTok.",
             )
+        self._open(TIKTOK_LOGIN_URL)
         return BrowserConnectionResult(
             False,
             "TikTok đã mở trong Chrome thường, không gắn trình gỡ lỗi. Hãy đăng nhập, "

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 import hashlib
-import inspect
 import os
 from pathlib import Path
 import sys
@@ -19,7 +18,12 @@ from mxh_publisher.publishers.tiktok import (
     STATE_AUTHENTICATION_REQUIRED,
     STATE_AWAITING_CONFIRMATION,
     STATE_MANUAL_ACTION_REQUIRED,
+    STATE_SCHEDULED,
     STATE_VERIFICATION_REQUIRED,
+    SCHEDULE_DATE_SELECTORS,
+    SCHEDULE_SUBMIT_SELECTORS,
+    SCHEDULE_TIME_SELECTORS,
+    SCHEDULE_TOGGLE_SELECTORS,
     TikTokPublisher,
     UPLOAD_INPUT_SELECTORS,
 )
@@ -37,6 +41,7 @@ class FakeBrowserSession:
         fill_error: Exception | None = None,
         navigation_result_url: str | None = None,
         url_after_first_present: str | None = None,
+        body_text_after_click: str | None = None,
     ) -> None:
         self.visible_selectors = set(visible_selectors or set())
         self._body_text = body_text
@@ -46,6 +51,7 @@ class FakeBrowserSession:
         self.fill_error = fill_error
         self.navigation_result_url = navigation_result_url
         self.url_after_first_present = url_after_first_present
+        self.body_text_after_click = body_text_after_click
         self.operations: list[tuple[object, ...]] = []
         self.closed = False
 
@@ -106,8 +112,10 @@ class FakeBrowserSession:
         self.operations.append(("close",))
         self.closed = True
 
-    def click(self, *_args: object, **_kwargs: object) -> None:
-        raise AssertionError("TikTok assisted adapter must never click")
+    def click(self, selector: str) -> None:
+        self.operations.append(("click", selector))
+        if self.body_text_after_click is not None:
+            self._body_text = self.body_text_after_click
 
 
 class FakeSessionFactory:
@@ -138,7 +146,7 @@ def _request(
 
 
 def _publisher(
-    tmp_path: Path, session: FakeBrowserSession
+    tmp_path: Path, session: FakeBrowserSession, *, auto_submit: bool = False
 ) -> tuple[TikTokPublisher, FakeSessionFactory]:
     factory = FakeSessionFactory(session)
     publisher = TikTokPublisher(
@@ -148,6 +156,7 @@ def _publisher(
         control_timeout_ms=0,
         preview_timeout_ms=0,
         upload_settle_ms=0,
+        auto_submit=auto_submit,
     )
     return publisher, factory
 
@@ -697,6 +706,55 @@ def test_shared_browser_factory_reuses_one_session_for_both_platforms(
     assert starts == [(profile.resolve(), "chrome", False)]
 
 
-def test_adapter_source_contains_no_click_call() -> None:
-    source = inspect.getsource(tiktok_module)
-    assert ".click(" not in source
+def test_automatic_mode_sets_schedule_and_submits_after_verification(
+    tmp_path: Path,
+) -> None:
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"video")
+    session = FakeBrowserSession(
+        visible_selectors={
+            UPLOAD_INPUT_SELECTORS[0],
+            CAPTION_INPUT_SELECTORS[0],
+            PREVIEW_READY_SELECTORS[0],
+            SCHEDULE_TOGGLE_SELECTORS[0],
+            SCHEDULE_DATE_SELECTORS[0],
+            SCHEDULE_TIME_SELECTORS[0],
+            SCHEDULE_SUBMIT_SELECTORS[0],
+        },
+        body_text_after_click="Video đã lên lịch thành công",
+    )
+    publisher, _factory = _publisher(tmp_path, session, auto_submit=True)
+
+    result = publisher.publish(_request(video))
+
+    assert result.state == STATE_SCHEDULED
+    assert result.metadata["schedule_action_performed"] is True
+    operations = [operation[0] for operation in session.operations]
+    assert operations.count("click") == 2
+    assert "fill" in operations
+
+
+def test_automatic_mode_locks_unknown_outcome_after_final_click(
+    tmp_path: Path,
+) -> None:
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"video")
+    session = FakeBrowserSession(
+        visible_selectors={
+            UPLOAD_INPUT_SELECTORS[0],
+            CAPTION_INPUT_SELECTORS[0],
+            PREVIEW_READY_SELECTORS[0],
+            SCHEDULE_TOGGLE_SELECTORS[0],
+            SCHEDULE_DATE_SELECTORS[0],
+            SCHEDULE_TIME_SELECTORS[0],
+            SCHEDULE_SUBMIT_SELECTORS[0],
+        },
+    )
+    publisher, _factory = _publisher(tmp_path, session, auto_submit=True)
+
+    with pytest.raises(PublisherError) as raised:
+        publisher.publish(_request(video))
+
+    assert raised.value.unknown_outcome
+    assert raised.value.retryable is False
+    assert sum(operation[0] == "click" for operation in session.operations) == 2

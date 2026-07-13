@@ -70,3 +70,15 @@ def test_tiktok_session_cookie_is_connected(tmp_path: Path) -> None:
 
     assert result.connected
     assert "đóng toàn bộ" in result.message
+    assert "tiktokstudio/upload" in launcher.calls[0][2]
+
+
+def test_tiktok_passport_cookie_is_recognized_as_connected(tmp_path: Path) -> None:
+    launcher = RecordingLauncher()
+    manager = _manager(tmp_path, launcher)
+    _write_cookie(manager.profile_dir, ".tiktok.com", "passport_auth_status_ss")
+
+    result = manager.open_tiktok()
+
+    assert result.connected
+    assert "tiktokstudio/upload" in launcher.calls[0][2]

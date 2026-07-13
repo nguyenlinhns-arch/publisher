@@ -19,6 +19,8 @@ from ..publishers.base import (
 from ..publishers.facebook import FacebookPublisher
 from ..publishers.tiktok import (
     STATE_AWAITING_CONFIRMATION,
+    STATE_PUBLISHED,
+    STATE_SCHEDULED,
     TikTokPublisher,
 )
 from ..repository import Repository
@@ -75,6 +77,7 @@ class PublishingOrchestrator:
             screenshots_dir=config.screenshots_dir / "tiktok",
             upload_url=config.tiktok_upload_url,
             browser_channel=config.browser_channel,
+            auto_submit=True,
         )
         self.chrome_login = ChromeLoginManager(shared_profile)
         self.facebook_factory = facebook_factory
@@ -143,6 +146,73 @@ class PublishingOrchestrator:
             raise OrchestrationError(
                 "Tài khoản TikTok hiện tại khác tài khoản đã khóa khi duyệt bài."
             )
+
+    def assert_facebook_setup(self, post_id: str) -> None:
+        page_id = self.config.facebook_page_id.strip()
+        if not page_id.isdigit():
+            raise OrchestrationError("Chưa cấu hình Facebook Page ID hợp lệ.")
+        if not self.secret_store.get(FACEBOOK_TOKEN_NAME):
+            raise OrchestrationError(
+                "Chưa có Facebook Page access token trong Windows Credential Manager."
+            )
+        delivery = self.repository.get_delivery_for_platform(
+            post_id, Platform.FACEBOOK
+        )
+        if delivery.account_id != page_id:
+            raise OrchestrationError(
+                "Page ID hiện tại khác Fanpage đã khóa cho bài này."
+            )
+
+    def dry_run_facebook(self, post_id: str) -> DryRunReport:
+        post = self.repository.get_post(post_id)
+        if post.scheduled_at is None or not post.video_sha256:
+            raise OrchestrationError("Bài chưa có video đã khóa và thời gian đăng.")
+        report = run_dry_run(
+            video_path=Path(post.video_path),
+            expected_sha256=post.video_sha256,
+            caption=post.caption,
+            hashtags=" ".join(post.hashtags),
+            scheduled_at_utc=post.scheduled_at,
+            approved=post.is_approved,
+            minimum_lead_minutes=max(
+                self.config.minimum_schedule_lead_minutes,
+                SAFE_OPERATION_LEAD_MINUTES,
+            ),
+            caption_soft_limit=self.config.caption_soft_limit,
+        )
+        page_id = self.config.facebook_page_id.strip()
+        try:
+            delivery = self.repository.get_delivery_for_platform(
+                post_id, Platform.FACEBOOK
+            )
+            matches = delivery.account_id == page_id
+        except Exception:
+            matches = False
+        token_available = bool(self.secret_store.get(FACEBOOK_TOKEN_NAME))
+        checks = (
+            CheckResult(
+                page_id.isdigit(),
+                "FACEBOOK_PAGE_ID",
+                f"Facebook Page ID: {page_id}."
+                if page_id.isdigit()
+                else "Facebook Page ID chưa hợp lệ.",
+            ),
+            CheckResult(
+                token_available,
+                "FACEBOOK_TOKEN",
+                "Đã có Facebook Page token."
+                if token_available
+                else "Chưa có Facebook Page access token.",
+            ),
+            CheckResult(
+                matches,
+                "FACEBOOK_DESTINATION",
+                "Fanpage đích khớp với bài đã khóa."
+                if matches
+                else "Bài chưa khóa đúng Fanpage đích.",
+            ),
+        )
+        return DryRunReport(report.checks + checks, report.video_info)
 
     def dry_run_tiktok(self, post_id: str) -> DryRunReport:
         post = self.repository.get_post(post_id)
@@ -361,6 +431,38 @@ class PublishingOrchestrator:
                 return ActionResult(
                     result.message, self.repository.get_post(post_id), result
                 )
+            if result.state == STATE_SCHEDULED:
+                self.repository.mark_scheduled(
+                    delivery.id,
+                    token,
+                    remote_upload_id=result.remote_id,
+                    next_check_at=post.scheduled_at,
+                )
+                self.repository.finish_attempt(
+                    attempt.id,
+                    AttemptStatus.SUCCEEDED,
+                    retryable=False,
+                    details=dict(result.metadata),
+                )
+                return ActionResult(
+                    result.message, self.repository.get_post(post_id), result
+                )
+            if result.state == STATE_PUBLISHED:
+                self.repository.mark_published(
+                    delivery.id,
+                    token,
+                    remote_post_id=result.remote_id or f"tiktok-{post.id}",
+                    remote_url=result.permalink_url,
+                )
+                self.repository.finish_attempt(
+                    attempt.id,
+                    AttemptStatus.SUCCEEDED,
+                    retryable=False,
+                    details=dict(result.metadata),
+                )
+                return ActionResult(
+                    result.message, self.repository.get_post(post_id), result
+                )
 
             self.repository.mark_needs_action(
                 delivery.id,
@@ -406,30 +508,18 @@ class PublishingOrchestrator:
             )
             raise OrchestrationError(exc.message) from exc
 
-    def confirm_tiktok_and_schedule_facebook(self, post_id: str) -> ActionResult:
-        """Record the human TikTok confirmation, then schedule Facebook."""
+    def schedule_facebook(self, post_id: str) -> ActionResult:
+        """Schedule Facebook independently, preserving per-platform idempotency."""
 
-        self.assert_platform_setup(post_id)
+        self.assert_facebook_setup(post_id)
         post = self.repository.get_post(post_id)
         if post.scheduled_at is None:
             raise OrchestrationError("Bài chưa có thời gian đăng.")
-        final_report = self.dry_run(post_id)
+        final_report = self.dry_run_facebook(post_id)
         if not final_report.ready:
             raise OrchestrationError(
-                "Không gửi Facebook vì điều kiện đã thay đổi sau khi chuẩn bị "
-                "TikTok:\n" + final_report.as_text()
-            )
-        tiktok = self.repository.get_delivery_for_platform(post_id, Platform.TIKTOK)
-        if tiktok.status is DeliveryStatus.AWAITING_CONFIRMATION:
-            claimed_tiktok = self.repository.claim_delivery(tiktok.id, self.worker_id)
-            self.repository.mark_scheduled(
-                tiktok.id,
-                claimed_tiktok.lease_token or "",
-                next_check_at=post.scheduled_at,
-            )
-        elif tiktok.status is not DeliveryStatus.SCHEDULED:
-            raise OrchestrationError(
-                "TikTok chưa ở màn hình chờ xác nhận. Không lên lịch Facebook."
+                "Không gửi Facebook vì điều kiện kiểm tra chưa đạt:\n"
+                + final_report.as_text()
             )
 
         facebook_delivery = self.repository.get_delivery_for_platform(
@@ -437,7 +527,7 @@ class PublishingOrchestrator:
         )
         if facebook_delivery.status is DeliveryStatus.SCHEDULED:
             return ActionResult(
-                "TikTok và Facebook đều đã được ghi nhận là đã lên lịch.",
+                "Facebook đã được ghi nhận là đã lên lịch; không gửi lại.",
                 self.repository.get_post(post_id),
             )
         if facebook_delivery.status not in {
@@ -562,7 +652,7 @@ class PublishingOrchestrator:
                 details=exc.metadata,
             )
             raise OrchestrationError(
-                "TikTok đã được xác nhận nhưng Facebook chưa lên lịch: " + exc.message
+                "Facebook chưa lên lịch: " + exc.message
             ) from exc
         except LeaseHeartbeatError as exc:
             current = self.repository.get_delivery(facebook_delivery.id)
@@ -594,6 +684,27 @@ class PublishingOrchestrator:
         finally:
             if publisher is not None:
                 publisher.close()
+
+    def confirm_tiktok_and_schedule_facebook(self, post_id: str) -> ActionResult:
+        """Legacy confirmation path retained for older awaiting TikTok tasks."""
+
+        post = self.repository.get_post(post_id)
+        tiktok = self.repository.get_delivery_for_platform(post_id, Platform.TIKTOK)
+        if tiktok.status is DeliveryStatus.AWAITING_CONFIRMATION:
+            claimed_tiktok = self.repository.claim_delivery(tiktok.id, self.worker_id)
+            self.repository.mark_scheduled(
+                tiktok.id,
+                claimed_tiktok.lease_token or "",
+                next_check_at=post.scheduled_at,
+            )
+        elif tiktok.status not in {
+            DeliveryStatus.SCHEDULED,
+            DeliveryStatus.PUBLISHED,
+        }:
+            raise OrchestrationError(
+                "TikTok chưa ở màn hình chờ xác nhận. Không lên lịch Facebook."
+            )
+        return self.schedule_facebook(post_id)
 
     def record_manual_published(
         self,

@@ -1,10 +1,8 @@
-"""Human-controlled TikTok Studio publishing assistance.
+"""TikTok Studio publishing with guarded optional automatic submission.
 
-This adapter deliberately stops before the irreversible action.  It opens a
-headed, persistent browser profile, selects the video, fills the caption when
-possible, captures evidence, and leaves TikTok Studio open for the operator to
-review.  There is intentionally no call to a browser ``click`` method in this
-module, so neither the Post nor Schedule action can be triggered by it.
+The desktop app enables automatic submission only after video, caption, target
+time and trusted TikTok Studio controls have all been verified. CAPTCHA, 2FA,
+login screens or an unrecognized layout always stop the operation.
 
 The browser-facing surface is kept behind :class:`BrowserSession`.  Besides
 making unit tests deterministic, that keeps TikTok selectors in one small,
@@ -23,6 +21,7 @@ from threading import Lock
 from time import monotonic
 from typing import Any, Callable, Protocol, Sequence
 from urllib.parse import urlsplit, urlunsplit
+from zoneinfo import ZoneInfo
 
 from .base import PublishRequest, PublishResult, PublisherError
 
@@ -34,6 +33,8 @@ STATE_AWAITING_CONFIRMATION = "awaiting_confirmation"
 STATE_AUTHENTICATION_REQUIRED = "authentication_required"
 STATE_VERIFICATION_REQUIRED = "verification_required"
 STATE_MANUAL_ACTION_REQUIRED = "manual_action_required"
+STATE_SCHEDULED = "scheduled"
+STATE_PUBLISHED = "published"
 
 
 # Keep all DOM knowledge here.  Prefer semantic attributes and roles, with a
@@ -63,6 +64,50 @@ PREVIEW_READY_SELECTORS: tuple[str, ...] = (
     'button:has-text("Đăng")',
     'button:has-text("Schedule")',
     'button:has-text("Lên lịch")',
+)
+
+SCHEDULE_TOGGLE_SELECTORS: tuple[str, ...] = (
+    '[data-e2e="schedule-switch"]',
+    '[data-testid="schedule-switch"]',
+    'label:has-text("Lên lịch") [role="switch"]',
+    'label:has-text("Schedule") [role="switch"]',
+    '[role="switch"][aria-label*="Schedule"]',
+    '[role="switch"][aria-label*="Lên lịch"]',
+)
+
+SCHEDULE_DATE_SELECTORS: tuple[str, ...] = (
+    'input[type="date"]',
+    'input[placeholder*="YYYY"]',
+    'input[placeholder*="DD"]',
+)
+
+SCHEDULE_TIME_SELECTORS: tuple[str, ...] = (
+    'input[type="time"]',
+    'input[placeholder*="HH"]',
+    'input[placeholder*="hh"]',
+)
+
+SCHEDULE_SUBMIT_SELECTORS: tuple[str, ...] = (
+    '[data-e2e="schedule-post-button"]',
+    '[data-testid="schedule-button"]',
+    'button:has-text("Lên lịch")',
+    'button:has-text("Schedule")',
+)
+
+POST_SUBMIT_SELECTORS: tuple[str, ...] = (
+    '[data-e2e="post_video_button"]',
+    '[data-testid="post-button"]',
+    'button:has-text("Đăng")',
+    'button:has-text("Post")',
+)
+
+SUBMIT_SUCCESS_MARKERS: tuple[str, ...] = (
+    "scheduled successfully",
+    "post scheduled",
+    "đã lên lịch",
+    "your video is being uploaded",
+    "video has been posted",
+    "đã đăng",
 )
 
 
@@ -128,6 +173,9 @@ class BrowserSession(Protocol):
 
     def fill(self, selector: str, value: str) -> None:
         """Fill a textarea or contenteditable element without submitting."""
+
+    def click(self, selector: str) -> None:
+        """Click one previously verified TikTok Studio control."""
 
     def wait(self, milliseconds: int) -> None:
         """Allow client-side upload state to progress."""
@@ -399,6 +447,9 @@ class _PlaywrightBrowserSession:
     def fill(self, selector: str, value: str) -> None:
         self._page.locator(selector).first.fill(value)
 
+    def click(self, selector: str) -> None:
+        self._page.locator(selector).first.click()
+
     def wait(self, milliseconds: int) -> None:
         self._page.wait_for_timeout(milliseconds)
 
@@ -427,7 +478,7 @@ def start_playwright_session(
 
 
 class TikTokPublisher:
-    """Prepare a TikTok Studio post and require an operator confirmation."""
+    """Prepare TikTok Studio and optionally submit after guarded verification."""
 
     platform = "tiktok"
 
@@ -443,6 +494,7 @@ class TikTokPublisher:
         control_timeout_ms: int = 20_000,
         preview_timeout_ms: int = 30_000,
         upload_settle_ms: int = 1_500,
+        auto_submit: bool = False,
     ) -> None:
         app_data = _default_app_data_dir()
         self.browser_profile_dir = (
@@ -462,6 +514,7 @@ class TikTokPublisher:
         self.control_timeout_ms = control_timeout_ms
         self.preview_timeout_ms = preview_timeout_ms
         self.upload_settle_ms = upload_settle_ms
+        self.auto_submit = auto_submit
         self._session: BrowserSession | None = None
 
         # A browser profile contains authenticated session material.  Keeping it
@@ -622,12 +675,157 @@ class TikTokPublisher:
             message=message,
         )
 
-    def publish(self, request: PublishRequest) -> PublishResult:
-        """Prepare TikTok Studio and stop before Post/Schedule confirmation.
+    def _automatic_submit(
+        self,
+        session: BrowserSession,
+        request: PublishRequest,
+        *,
+        caption_filled: bool,
+    ) -> PublishResult:
+        schedule_action = False
+        if request.scheduled_at_utc is not None:
+            timezone_name = str(request.options.get("timezone") or "Asia/Ho_Chi_Minh")
+            target = request.scheduled_at_utc.astimezone(ZoneInfo(timezone_name))
+            toggle = session.first_visible(
+                SCHEDULE_TOGGLE_SELECTORS, timeout_ms=self.control_timeout_ms
+            )
+            if toggle is None:
+                return self._manual_result(
+                    session,
+                    request,
+                    reason="schedule_toggle_not_found",
+                    message=(
+                        "Đã tải video nhưng không xác định chắc chắn được công tắc "
+                        "Lên lịch của TikTok. Ứng dụng dừng trước khi đăng để tránh "
+                        "đăng sai thời điểm."
+                    ),
+                    extra_metadata={"video_uploaded": True},
+                )
+            try:
+                session.click(toggle)
+            except Exception as exc:
+                return self._manual_result(
+                    session,
+                    request,
+                    reason="schedule_toggle_not_set",
+                    message=f"Không bật chắc chắn được chế độ Lên lịch TikTok: {exc}",
+                    extra_metadata={"video_uploaded": True},
+                )
+            date_input = session.first_visible(
+                SCHEDULE_DATE_SELECTORS, timeout_ms=self.control_timeout_ms
+            )
+            time_input = session.first_visible(
+                SCHEDULE_TIME_SELECTORS, timeout_ms=self.control_timeout_ms
+            )
+            if date_input is None or time_input is None:
+                return self._manual_result(
+                    session,
+                    request,
+                    reason="schedule_controls_not_found",
+                    message=(
+                        "Đã tải video nhưng không xác định chắc chắn được đủ điều "
+                        "khiển ngày/giờ TikTok. Ứng dụng dừng trước khi đăng để tránh "
+                        "đăng sai lịch."
+                    ),
+                    extra_metadata={"video_uploaded": True},
+                )
+            try:
+                session.fill(date_input, target.strftime("%Y-%m-%d"))
+                session.fill(time_input, target.strftime("%H:%M"))
+            except Exception as exc:
+                return self._manual_result(
+                    session,
+                    request,
+                    reason="schedule_values_not_set",
+                    message=f"Không điền chắc chắn được lịch TikTok: {exc}",
+                    extra_metadata={"video_uploaded": True},
+                )
+            submit_selectors = SCHEDULE_SUBMIT_SELECTORS
+            schedule_action = True
+        else:
+            submit_selectors = POST_SUBMIT_SELECTORS
 
-        The method name follows the common publisher contract.  For TikTok V1
-        its successful terminal state is ``awaiting_confirmation``, never
-        ``published``.
+        if challenge := _detect_challenge(session):
+            return self._challenge_result(
+                session, request, challenge, phase="before_automatic_submit"
+            )
+        submit = session.first_visible(
+            submit_selectors, timeout_ms=self.preview_timeout_ms
+        )
+        if submit is None:
+            return self._manual_result(
+                session,
+                request,
+                reason="submit_control_not_found",
+                message=(
+                    "Đã chuẩn bị video nhưng không xác định chắc chắn được nút đăng "
+                    "cuối của TikTok. Ứng dụng dừng để tránh bấm nhầm."
+                ),
+                extra_metadata={"video_uploaded": True},
+            )
+        try:
+            session.click(submit)
+        except Exception as exc:
+            raise PublisherError(
+                "TIKTOK_SUBMIT_OUTCOME_UNKNOWN",
+                "Đã thao tác nút TikTok nhưng không xác định được kết quả. Không "
+                "được thử lại trước khi kiểm tra danh sách bài/lịch: " + str(exc),
+                retryable=False,
+                unknown_outcome=True,
+                metadata={
+                    "publish_action_performed": not schedule_action,
+                    "schedule_action_performed": schedule_action,
+                },
+            ) from exc
+
+        success_marker: str | None = None
+        trusted_content_page = False
+        for _ in range(5):
+            session.wait(2_000)
+            success_marker = _contains_any(
+                session.body_text(), SUBMIT_SUCCESS_MARKERS
+            )
+            trusted_content_page = _is_trusted_studio_url(session.url) and any(
+                marker in urlsplit(session.url).path.casefold()
+                for marker in ("/content", "/manage", "/posts")
+            )
+            if success_marker is not None or trusted_content_page:
+                break
+        if success_marker is None and not trusted_content_page:
+            raise PublisherError(
+                "TIKTOK_SUBMIT_OUTCOME_UNKNOWN",
+                "TikTok đã nhận thao tác cuối nhưng chưa trả về bằng chứng thành "
+                "công rõ ràng. Không tự đăng lại; hãy kiểm tra TikTok Studio.",
+                retryable=False,
+                unknown_outcome=True,
+                metadata={
+                    "publish_action_performed": not schedule_action,
+                    "schedule_action_performed": schedule_action,
+                },
+            )
+        state = STATE_SCHEDULED if schedule_action else STATE_PUBLISHED
+        return PublishResult(
+            state=state,
+            remote_id=f"tiktok-{request.post_id}",
+            metadata={
+                "mode": "automatic_guarded",
+                "video_uploaded": True,
+                "caption_filled": caption_filled,
+                "publish_action_performed": not schedule_action,
+                "schedule_action_performed": schedule_action,
+                "success_evidence": success_marker or "trusted_content_page",
+            },
+            message=(
+                "TikTok đã được lên lịch tự động."
+                if schedule_action
+                else "TikTok đã được đăng tự động."
+            ),
+        )
+
+    def publish(self, request: PublishRequest) -> PublishResult:
+        """Prepare TikTok Studio and optionally submit Post/Schedule.
+
+        CAPTCHA/2FA/login or uncertain controls always stop before submission.
         """
 
         video_path = request.video_path.expanduser().resolve()
@@ -817,6 +1015,11 @@ class TikTokPublisher:
                 },
             )
 
+        if self.auto_submit:
+            return self._automatic_submit(
+                session, request, caption_filled=caption_filled
+            )
+
         screenshot, screenshot_error = self._capture(session, request, "preview")
         return PublishResult(
             state=STATE_AWAITING_CONFIRMATION,
@@ -868,9 +1071,15 @@ __all__ = [
     "BrowserSession",
     "CAPTION_INPUT_SELECTORS",
     "PREVIEW_READY_SELECTORS",
+    "SCHEDULE_DATE_SELECTORS",
+    "SCHEDULE_SUBMIT_SELECTORS",
+    "SCHEDULE_TIME_SELECTORS",
+    "SCHEDULE_TOGGLE_SELECTORS",
     "STATE_AUTHENTICATION_REQUIRED",
     "STATE_AWAITING_CONFIRMATION",
     "STATE_MANUAL_ACTION_REQUIRED",
+    "STATE_PUBLISHED",
+    "STATE_SCHEDULED",
     "STATE_VERIFICATION_REQUIRED",
     "SharedBrowserSessionFactory",
     "TikTokAssistedPublisher",
