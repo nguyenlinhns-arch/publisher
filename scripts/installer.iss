@@ -1,8 +1,8 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "0.3.3"
+  #define MyAppVersion "0.4.0"
 #endif
 #ifndef SourceDir
-  #define SourceDir "..\dist\MXHPublisher-0.3.3-Windows-x64"
+  #define SourceDir "..\dist\MXHPublisher-0.4.0-Windows-x64"
 #endif
 [Setup]
 AppId={{C9BC0D86-4EBA-42C5-AB33-DAB26463A528}

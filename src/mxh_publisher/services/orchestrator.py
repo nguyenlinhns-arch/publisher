@@ -19,6 +19,7 @@ from ..publishers.base import (
 from ..publishers.facebook import FacebookPublisher
 from ..publishers.tiktok import (
     STATE_AWAITING_CONFIRMATION,
+    SharedBrowserSessionFactory,
     TikTokConnectionResult,
     TikTokPublisher,
 )
@@ -70,15 +71,19 @@ class PublishingOrchestrator:
         self.config = config
         self.secret_store = secret_store or SecretStore()
         self.worker_id = worker_id or f"{socket.gethostname()}-{id(self):x}"
+        self._shared_browser_factory = SharedBrowserSessionFactory()
+        shared_profile = config.browser_profile_dir / "facebook"
         self.tiktok = tiktok or TikTokPublisher(
-            browser_profile_dir=config.browser_profile_dir / "tiktok",
+            browser_profile_dir=shared_profile,
             screenshots_dir=config.screenshots_dir / "tiktok",
             upload_url=config.tiktok_upload_url,
             browser_channel=config.browser_channel,
+            session_factory=self._shared_browser_factory,
         )
         self.facebook_browser = FacebookBrowserConnection(
-            config.browser_profile_dir / "facebook",
+            shared_profile,
             browser_channel=config.browser_channel,
+            session_factory=self._shared_browser_factory,
         )
         self.facebook_factory = facebook_factory
 

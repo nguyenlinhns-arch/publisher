@@ -14,6 +14,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Venv = Join-Path $Root ".venv"
 $Python = Join-Path $Venv "Scripts\python.exe"
 $Ffprobe = Join-Path $Root "bin\ffprobe.exe"
+$Ffmpeg = Join-Path $Root "bin\ffmpeg.exe"
 $DistPath = Join-Path $Root "dist"
 $WorkPath = Join-Path $Root "build\pyinstaller"
 $SpecPath = Join-Path $Root "build\pyinstaller-spec"
@@ -41,9 +42,14 @@ if (-not (Test-Path -LiteralPath $Python -PathType Leaf)) {
 if (-not (Test-Path -LiteralPath $Ffprobe -PathType Leaf)) {
     throw "Thiếu bin\ffprobe.exe. Hãy chạy scripts\fetch_ffprobe.ps1 trước khi build."
 }
+if (-not (Test-Path -LiteralPath $Ffmpeg -PathType Leaf)) {
+    throw "Thiếu bin\ffmpeg.exe. Hãy chạy scripts\fetch_ffprobe.ps1 trước khi build."
+}
 
 & $Ffprobe -version
 Assert-NativeSuccess "Kiểm tra ffprobe"
+& $Ffmpeg -version
+Assert-NativeSuccess "Kiểm tra ffmpeg"
 
 Push-Location $Root
 try {
@@ -82,6 +88,7 @@ try {
         "--collect-all", "tzdata",
         "--paths", (Join-Path $Root "src"),
         "--add-binary", "$Ffprobe;bin",
+        "--add-binary", "$Ffmpeg;bin",
         $EntryPoint
     )
     & $Python -m PyInstaller @Arguments
@@ -99,6 +106,12 @@ $BundledFfprobe = Get-ChildItem (Join-Path $DistPath "MXHPublisher") `
 if ($null -eq $BundledFfprobe) {
     throw "Bản onedir không chứa ffprobe.exe."
 }
+$BundledFfmpeg = Get-ChildItem (Join-Path $DistPath "MXHPublisher") `
+    -Recurse -Filter "ffmpeg.exe" -File | Select-Object -First 1
+if ($null -eq $BundledFfmpeg) {
+    throw "Bản onedir không chứa ffmpeg.exe."
+}
 
 Write-Host "Build hoàn tất: $Executable"
 Write-Host "ffprobe đóng gói: $($BundledFfprobe.FullName)"
+Write-Host "ffmpeg đóng gói: $($BundledFfmpeg.FullName)"

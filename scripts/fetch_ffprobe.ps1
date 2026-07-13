@@ -12,6 +12,7 @@ $ProgressPreference = "SilentlyContinue"
 $Root = Split-Path -Parent $PSScriptRoot
 $BinDirectory = Join-Path $Root "bin"
 $Destination = Join-Path $BinDirectory "ffprobe.exe"
+$FfmpegDestination = Join-Path $BinDirectory "ffmpeg.exe"
 $VendorDirectory = Join-Path $Root "build\vendor\ffmpeg"
 $TemporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) `
     ("mxh-publisher-ffmpeg-" + [guid]::NewGuid().ToString("N"))
@@ -41,12 +42,20 @@ try {
     if ($null -eq $Probe) {
         throw "Archive FFmpeg không chứa ffprobe.exe."
     }
+    $Ffmpeg = Get-ChildItem -LiteralPath $Extracted -Recurse -Filter "ffmpeg.exe" -File |
+        Select-Object -First 1
+    if ($null -eq $Ffmpeg) {
+        throw "Archive FFmpeg không chứa ffmpeg.exe."
+    }
 
     & $Probe.FullName -version
     Assert-NativeSuccess "Chạy ffprobe vừa tải"
+    & $Ffmpeg.FullName -version
+    Assert-NativeSuccess "Chạy ffmpeg vừa tải"
 
     New-Item -ItemType Directory -Force -Path $BinDirectory | Out-Null
     Copy-Item -LiteralPath $Probe.FullName -Destination $Destination -Force
+    Copy-Item -LiteralPath $Ffmpeg.FullName -Destination $FfmpegDestination -Force
 
     if (Test-Path -LiteralPath $VendorDirectory) {
         Remove-Item -LiteralPath $VendorDirectory -Recurse -Force
@@ -72,16 +81,19 @@ try {
     }
 
     $ProbeSha256 = (Get-FileHash -LiteralPath $Destination -Algorithm SHA256).Hash.ToLowerInvariant()
+    $FfmpegSha256 = (Get-FileHash -LiteralPath $FfmpegDestination -Algorithm SHA256).Hash.ToLowerInvariant()
     @(
         "FFmpeg build version: $Version"
         "Download URL: $DownloadUrl"
         "Archive SHA-256: $ExpectedSha256"
         "Bundled ffprobe.exe SHA-256: $ProbeSha256"
+        "Bundled ffmpeg.exe SHA-256: $FfmpegSha256"
         "Provider: Gyan Doshi (gyan.dev), linked by ffmpeg.org"
         "License reported by provider: GPLv3"
     ) | Set-Content -LiteralPath (Join-Path $VendorDirectory "SOURCE.txt") -Encoding utf8
 
     Write-Host "Đã xác minh và lưu ffprobe: $Destination"
+    Write-Host "Đã xác minh và lưu ffmpeg: $FfmpegDestination"
 } finally {
     if (Test-Path -LiteralPath $TemporaryRoot) {
         Remove-Item -LiteralPath $TemporaryRoot -Recurse -Force

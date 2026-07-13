@@ -4,6 +4,7 @@ import tkinter as tk
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+import math
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Any, Callable
@@ -13,7 +14,7 @@ from ..models import Platform, Post
 from ..repository import Repository
 from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
 from ..services.doctor import format_doctor, run_doctor
-from ..services.media import ingest_video, inspect_video
+from ..services.media import VideoEditSpec, inspect_video, render_social_video
 from ..services.backup import backup_database
 from ..services.next_action import next_action
 from ..services.orchestrator import ActionResult, PublishingOrchestrator
@@ -51,6 +52,9 @@ class DraftInput:
     title: str
     caption: str
     hashtags: str
+    frame: Path | None
+    trim_start_seconds: float
+    trim_end_seconds: float
     expected_updated_at: datetime | None
 
 
@@ -76,6 +80,9 @@ class MainWindow(tk.Tk):
         )
         self.selected_post_id: str | None = None
         self.video_source = tk.StringVar()
+        self.frame_source = tk.StringVar()
+        self.trim_start_var = tk.StringVar(value="6.2")
+        self.trim_end_var = tk.StringVar(value="6.2")
         self.title_var = tk.StringVar()
         self.hashtags_var = tk.StringVar(value=DEFAULT_HASHTAGS)
         self.schedule_var = tk.StringVar(
@@ -89,7 +96,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.3.3 — Facebook & TikTok")
+        self.title("MXH Publisher v0.4.0 — Biên tập, Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -199,7 +206,7 @@ class MainWindow(tk.Tk):
         form = ttk.LabelFrame(outer, text="Nội dung và lịch đăng", padding=12)
         form.grid(row=1, column=1, sticky="nsew")
         form.columnconfigure(1, weight=1)
-        form.rowconfigure(2, weight=1)
+        form.rowconfigure(5, weight=1)
 
         ttk.Label(form, text="Tiêu đề quản lý").grid(
             row=0, column=0, sticky="w", pady=4
@@ -216,25 +223,51 @@ class MainWindow(tk.Tk):
             row=1, column=2, padx=(6, 0), pady=4
         )
 
-        ttk.Label(form, text="Caption chung").grid(row=2, column=0, sticky="nw", pady=4)
-        self.caption_text = tk.Text(form, height=9, wrap="word", undo=True)
-        self.caption_text.grid(row=2, column=1, columnspan=2, sticky="nsew", pady=4)
-
-        ttk.Label(form, text="Hashtag").grid(row=3, column=0, sticky="nw", pady=4)
-        ttk.Entry(form, textvariable=self.hashtags_var).grid(
-            row=3, column=1, columnspan=2, sticky="new", pady=4
+        ttk.Label(form, text="Khung PNG").grid(row=2, column=0, sticky="w", pady=4)
+        ttk.Entry(form, textvariable=self.frame_source, state="readonly").grid(
+            row=2, column=1, sticky="ew", pady=4
+        )
+        ttk.Button(form, text="Chọn khung", command=self.choose_frame).grid(
+            row=2, column=2, padx=(6, 0), pady=4
         )
 
-        ttk.Label(form, text="Giờ đăng (VN)").grid(row=4, column=0, sticky="w", pady=4)
+        trim_frame = ttk.Frame(form)
+        trim_frame.grid(row=3, column=1, columnspan=2, sticky="w", pady=4)
+        ttk.Label(form, text="Cắt video").grid(row=3, column=0, sticky="w", pady=4)
+        ttk.Label(trim_frame, text="Đầu (giây)").pack(side="left")
+        ttk.Entry(trim_frame, textvariable=self.trim_start_var, width=8).pack(
+            side="left", padx=(5, 16)
+        )
+        ttk.Label(trim_frame, text="Cuối (giây)").pack(side="left")
+        ttk.Entry(trim_frame, textvariable=self.trim_end_var, width=8).pack(
+            side="left", padx=5
+        )
+
+        ttk.Label(
+            form,
+            text="Ứng dụng sẽ xuất 1080×1920, 30 fps, H.264/AAC trước khi đăng.",
+            foreground="#555555",
+        ).grid(row=4, column=1, columnspan=2, sticky="w", pady=(0, 4))
+
+        ttk.Label(form, text="Caption chung").grid(row=5, column=0, sticky="nw", pady=4)
+        self.caption_text = tk.Text(form, height=9, wrap="word", undo=True)
+        self.caption_text.grid(row=5, column=1, columnspan=2, sticky="nsew", pady=4)
+
+        ttk.Label(form, text="Hashtag").grid(row=6, column=0, sticky="nw", pady=4)
+        ttk.Entry(form, textvariable=self.hashtags_var).grid(
+            row=6, column=1, columnspan=2, sticky="new", pady=4
+        )
+
+        ttk.Label(form, text="Giờ đăng (VN)").grid(row=7, column=0, sticky="w", pady=4)
         ttk.Entry(form, textvariable=self.schedule_var).grid(
-            row=4, column=1, sticky="ew", pady=4
+            row=7, column=1, sticky="ew", pady=4
         )
         ttk.Label(form, text="YYYY-MM-DD HH:MM").grid(
-            row=4, column=2, sticky="w", padx=(6, 0)
+            row=7, column=2, sticky="w", padx=(6, 0)
         )
 
         actions = ttk.Frame(form)
-        actions.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(12, 0))
+        actions.grid(row=8, column=0, columnspan=3, sticky="ew", pady=(12, 0))
         for index in range(4):
             actions.columnconfigure(index, weight=1)
 
@@ -253,7 +286,7 @@ class MainWindow(tk.Tk):
             button.grid(row=1 + index // 4, column=index % 4, sticky="ew", padx=3, pady=3)
             self._busy_widgets.append(button)
 
-        ttk.Separator(form).grid(row=6, column=0, columnspan=3, sticky="ew", pady=12)
+        ttk.Separator(form).grid(row=9, column=0, columnspan=3, sticky="ew", pady=12)
         ttk.Label(
             form,
             text=(
@@ -262,7 +295,7 @@ class MainWindow(tk.Tk):
             ),
             wraplength=650,
             foreground="#444444",
-        ).grid(row=7, column=0, columnspan=3, sticky="w")
+        ).grid(row=10, column=0, columnspan=3, sticky="w")
 
         status = ttk.Label(
             self, textvariable=self.status_var, relief="sunken", anchor="w"
@@ -271,7 +304,6 @@ class MainWindow(tk.Tk):
 
     def _refresh_connection_summary(self) -> None:
         facebook_profile = self.config_data.browser_profile_dir / "facebook"
-        tiktok_profile = self.config_data.browser_profile_dir / "tiktok"
         self.facebook_connection_var.set(
             "Có phiên đã lưu — bấm Kiểm tra"
             if facebook_profile.exists()
@@ -279,7 +311,7 @@ class MainWindow(tk.Tk):
         )
         self.tiktok_connection_var.set(
             "Có phiên đã lưu — bấm Kiểm tra"
-            if tiktok_profile.exists()
+            if facebook_profile.exists()
             else "Chưa kết nối"
         )
 
@@ -394,10 +426,26 @@ class MainWindow(tk.Tk):
             if not self.title_var.get().strip():
                 self.title_var.set(Path(filename).stem)
 
+    def choose_frame(self) -> None:
+        filename = filedialog.askopenfilename(
+            parent=self,
+            title="Chọn khung dọc 9:16",
+            filetypes=[
+                ("Khung PNG", "*.png"),
+                ("Ảnh JPG", "*.jpg *.jpeg"),
+                ("Tất cả tệp", "*.*"),
+            ],
+        )
+        if filename:
+            self.frame_source.set(filename)
+
     def clear_form(self) -> None:
         self.selected_post_id = None
         self.title_var.set("")
         self.video_source.set("")
+        self.frame_source.set("")
+        self.trim_start_var.set("6.2")
+        self.trim_end_var.set("6.2")
         self.caption_text.delete("1.0", "end")
         self.hashtags_var.set(DEFAULT_HASHTAGS)
         self.schedule_var.set(
@@ -424,6 +472,16 @@ class MainWindow(tk.Tk):
 
     def _capture_draft_input(self) -> DraftInput:
         source = Path(self.video_source.get().strip())
+        try:
+            trim_start = float(self.trim_start_var.get().strip().replace(",", "."))
+            trim_end = float(self.trim_end_var.get().strip().replace(",", "."))
+        except ValueError as exc:
+            raise ValueError("Thời gian cắt đầu/cuối phải là số.") from exc
+        if not math.isfinite(trim_start) or not math.isfinite(trim_end):
+            raise ValueError("Thời gian cắt đầu/cuối phải là số hữu hạn.")
+        if trim_start < 0 or trim_end < 0:
+            raise ValueError("Thời gian cắt đầu/cuối không được âm.")
+        frame_text = self.frame_source.get().strip()
         current = (
             self.repository.get_post(self.selected_post_id)
             if self.selected_post_id
@@ -435,11 +493,39 @@ class MainWindow(tk.Tk):
             title=self.title_var.get().strip() or source.stem,
             caption=self.caption_text.get("1.0", "end-1c").strip(),
             hashtags=self.hashtags_var.get().strip(),
+            frame=Path(frame_text) if frame_text else None,
+            trim_start_seconds=trim_start,
+            trim_end_seconds=trim_end,
             expected_updated_at=current.updated_at if current else None,
         )
 
     def _save_draft_task(self, draft: DraftInput) -> Post:
-        info = inspect_video(draft.source)
+        current = self.repository.get_post(draft.post_id) if draft.post_id else None
+        same_rendered_video = False
+        if current is not None:
+            try:
+                same_rendered_video = (
+                    draft.source.expanduser().resolve()
+                    == Path(current.video_path).expanduser().resolve()
+                )
+            except OSError:
+                same_rendered_video = False
+        if same_rendered_video:
+            info = inspect_video(draft.source)
+        else:
+            if draft.frame is None:
+                raise ValueError(
+                    "Hãy chọn khung PNG trước khi biên tập video mới."
+                )
+            info = render_social_video(
+                draft.source,
+                self.config_data.media_dir,
+                VideoEditSpec(
+                    trim_start_seconds=draft.trim_start_seconds,
+                    trim_end_seconds=draft.trim_end_seconds,
+                    frame_path=draft.frame,
+                ),
+            )
         if not info.is_valid:
             errors = "\n".join(
                 "- " + issue.message
@@ -447,7 +533,7 @@ class MainWindow(tk.Tk):
                 if issue.severity == "error"
             )
             raise ValueError("Video chưa đạt chuẩn:\n" + errors)
-        managed = ingest_video(draft.source, self.config_data.media_dir, info.sha256)
+        managed = info.path
         if draft.post_id:
             return self.repository.update_post(
                 draft.post_id,
@@ -474,15 +560,22 @@ class MainWindow(tk.Tk):
                 "Thiếu video", "Hãy chọn video MP4 trước.", parent=self
             )
             return
-        draft = self._capture_draft_input()
+        try:
+            draft = self._capture_draft_input()
+        except ValueError as exc:
+            messagebox.showerror("Thiết lập biên tập chưa hợp lệ", str(exc), parent=self)
+            return
 
         def success(post: Post) -> None:
             self.selected_post_id = post.id
-            self.status_var.set("Đã lưu nháp và sao chép video vào thư mục an toàn.")
+            self.video_source.set(post.video_path)
+            self.status_var.set(
+                "Đã cắt, ghép khung, xuất video chuẩn và lưu nháp an toàn."
+            )
 
         self._run_background(
             lambda: self._save_draft_task(draft),
-            working_message="Đang kiểm tra và sao chép video…",
+            working_message="Đang cắt video, ghép khung và xuất 1080×1920…",
             success=success,
         )
 
@@ -855,6 +948,9 @@ class MainWindow(tk.Tk):
         self.selected_post_id = post_id
         self.title_var.set(post.title)
         self.video_source.set(post.video_path)
+        self.frame_source.set("")
+        self.trim_start_var.set("6.2")
+        self.trim_end_var.set("6.2")
         self.caption_text.delete("1.0", "end")
         self.caption_text.insert("1.0", post.caption)
         self.hashtags_var.set(" ".join(post.hashtags))

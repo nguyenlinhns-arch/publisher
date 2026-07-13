@@ -18,15 +18,15 @@ Gói thử nghiệm hiện chưa ký mã. Windows SmartScreen có thể cảnh b
 4. Mở PowerShell tại thư mục đó và kiểm tra:
 
    ```powershell
-   Get-FileHash .\MXHPublisher-0.2.0-Windows-x64.zip -Algorithm SHA256
-   Get-Content .\MXHPublisher-0.2.0-Windows-x64.zip.sha256
+   Get-FileHash .\MXHPublisher-0.4.0-Windows-x64.zip -Algorithm SHA256
+   Get-Content .\MXHPublisher-0.4.0-Windows-x64.zip.sha256
    ```
 
 5. Hai giá trị phải giống nhau. Sau đó giải nén ZIP đến một thư mục cố định.
 6. Giữ nguyên toàn bộ thư mục `MXHPublisher`; không chép riêng tệp EXE.
 
 Ứng dụng dùng PyInstaller `onedir`. Thư mục `_internal` chứa Python, Tcl/Tk,
-Playwright driver, múi giờ và `ffprobe.exe`; thiếu bất kỳ phần nào ứng dụng có
+Playwright driver, múi giờ, `ffmpeg.exe` và `ffprobe.exe`; thiếu bất kỳ phần nào ứng dụng có
 thể không chạy hoặc không kiểm tra được video.
 
 ## Kiểm tra hệ thống
@@ -60,6 +60,10 @@ Page access token được nhập ẩn và lưu trong Windows Credential Manager
 ```powershell
 .\MXHPublisher.exe gui
 ```
+
+Facebook và TikTok dùng chung một hồ sơ Edge của ứng dụng. Đăng nhập Facebook
+trước, sau đó bấm kết nối TikTok; TikTok mở trong cùng phiên Edge và phiên đăng
+nhập được dùng lại ở những lần sau.
 
 Lần đầu chuẩn bị TikTok, đăng nhập trực tiếp trong cửa sổ Edge do ứng dụng mở.
 Ứng dụng không lưu mật khẩu TikTok. CAPTCHA và 2FA luôn do người dùng xử lý.
