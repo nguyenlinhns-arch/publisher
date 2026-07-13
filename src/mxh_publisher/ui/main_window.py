@@ -96,7 +96,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.4.1 — Biên tập, Facebook & TikTok")
+        self.title("MXH Publisher v0.4.2 — Biên tập, Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)

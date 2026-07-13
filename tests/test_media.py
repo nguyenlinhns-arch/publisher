@@ -71,6 +71,33 @@ class MediaTests(unittest.TestCase):
         self.assertEqual(info.width, 1080)
         self.assertEqual(info.audio_codec, "aac")
 
+    @patch("mxh_publisher.services.media.find_ffprobe", return_value="ffprobe")
+    @patch("mxh_publisher.services.media.subprocess.run")
+    def test_inspect_does_not_reject_video_over_90_seconds(self, run, _find) -> None:
+        payload = {
+            "format": {"duration": "148.4"},
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": "h264",
+                    "width": 1080,
+                    "height": 1920,
+                    "avg_frame_rate": "30/1",
+                },
+                {"codec_type": "audio", "codec_name": "aac"},
+            ],
+        }
+        run.return_value.returncode = 0
+        run.return_value.stdout = json.dumps(payload)
+        run.return_value.stderr = ""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "long.mp4"
+            path.write_bytes(b"video")
+            info = inspect_video(path)
+
+        self.assertTrue(info.is_valid)
+        self.assertEqual(info.duration_seconds, 148.4)
+
     def test_dry_run_blocks_changed_video(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "sample.mp4"
@@ -172,22 +199,40 @@ class MediaTests(unittest.TestCase):
             "130 GIA ĐÌNH CÔNG NHÂN TIÊU BIỂU",
         )
 
+    @patch("mxh_publisher.services.media.find_ffmpeg", return_value="ffmpeg")
     @patch("mxh_publisher.services.media.inspect_video")
-    def test_render_blocks_output_longer_than_90_seconds(self, inspect) -> None:
-        from mxh_publisher.services.media import VideoEditError
-
+    @patch("mxh_publisher.services.media.subprocess.run")
+    def test_render_keeps_output_longer_than_90_seconds(
+        self, run, inspect, _find
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory) / "source.mp4"
+            root = Path(directory)
+            source = root / "source.mp4"
             source.write_bytes(b"source")
-            inspect.return_value = self._video_info(
-                source, duration=120, valid=False
+
+            def execute(command, **_kwargs):
+                Path(command[-1]).write_bytes(b"rendered")
+                result = unittest.mock.Mock()
+                result.returncode = 0
+                result.stderr = ""
+                return result
+
+            run.side_effect = execute
+            inspect.side_effect = [
+                self._video_info(source, duration=158.6, valid=False),
+                self._video_info(root / "temporary.mp4", duration=148.4, valid=True),
+                self._video_info(root / "result.mp4", duration=148.4, valid=True),
+            ]
+
+            result = render_social_video(
+                source,
+                root / "output",
+                VideoEditSpec(),
             )
-            with self.assertRaisesRegex(VideoEditError, "tối đa 90 giây"):
-                render_social_video(
-                    source,
-                    Path(directory) / "output",
-                    VideoEditSpec(6.2, 6.2),
-                )
+
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index("-t") + 1], "148.400")
+        self.assertEqual(result.duration_seconds, 148.4)
 
 
 if __name__ == "__main__":
