@@ -6,6 +6,7 @@ import pytest
 
 from mxh_publisher.services.media import (
     WINDOWS_CREATE_NO_WINDOW,
+    _title_font_size,
     _wrapped_video_title,
     default_fonts_dir,
     default_intro_sound_path,
@@ -46,8 +47,15 @@ def test_hyphen_creates_manual_title_line_break() -> None:
 
 def test_bundled_vietnamese_fonts_exist() -> None:
     fonts = default_fonts_dir()
-    assert (fonts / "BeVietnamPro-ExtraBold.ttf").is_file()
-    assert (fonts / "BeVietnamPro-SemiBold.ttf").is_file()
+    assert (fonts / "Montserrat-ExtraBold.ttf").is_file()
+    assert (fonts / "Montserrat-SemiBold.ttf").is_file()
+
+
+def test_news_title_font_size_adapts_to_line_length() -> None:
+    assert _title_font_size(r"TIN MỚI\NHÔM NAY") == 68
+    assert _title_font_size("A" * 22) == 60
+    assert _title_font_size("A" * 28) == 54
+    assert _title_font_size("A" * 34) == 48
 
 
 def test_default_intro_sound_is_valid() -> None:

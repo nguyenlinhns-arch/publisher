@@ -83,7 +83,7 @@ def default_frame_path() -> Path:
 
 
 def default_fonts_dir() -> Path:
-    """Return the bundled Be Vietnam Pro fonts used by the video template."""
+    """Return the bundled Montserrat fonts used by the news-video template."""
 
     if getattr(sys, "frozen", False):
         runtime_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
@@ -91,8 +91,8 @@ def default_fonts_dir() -> Path:
         runtime_root = Path(__file__).resolve().parents[3]
     fonts = runtime_root / "assets" / "fonts"
     required = (
-        fonts / "BeVietnamPro-ExtraBold.ttf",
-        fonts / "BeVietnamPro-SemiBold.ttf",
+        fonts / "Montserrat-ExtraBold.ttf",
+        fonts / "Montserrat-SemiBold.ttf",
     )
     missing = [path.name for path in required if not path.is_file()]
     if missing:
@@ -180,9 +180,23 @@ def _ass_time(seconds: float) -> str:
     return f"{hours}:{minutes:02d}:{whole_seconds:02d}.{centiseconds:02d}"
 
 
+def _title_font_size(wrapped_title: str) -> int:
+    """Keep short news headlines bold while preventing long lines overflowing."""
+
+    longest_line = max((len(line) for line in wrapped_title.split(r"\N")), default=0)
+    if longest_line <= 18:
+        return 68
+    if longest_line <= 24:
+        return 60
+    if longest_line <= 30:
+        return 54
+    return 48
+
+
 def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
     end = _ass_time(duration_seconds)
     wrapped = _wrapped_video_title(title)
+    title_font_size = _title_font_size(wrapped)
     content = "\n".join(
         [
             "[Script Info]",
@@ -197,16 +211,16 @@ def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
             "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
             "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
             "Alignment, MarginL, MarginR, MarginV, Encoding",
-            "Style: Title,Be Vietnam Pro ExtraBold,50,&H00FFFFFF,&H00FFFFFF,"
+            "Style: Title,Montserrat ExtraBold,60,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,4,1,8,55,55,0,1",
-            "Style: Brand,Be Vietnam Pro SemiBold,38,&H00FFFFFF,&H00FFFFFF,"
+            "Style: Brand,Montserrat SemiBold,38,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
             "",
             "[Events]",
             "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, "
             "Effect, Text",
             f"Dialogue: 0,0:00:00.00,{end},Title,,0,0,0,,"
-            rf"{{\an8\pos(540,1040)}}{wrapped}",
+            rf"{{\an8\pos(540,1040)\fs{title_font_size}}}{wrapped}",
             f"Dialogue: 0,0:00:00.00,{end},Brand,,0,0,0,,"
             r"{\an8\pos(540,1510)}Thầy Linh - Tuyển Thợ Mỏ",
         ]
@@ -513,7 +527,7 @@ def render_social_video(
     font_digest = hashlib.sha256(
         "".join(
             sha256_file(path)
-            for path in sorted(fonts_dir.glob("BeVietnamPro-*.ttf"))
+            for path in sorted(fonts_dir.glob("Montserrat-*.ttf"))
         ).encode("ascii")
     ).hexdigest()
     recipe = json.dumps(
@@ -528,7 +542,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-blue-horizontal-title-sound-v3",
+            "layout": "standalone-blue-montserrat-news-sound-v4",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,

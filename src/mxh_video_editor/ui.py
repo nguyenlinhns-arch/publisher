@@ -32,7 +32,7 @@ class VideoEditorWindow:
         self.status_var = tk.StringVar(value="Chọn video để bắt đầu.")
         self._busy = False
 
-        root.title("MXH Video Editor v1.1.0")
+        root.title("MXH Video Editor v1.1.1")
         root.geometry("980x680")
         root.minsize(820, 600)
         root.protocol("WM_DELETE_WINDOW", self.close)

@@ -1,4 +1,4 @@
-# Release trigger for v1.1.0 with title breaks, Vietnamese font and intro sound.
+# Release trigger for v1.1.1 with Montserrat news typography.
 name: Publish MXH Video Editor Windows release
 
 "on":
@@ -60,14 +60,14 @@ jobs:
       - name: Publish stable GitHub release
         shell: pwsh
         run: |
-          $tag = "video-editor-v1.1.0"
-          $title = "MXH Video Editor v1.1.0"
+          $tag = "video-editor-v1.1.1"
+          $title = "MXH Video Editor v1.1.1"
           $files = Get-ChildItem release -File | ForEach-Object { $_.FullName }
           if (-not $files) { throw "No release files were produced." }
           gh release view $tag --repo "${{ github.repository }}" 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $files --clobber --repo "${{ github.repository }}"
           } else {
-            gh release create $tag $files --title $title --notes-file RELEASE_NOTES_VIDEO_EDITOR_V1.1.0.md --repo "${{ github.repository }}"
+            gh release create $tag $files --title $title --notes-file RELEASE_NOTES_VIDEO_EDITOR_V1.1.1.md --repo "${{ github.repository }}"
           }
           if ($LASTEXITCODE -ne 0) { throw "GitHub Release upload failed." }
