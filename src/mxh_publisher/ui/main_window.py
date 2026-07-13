@@ -14,7 +14,12 @@ from ..models import DeliveryStatus, Platform, Post, PostStatus
 from ..repository import Repository
 from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
 from ..services.doctor import format_doctor, run_doctor
-from ..services.media import VideoEditSpec, inspect_video, render_social_video
+from ..services.media import (
+    VideoEditSpec,
+    default_frame_path,
+    inspect_video,
+    render_social_video,
+)
 from ..services.backup import backup_database
 from ..services.orchestrator import ActionResult, PublishingOrchestrator
 
@@ -79,7 +84,7 @@ class MainWindow(tk.Tk):
         )
         self.selected_post_id: str | None = None
         self.video_source = tk.StringVar()
-        self.frame_source = tk.StringVar()
+        self.frame_source = tk.StringVar(value=str(default_frame_path()))
         self.trim_start_var = tk.StringVar(value="6.2")
         self.trim_end_var = tk.StringVar(value="4.0")
         self.title_var = tk.StringVar()
@@ -95,7 +100,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.5.0 — Biên tập, Facebook & TikTok")
+        self.title("MXH Publisher v0.5.1 — Biên tập, Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -232,7 +237,7 @@ class MainWindow(tk.Tk):
             row=1, column=2, padx=(6, 0), pady=4
         )
 
-        ttk.Label(form, text="Khung nền (tùy chọn)").grid(
+        ttk.Label(form, text="Khung nền mặc định").grid(
             row=2, column=0, sticky="w", pady=4
         )
         ttk.Entry(form, textvariable=self.frame_source, state="readonly").grid(
@@ -433,7 +438,7 @@ class MainWindow(tk.Tk):
         self.selected_post_id = None
         self.title_var.set("")
         self.video_source.set("")
-        self.frame_source.set("")
+        self.frame_source.set(str(default_frame_path()))
         self.trim_start_var.set("6.2")
         self.trim_end_var.set("4.0")
         self.caption_text.delete("1.0", "end")
@@ -504,7 +509,7 @@ class MainWindow(tk.Tk):
         else:
             info = render_social_video(
                 draft.source,
-                self.config_data.media_dir,
+                self.config_data.media_dir / "edited",
                 VideoEditSpec(
                     trim_start_seconds=draft.trim_start_seconds,
                     trim_end_seconds=draft.trim_end_seconds,
@@ -555,9 +560,9 @@ class MainWindow(tk.Tk):
         def success(post: Post) -> None:
             self.selected_post_id = post.id
             self.video_source.set(post.video_path)
-            self.status_var.set(
-                "Đã cắt, ghép khung, xuất video chuẩn và lưu nháp an toàn."
-            )
+            message = f"Đã sửa và lưu file video tại:\n{post.video_path}"
+            self.status_var.set(message.replace("\n", " "))
+            messagebox.showinfo("Đã lưu video đã sửa", message, parent=self)
 
         self._run_background(
             lambda: self._save_draft_task(draft),
@@ -578,20 +583,9 @@ class MainWindow(tk.Tk):
         if not post_id:
             return
         page_id = self.config_data.facebook_page_id.strip()
-        tiktok_account_id = self.config_data.tiktok_account_id.strip()
-        setup_errors = []
-        if not page_id.isdigit():
-            setup_errors.append("Facebook Page ID phải là số.")
-        if not tiktok_account_id:
-            setup_errors.append("Chưa cấu hình TikTok @username/account.")
-        if setup_errors:
-            messagebox.showerror(
-                "Thiết lập chưa đầy đủ",
-                "\n".join(setup_errors)
-                + "\n\nHãy mở Thiết lập/kiểm tra, lưu thông tin rồi khởi động lại ứng dụng.",
-                parent=self,
-            )
-            return
+        tiktok_account_id = (
+            self.config_data.tiktok_account_id.strip() or "chrome-profile"
+        )
         try:
             scheduled = self._local_schedule_utc()
             draft = self._capture_draft_input()
@@ -605,13 +599,11 @@ class MainWindow(tk.Tk):
             )
             saved = self._save_draft_task(draft)
             self.repository.approve_post(saved.id)
+            destinations = {Platform.TIKTOK: tiktok_account_id}
+            if page_id.isdigit():
+                destinations[Platform.FACEBOOK] = page_id
             return self.repository.schedule_post(
-                saved.id,
-                scheduled,
-                destinations={
-                    Platform.FACEBOOK: page_id,
-                    Platform.TIKTOK: tiktok_account_id,
-                },
+                saved.id, scheduled, destinations=destinations
             )
 
         def success(saved_post: Post) -> None:
@@ -718,17 +710,21 @@ class MainWindow(tk.Tk):
         if not post_id:
             return
         post, deliveries = self.repository.get_post_with_deliveries(post_id)
-        by_platform = {delivery.platform: delivery for delivery in deliveries}
-        required = (Platform.FACEBOOK, Platform.TIKTOK)
-        if any(
-            platform not in by_platform
-            or by_platform[platform].status is not DeliveryStatus.PUBLISHED
-            for platform in required
-        ):
+        unsafe_statuses = {
+            DeliveryStatus.PENDING,
+            DeliveryStatus.PREPARING,
+            DeliveryStatus.UPLOADING,
+            DeliveryStatus.PROCESSING,
+            DeliveryStatus.AWAITING_CONFIRMATION,
+            DeliveryStatus.SCHEDULED,
+            DeliveryStatus.RETRY_WAIT,
+            DeliveryStatus.UNKNOWN,
+        }
+        if any(delivery.status in unsafe_statuses for delivery in deliveries):
             messagebox.showwarning(
                 "Chưa được xóa video",
-                "Chỉ xóa được file video sau khi cả Facebook và TikTok đều đã "
-                "được ghi nhận là Đã đăng.",
+                "File video đang còn tác vụ chờ hoặc chưa rõ kết quả. Hãy hoàn tất "
+                "việc đăng/đối soát trước khi xóa.",
                 parent=self,
             )
             return
@@ -1042,7 +1038,7 @@ class MainWindow(tk.Tk):
         self.selected_post_id = post_id
         self.title_var.set(post.title)
         self.video_source.set(post.video_path)
-        self.frame_source.set("")
+        self.frame_source.set(str(default_frame_path()))
         self.trim_start_var.set("6.2")
         self.trim_end_var.set("4.0")
         self.caption_text.delete("1.0", "end")

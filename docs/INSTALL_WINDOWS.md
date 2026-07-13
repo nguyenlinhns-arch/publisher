@@ -61,15 +61,15 @@ Page access token được nhập ẩn và lưu trong Windows Credential Manager
 .\MXHPublisher.exe gui
 ```
 
-Facebook và TikTok dùng chung một hồ sơ Chrome của ứng dụng. Đăng nhập Facebook
-trước, sau đó bấm kết nối TikTok; TikTok mở trong cùng phiên Chrome và phiên đăng
-nhập được dùng lại ở những lần sau.
+Facebook và TikTok dùng chung một hồ sơ Chrome của ứng dụng. Các nút kết nối mở
+Google Chrome thường, không gắn trình gỡ lỗi. Tự đăng nhập rồi bấm `Kiểm tra lại`;
+phiên được dùng lại ở những lần sau. Đóng toàn bộ cửa sổ Chrome này trước khi bấm
+`Đăng TikTok` để ứng dụng có thể mở hồ sơ đã lưu cho bước upload.
 
-Lần đầu chuẩn bị TikTok, đăng nhập trực tiếp trong cửa sổ Chrome do ứng dụng mở.
-Ứng dụng không lưu mật khẩu TikTok. CAPTCHA và 2FA luôn do người dùng xử lý.
+Ứng dụng không lưu mật khẩu. CAPTCHA và 2FA luôn do người dùng xử lý.
 
-Dữ liệu cục bộ nằm tại `%LOCALAPPDATA%\MXHPublisher`, gồm database, media đã
-nhập, log, ảnh chụp bằng chứng và hồ sơ trình duyệt TikTok.
+Dữ liệu cục bộ nằm tại `%LOCALAPPDATA%\MXHPublisher`, gồm database, video đã sửa
+trong `media\edited`, log, ảnh chụp bằng chứng và hồ sơ trình duyệt.
 
 ## Build lại từ mã nguồn
 

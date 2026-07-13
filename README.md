@@ -1,4 +1,4 @@
-# MXH Publisher V0.5.0 — bản pilot Windows
+# MXH Publisher V0.5.1 — bản pilot Windows
 
 Ứng dụng Windows hỗ trợ quản lý, duyệt và lên lịch cùng một video lên Facebook Fanpage và TikTok.
 
@@ -30,15 +30,14 @@ Các ranh giới an toàn quan trọng:
 
 ## Quy trình sử dụng
 
-1. Chọn MP4 nguồn, khung PNG, số giây cắt đầu/cuối; nhập caption, hashtag và giờ Việt Nam.
-2. Bấm `Lưu nháp`.
-3. Kiểm tra lại nội dung rồi bấm `Duyệt nội dung + khóa lịch`; app khóa Page,
-   TikTok account và lịch cho bài đó.
-4. Chạy `Dry-run`.
-5. Bấm `Chuẩn bị TikTok`.
+1. Bấm kết nối Facebook/TikTok, đăng nhập trong Chrome thường rồi bấm kiểm tra lại.
+2. Đóng toàn bộ cửa sổ Chrome do app mở trước khi tải TikTok.
+3. Chọn MP4 nguồn, nhập tiêu đề, caption, hashtag và giờ Việt Nam.
+4. Bấm `Sửa video`; app dùng sẵn `nen.png`, cắt và lưu bản xuất vào `media/edited`.
+5. Bấm `Đăng TikTok`.
 6. Trong TikTok Studio, tự kiểm tra preview, chọn đúng giờ Việt Nam app hiển thị
    và tự bấm nút cuối.
-7. Quay lại app, bấm `Xác nhận TikTok + lịch FB` rồi nhập lại chính xác giờ đã
+7. Quay lại app, bấm `Đăng FB` rồi nhập lại chính xác giờ đã
    thấy trong danh sách hẹn giờ TikTok.
 8. App mới upload và lên lịch Facebook bằng API.
 9. Sau giờ đăng, ghi nhận link TikTok; worker đối soát trạng thái Facebook.
@@ -50,7 +49,7 @@ gian thao tác và gửi lịch Facebook an toàn.
 ## Biên tập và chuẩn video
 
 - Mặc định bỏ 6,2 giây đầu và 4 giây cuối; có thể đổi riêng phần cuối.
-- Video ngang được đặt ở giữa khung xanh 1080×1920 theo đúng mẫu đã chốt.
+- Video ngang được đặt ở giữa đúng tệp nền `assets/nen.png` 1080×1920 đã chốt.
 - Tiêu đề bài được viết hoa, tự chia tối đa ba dòng, chữ trắng viền đen; có thể
   dùng dấu `|` trong tiêu đề để chủ động ngắt dòng.
 - App xuất bản upload bất biến bằng FFmpeg rồi mới chạy kiểm tra chuẩn.
@@ -94,8 +93,8 @@ Cách lưu Page ID/token an toàn:
 ```
 
 Lệnh sẽ yêu cầu dán token bằng trường ẩn và lưu vào Windows Credential Manager.
-Trong cửa sổ `Thiết lập/kiểm tra`, nhập thêm TikTok `@username`; sau khi đổi tài
-khoản phải khởi động lại và duyệt một bài mới.
+TikTok mặc định dùng chính hồ sơ Chrome đã đăng nhập; không bắt buộc nhập
+`@username` và không phụ thuộc Facebook Page ID khi chỉ đăng TikTok.
 
 Tham khảo chính thức: [Meta Reels Publishing API](https://developers.facebook.com/documentation/video-api/guides/reels-publishing).
 

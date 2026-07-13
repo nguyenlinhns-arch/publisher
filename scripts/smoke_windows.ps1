@@ -125,6 +125,17 @@ try {
     & $BundledFfmpeg.FullName -version
     Assert-ExitCode "ffmpeg đóng gói" $LASTEXITCODE
 
+    $BundledFrame = Get-ChildItem -LiteralPath $IsolatedBundle `
+        -Recurse -Filter "nen.png" -File | Select-Object -First 1
+    if ($null -eq $BundledFrame) {
+        throw "Bản onedir thiếu khung nền mặc định nen.png."
+    }
+    $FrameHash = (Get-FileHash -LiteralPath $BundledFrame.FullName `
+        -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($FrameHash -ne "d66882d0e60f73cdde049d6ad997a859ee0d379571bb0dc36e6155df58c6d910") {
+        throw "Khung nền mặc định không đúng tệp đã duyệt."
+    }
+
     $PlaywrightNode = Get-ChildItem -LiteralPath $IsolatedBundle `
         -Recurse -Filter "node.exe" -File |
         Where-Object { $_.FullName -match 'playwright' } |

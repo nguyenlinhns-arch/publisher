@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+import os
+import shutil
+import sqlite3
+import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlsplit
-
-from ..publishers.tiktok import BrowserSession, BrowserSessionFactory, start_playwright_session
+from typing import Callable
 
 
 FACEBOOK_HOME_URL = "https://www.facebook.com/"
-FACEBOOK_LOGIN_MARKERS = (
-    "log into facebook",
-    "log in to facebook",
-    "đăng nhập facebook",
-    "email or phone",
-    "email hoặc số điện thoại",
+TIKTOK_LOGIN_URL = (
+    "https://www.tiktok.com/login?redirect_url="
+    "https%3A%2F%2Fwww.tiktok.com%2Ftiktokstudio%2Fupload"
 )
 
 
@@ -23,55 +23,168 @@ class BrowserConnectionResult:
     message: str
 
 
+Launcher = Callable[[Path, Path, str], None]
+
+
+def find_google_chrome() -> Path:
+    """Find the normal Google Chrome executable without invoking Playwright."""
+
+    candidates: list[Path] = []
+    for variable in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
+        root = os.environ.get(variable)
+        if root:
+            candidates.append(Path(root) / "Google" / "Chrome" / "Application" / "chrome.exe")
+    for name in ("chrome", "google-chrome", "google-chrome-stable"):
+        executable = shutil.which(name)
+        if executable:
+            candidates.append(Path(executable))
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate.resolve()
+    raise RuntimeError("Không tìm thấy Google Chrome. Hãy cài Google Chrome rồi thử lại.")
+
+
+def launch_normal_chrome(executable: Path, profile_dir: Path, url: str) -> None:
+    """Open an ordinary detached Chrome window using the app's shared profile."""
+
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    creation_flags = 0
+    if os.name == "nt":
+        creation_flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(
+            subprocess, "DETACHED_PROCESS", 0
+        )
+    subprocess.Popen(
+        [
+            str(executable),
+            f"--user-data-dir={profile_dir}",
+            "--profile-directory=Default",
+            "--start-maximized",
+            url,
+        ],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        close_fds=True,
+        creationflags=creation_flags,
+    )
+
+
+class ChromeLoginManager:
+    """Open login pages in normal Chrome and detect saved login cookies.
+
+    Login is intentionally outside Playwright. This avoids TikTok pausing its
+    login popup because a debugger/automation connection is attached.
+    """
+
+    def __init__(
+        self,
+        profile_dir: Path,
+        *,
+        launcher: Launcher | None = None,
+        chrome_executable: Path | None = None,
+    ) -> None:
+        self.profile_dir = profile_dir.expanduser().resolve()
+        self._launcher = launcher or launch_normal_chrome
+        self._chrome_executable = chrome_executable
+
+    def _cookie_databases(self) -> tuple[Path, ...]:
+        return (
+            self.profile_dir / "Default" / "Network" / "Cookies",
+            self.profile_dir / "Default" / "Cookies",
+            self.profile_dir / "Network" / "Cookies",
+        )
+
+    @staticmethod
+    def _database_has_cookie(
+        database: Path, *, domain: str, cookie_names: tuple[str, ...]
+    ) -> bool:
+        if not database.is_file():
+            return False
+        try:
+            with tempfile.TemporaryDirectory(prefix="mxh-cookies-") as directory:
+                copied = Path(directory) / "Cookies"
+                shutil.copy2(database, copied)
+                placeholders = ",".join("?" for _ in cookie_names)
+                query = (
+                    "SELECT 1 FROM cookies WHERE host_key LIKE ? "
+                    f"AND name IN ({placeholders}) "
+                    "AND (length(value) > 0 OR length(encrypted_value) > 0) LIMIT 1"
+                )
+                with sqlite3.connect(copied) as connection:
+                    row = connection.execute(
+                        query, (f"%{domain}", *cookie_names)
+                    ).fetchone()
+                return row is not None
+        except (OSError, sqlite3.Error):
+            return False
+
+    def _has_cookie(self, *, domain: str, cookie_names: tuple[str, ...]) -> bool:
+        return any(
+            self._database_has_cookie(
+                database, domain=domain, cookie_names=cookie_names
+            )
+            for database in self._cookie_databases()
+        )
+
+    def _open(self, url: str) -> None:
+        executable = self._chrome_executable or find_google_chrome()
+        self._launcher(executable, self.profile_dir, url)
+
+    def open_facebook(self) -> BrowserConnectionResult:
+        connected = self._has_cookie(domain="facebook.com", cookie_names=("c_user",))
+        self._open(FACEBOOK_HOME_URL)
+        if connected:
+            return BrowserConnectionResult(
+                True,
+                "Đã kết nối Facebook bằng phiên Chrome đã lưu. Có thể đóng Chrome.",
+            )
+        return BrowserConnectionResult(
+            False,
+            "Facebook đã mở trong Chrome thường. Hãy đăng nhập, chờ trang chính hiện ra, "
+            "rồi bấm Kiểm tra lại.",
+        )
+
+    def open_tiktok(self) -> BrowserConnectionResult:
+        connected = self._has_cookie(
+            domain="tiktok.com",
+            cookie_names=("sessionid", "sessionid_ss", "sid_tt"),
+        )
+        self._open(TIKTOK_LOGIN_URL)
+        if connected:
+            return BrowserConnectionResult(
+                True,
+                "Đã kết nối TikTok bằng phiên Chrome đã lưu. Hãy đóng toàn bộ cửa sổ "
+                "Chrome này trước khi bấm Đăng TikTok.",
+            )
+        return BrowserConnectionResult(
+            False,
+            "TikTok đã mở trong Chrome thường, không gắn trình gỡ lỗi. Hãy đăng nhập, "
+            "chờ TikTok Studio hiện ra, rồi bấm Kiểm tra lại. Sau khi kết nối, hãy "
+            "đóng Chrome trước khi bấm Đăng TikTok.",
+        )
+
+
 class FacebookBrowserConnection:
-    """Open Facebook in the shared, persistent Google Chrome profile."""
+    """Compatibility wrapper retained for existing callers."""
 
     def __init__(
         self,
         profile_dir: Path,
         *,
         browser_channel: str = "chrome",
-        session_factory: BrowserSessionFactory | None = None,
+        launcher: Launcher | None = None,
+        chrome_executable: Path | None = None,
     ) -> None:
-        self.profile_dir = profile_dir.expanduser().resolve()
-        self.browser_channel = browser_channel
-        self._session_factory = session_factory or start_playwright_session
-        self._session: BrowserSession | None = None
-
-    def _browser(self) -> BrowserSession:
-        if self._session is None:
-            self._session = self._session_factory(
-                self.profile_dir, self.browser_channel, False
-            )
-        return self._session
-
-    def open_and_check(self) -> BrowserConnectionResult:
-        try:
-            session = self._browser()
-            session.goto(FACEBOOK_HOME_URL, timeout_ms=45_000)
-            current_url = session.url
-            body = session.body_text().casefold()
-        except Exception as exc:
-            return BrowserConnectionResult(
-                False, f"Không mở được Facebook bằng Google Chrome: {exc}"
-            )
-        parts = urlsplit(current_url)
-        login_page = "/login" in parts.path.casefold()
-        login_text = any(marker in body for marker in FACEBOOK_LOGIN_MARKERS)
-        trusted_host = parts.hostname in {"facebook.com", "www.facebook.com"}
-        if trusted_host and not login_page and not login_text:
-            return BrowserConnectionResult(
-                True,
-                "Đã kết nối Facebook. Phiên đăng nhập đã được lưu trong hồ sơ "
-                "Google Chrome riêng của ứng dụng.",
-            )
-        return BrowserConnectionResult(
-            False,
-            "Facebook đã được mở. Hãy đăng nhập trực tiếp trong cửa sổ Chrome, "
-            "sau đó bấm Kiểm tra lại.",
+        del browser_channel
+        self._manager = ChromeLoginManager(
+            profile_dir,
+            launcher=launcher,
+            chrome_executable=chrome_executable,
         )
 
+    def open_and_check(self) -> BrowserConnectionResult:
+        return self._manager.open_facebook()
+
     def close(self) -> None:
-        if self._session is not None:
-            self._session.close()
-            self._session = None
+        # Normal Chrome belongs to the user and is never killed by the app.
+        return None

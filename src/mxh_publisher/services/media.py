@@ -56,9 +56,21 @@ class VideoEditError(RuntimeError):
     pass
 
 
-FRAME_BLUE = "0x0752AD"
 VIDEO_TOP = 360
 VIDEO_HEIGHT = 608
+
+
+def default_frame_path() -> Path:
+    """Return the bundled blue 1080x1920 frame supplied for this project."""
+
+    if getattr(sys, "frozen", False):
+        runtime_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    else:
+        runtime_root = Path(__file__).resolve().parents[3]
+    frame = runtime_root / "assets" / "nen.png"
+    if not frame.is_file():
+        raise VideoEditError(f"Thiếu khung nền mặc định: {frame}")
+    return frame.resolve()
 
 
 def _wrapped_video_title(value: str) -> str:
@@ -375,8 +387,12 @@ def render_social_video(
     if spec.trim_start_seconds < 0 or spec.trim_end_seconds < 0:
         raise VideoEditError("Thời gian cắt đầu/cuối không được âm.")
 
-    frame = spec.frame_path.expanduser().resolve() if spec.frame_path else None
-    if frame is not None and not frame.is_file():
+    frame = (
+        spec.frame_path.expanduser().resolve()
+        if spec.frame_path
+        else default_frame_path()
+    )
+    if not frame.is_file():
         raise VideoEditError(f"Không tìm thấy khung hình: {frame}")
 
     source_info = inspect_video(source)
@@ -390,7 +406,7 @@ def render_social_video(
             "Thời gian cắt đầu/cuối đã vượt toàn bộ thời lượng video."
         )
 
-    frame_digest = sha256_file(frame) if frame else "no-frame"
+    frame_digest = sha256_file(frame)
     recipe = json.dumps(
         {
             "source": source_info.sha256,
@@ -400,7 +416,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "blue-horizontal-title-v4",
+            "layout": "bundled-blue-horizontal-title-v5",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,
@@ -430,13 +446,12 @@ def render_social_video(
         "-i",
         str(source),
     ]
-    if frame is not None:
-        command.extend(["-loop", "1", "-i", str(frame)])
+    command.extend(["-loop", "1", "-i", str(frame)])
 
     if source_info.has_audio:
         audio_map = "0:a:0"
     else:
-        silence_index = 2 if frame is not None else 1
+        silence_index = 2
         command.extend(
             [
                 "-f",
@@ -451,10 +466,7 @@ def render_social_video(
         f"scale=1080:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,"
         f"crop=1080:{VIDEO_HEIGHT},fps=30"
     )
-    if frame is None:
-        background_filter = f"color=c={FRAME_BLUE}:s=1080x1920:r=30[background]"
-    else:
-        background_filter = "[1:v]scale=1080:1920,format=rgba[background]"
+    background_filter = "[1:v]scale=1080:1920,format=rgba[background]"
     ass_path = _ffmpeg_filter_path(title_ass)
     video_filter = (
         f"[0:v]{video_scale}[video];"

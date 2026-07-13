@@ -178,7 +178,7 @@ def test_tiktok_must_be_confirmed_before_facebook(monkeypatch, tmp_path: Path) -
     assert repository.get_post(post.id).status is PostStatus.COMPLETED
 
 
-def test_changed_page_is_blocked_before_tiktok_upload(tmp_path: Path) -> None:
+def test_changed_tiktok_account_is_blocked_before_tiktok_upload(tmp_path: Path) -> None:
     video = tmp_path / "video.mp4"
     video.write_bytes(b"dummy-video")
     repository = Repository(tmp_path / "db.sqlite3")
@@ -197,7 +197,7 @@ def test_changed_page_is_blocked_before_tiktok_upload(tmp_path: Path) -> None:
         },
     )
     tiktok = FakeTikTok()
-    changed_config = replace(_config(tmp_path), facebook_page_id="999999")
+    changed_config = replace(_config(tmp_path), tiktok_account_id="@other_account")
     orchestrator = PublishingOrchestrator(
         repository,
         changed_config,
@@ -206,7 +206,7 @@ def test_changed_page_is_blocked_before_tiktok_upload(tmp_path: Path) -> None:
         secret_store=FakeSecrets(),
     )
 
-    with pytest.raises(OrchestrationError, match="khác Page đã khóa"):
+    with pytest.raises(OrchestrationError, match="Tài khoản TikTok hiện tại khác"):
         orchestrator.prepare_tiktok(post.id)
 
     assert tiktok.calls == []

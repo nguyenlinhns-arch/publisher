@@ -317,8 +317,23 @@ class _PlaywrightBrowserSession:
             manager = self._manager
             self._manager = None
             manager.stop()
+            detail = str(exc)
+            folded = detail.casefold()
+            if any(
+                marker in folded
+                for marker in (
+                    "processsingleton",
+                    "profile in use",
+                    "user data directory is already in use",
+                    "singletonlock",
+                )
+            ):
+                raise RuntimeError(
+                    "Hồ sơ Chrome đăng nhập đang được sử dụng. Hãy đóng toàn bộ cửa "
+                    "sổ Chrome do ứng dụng mở, chờ vài giây rồi bấm Đăng TikTok lại."
+                ) from exc
             raise RuntimeError(
-                f"Không mở được kênh trình duyệt bắt buộc {requested}: {exc}"
+                f"Không mở được kênh trình duyệt bắt buộc {requested}: {detail}"
             ) from exc
 
         self._page = (

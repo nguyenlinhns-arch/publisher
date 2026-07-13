@@ -15,6 +15,7 @@ $Venv = Join-Path $Root ".venv"
 $Python = Join-Path $Venv "Scripts\python.exe"
 $Ffprobe = Join-Path $Root "bin\ffprobe.exe"
 $Ffmpeg = Join-Path $Root "bin\ffmpeg.exe"
+$DefaultFrame = Join-Path $Root "assets\nen.png"
 $DistPath = Join-Path $Root "dist"
 $WorkPath = Join-Path $Root "build\pyinstaller"
 $SpecPath = Join-Path $Root "build\pyinstaller-spec"
@@ -44,6 +45,9 @@ if (-not (Test-Path -LiteralPath $Ffprobe -PathType Leaf)) {
 }
 if (-not (Test-Path -LiteralPath $Ffmpeg -PathType Leaf)) {
     throw "Thiếu bin\ffmpeg.exe. Hãy chạy scripts\fetch_ffprobe.ps1 trước khi build."
+}
+if (-not (Test-Path -LiteralPath $DefaultFrame -PathType Leaf)) {
+    throw "Thiếu assets\nen.png — khung nền mặc định của dự án."
 }
 
 & $Ffprobe -version
@@ -90,6 +94,7 @@ try {
         "--paths", (Join-Path $Root "src"),
         "--add-binary", "$Ffprobe;bin",
         "--add-binary", "$Ffmpeg;bin",
+        "--add-data", "$DefaultFrame;assets",
         $EntryPoint
     )
     & $Python -m PyInstaller @Arguments
@@ -112,7 +117,13 @@ $BundledFfmpeg = Get-ChildItem (Join-Path $DistPath "MXHPublisher") `
 if ($null -eq $BundledFfmpeg) {
     throw "Bản onedir không chứa ffmpeg.exe."
 }
+$BundledFrame = Get-ChildItem (Join-Path $DistPath "MXHPublisher") `
+    -Recurse -Filter "nen.png" -File | Select-Object -First 1
+if ($null -eq $BundledFrame) {
+    throw "Bản onedir không chứa khung nền assets\nen.png."
+}
 
 Write-Host "Build hoàn tất: $Executable"
 Write-Host "ffprobe đóng gói: $($BundledFfprobe.FullName)"
 Write-Host "ffmpeg đóng gói: $($BundledFfmpeg.FullName)"
+Write-Host "Khung nền đóng gói: $($BundledFrame.FullName)"

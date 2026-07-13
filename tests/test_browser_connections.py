@@ -1,73 +1,72 @@
+from __future__ import annotations
+
+import sqlite3
 from pathlib import Path
-from typing import Sequence
 
-from mxh_publisher.services.browser_connections import FacebookBrowserConnection
-
-
-class FakeBrowser:
-    def __init__(self, *, url: str, body: str) -> None:
-        self._url = url
-        self.body = body
-        self.operations: list[str] = []
-
-    @property
-    def url(self) -> str:
-        return self._url
-
-    def goto(self, url: str, *, timeout_ms: int) -> None:
-        self.operations.append("goto")
-
-    def body_text(self) -> str:
-        self.operations.append("body_text")
-        return self.body
-
-    def first_present(self, selectors: Sequence[str], *, timeout_ms: int):
-        return None
-
-    def first_visible(self, selectors: Sequence[str], *, timeout_ms: int):
-        return None
-
-    def set_input_files(self, selector: str, path: Path) -> None:
-        raise AssertionError("Facebook connection must not select a file")
-
-    def fill(self, selector: str, value: str) -> None:
-        raise AssertionError("Facebook connection must not fill credentials")
-
-    def wait(self, milliseconds: int) -> None:
-        pass
-
-    def screenshot(self, path: Path) -> None:
-        raise AssertionError("Facebook connection must not capture login screens")
-
-    def close(self) -> None:
-        self.operations.append("close")
+from mxh_publisher.services.browser_connections import ChromeLoginManager
 
 
-def _connection(tmp_path: Path, browser: FakeBrowser) -> FacebookBrowserConnection:
-    return FacebookBrowserConnection(
-        tmp_path / "facebook-profile",
-        session_factory=lambda *_args: browser,
+class RecordingLauncher:
+    def __init__(self) -> None:
+        self.calls: list[tuple[Path, Path, str]] = []
+
+    def __call__(self, executable: Path, profile: Path, url: str) -> None:
+        self.calls.append((executable, profile, url))
+
+
+def _write_cookie(profile: Path, host: str, name: str) -> None:
+    database = profile / "Default" / "Network" / "Cookies"
+    database.parent.mkdir(parents=True)
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "CREATE TABLE cookies (host_key TEXT, name TEXT, value TEXT, encrypted_value BLOB)"
+        )
+        connection.execute(
+            "INSERT INTO cookies VALUES (?, ?, '', ?)", (host, name, b"encrypted")
+        )
+
+
+def _manager(tmp_path: Path, launcher: RecordingLauncher) -> ChromeLoginManager:
+    return ChromeLoginManager(
+        tmp_path / "chrome-profile",
+        launcher=launcher,
+        chrome_executable=tmp_path / "chrome.exe",
     )
 
 
-def test_facebook_logged_in_session_is_connected(tmp_path: Path) -> None:
-    browser = FakeBrowser(
-        url="https://www.facebook.com/", body="Home Friends Notifications"
-    )
+def test_facebook_saved_cookie_is_connected_and_opens_normal_chrome(
+    tmp_path: Path,
+) -> None:
+    launcher = RecordingLauncher()
+    manager = _manager(tmp_path, launcher)
+    _write_cookie(manager.profile_dir, ".facebook.com", "c_user")
 
-    result = _connection(tmp_path, browser).open_and_check()
+    result = manager.open_facebook()
 
     assert result.connected
     assert "Đã kết nối" in result.message
-    assert browser.operations == ["goto", "body_text"]
+    assert launcher.calls[0][2] == "https://www.facebook.com/"
 
 
-def test_facebook_login_page_is_not_connected(tmp_path: Path) -> None:
-    browser = FakeBrowser(
-        url="https://www.facebook.com/login/", body="Log into Facebook"
-    )
+def test_tiktok_without_cookie_opens_login_and_requests_check_again(
+    tmp_path: Path,
+) -> None:
+    launcher = RecordingLauncher()
+    manager = _manager(tmp_path, launcher)
 
-    result = _connection(tmp_path, browser).open_and_check()
+    result = manager.open_tiktok()
 
     assert not result.connected
-    assert "đăng nhập" in result.message.casefold()
+    assert "Chrome thường" in result.message
+    assert "tiktok.com/login" in launcher.calls[0][2]
+
+
+def test_tiktok_session_cookie_is_connected(tmp_path: Path) -> None:
+    launcher = RecordingLauncher()
+    manager = _manager(tmp_path, launcher)
+    _write_cookie(manager.profile_dir, ".tiktok.com", "sessionid")
+
+    result = manager.open_tiktok()
+
+    assert result.connected
+    assert "đóng toàn bộ" in result.message

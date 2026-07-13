@@ -12,6 +12,7 @@ from mxh_publisher.services.media import (
     VideoEditSpec,
     VideoInfo,
     _wrapped_video_title,
+    default_frame_path,
     inspect_video,
     render_social_video,
     sha256_file,
@@ -187,6 +188,12 @@ class MediaTests(unittest.TestCase):
 
         self.assertEqual(spec.trim_start_seconds, 6.2)
         self.assertEqual(spec.trim_end_seconds, 4.0)
+
+    def test_default_frame_is_the_supplied_blue_image(self) -> None:
+        self.assertEqual(
+            sha256_file(default_frame_path()),
+            "d66882d0e60f73cdde049d6ad997a859ee0d379571bb0dc36e6155df58c6d910",
+        )
 
     def test_project_title_is_split_like_the_reference_layout(self) -> None:
         title = _wrapped_video_title(

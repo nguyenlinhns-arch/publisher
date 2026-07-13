@@ -19,14 +19,12 @@ from ..publishers.base import (
 from ..publishers.facebook import FacebookPublisher
 from ..publishers.tiktok import (
     STATE_AWAITING_CONFIRMATION,
-    SharedBrowserSessionFactory,
-    TikTokConnectionResult,
     TikTokPublisher,
 )
 from ..repository import Repository
 from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
 from .dry_run import CheckResult, DryRunReport, run_dry_run
-from .browser_connections import BrowserConnectionResult, FacebookBrowserConnection
+from .browser_connections import BrowserConnectionResult, ChromeLoginManager
 from .lease import LeaseHeartbeat, LeaseHeartbeatError
 
 
@@ -71,25 +69,18 @@ class PublishingOrchestrator:
         self.config = config
         self.secret_store = secret_store or SecretStore()
         self.worker_id = worker_id or f"{socket.gethostname()}-{id(self):x}"
-        self._shared_browser_factory = SharedBrowserSessionFactory()
         shared_profile = config.browser_profile_dir / "chrome"
         self.tiktok = tiktok or TikTokPublisher(
             browser_profile_dir=shared_profile,
             screenshots_dir=config.screenshots_dir / "tiktok",
             upload_url=config.tiktok_upload_url,
             browser_channel=config.browser_channel,
-            session_factory=self._shared_browser_factory,
         )
-        self.facebook_browser = FacebookBrowserConnection(
-            shared_profile,
-            browser_channel=config.browser_channel,
-            session_factory=self._shared_browser_factory,
-        )
+        self.chrome_login = ChromeLoginManager(shared_profile)
         self.facebook_factory = facebook_factory
 
     def close(self) -> None:
         self.tiktok.close()
-        self.facebook_browser.close()
 
     def _default_facebook_factory(
         self,
@@ -143,6 +134,51 @@ class PublishingOrchestrator:
                     "Tài khoản TikTok hiện tại khác tài khoản đã khóa khi duyệt bài."
                 )
 
+    def assert_tiktok_setup(self, post_id: str) -> None:
+        """Validate only the TikTok destination; Facebook is independent."""
+
+        delivery = self.repository.get_delivery_for_platform(post_id, Platform.TIKTOK)
+        configured = self.config.tiktok_account_id.strip()
+        if configured and (delivery.account_id or "").casefold() != configured.casefold():
+            raise OrchestrationError(
+                "Tài khoản TikTok hiện tại khác tài khoản đã khóa khi duyệt bài."
+            )
+
+    def dry_run_tiktok(self, post_id: str) -> DryRunReport:
+        post = self.repository.get_post(post_id)
+        if post.scheduled_at is None:
+            raise OrchestrationError("Bài chưa có thời gian đăng.")
+        if not post.video_sha256:
+            raise OrchestrationError("Bài chưa có SHA-256 của video.")
+        report = run_dry_run(
+            video_path=Path(post.video_path),
+            expected_sha256=post.video_sha256,
+            caption=post.caption,
+            hashtags=" ".join(post.hashtags),
+            scheduled_at_utc=post.scheduled_at,
+            approved=post.is_approved,
+            minimum_lead_minutes=max(
+                self.config.minimum_schedule_lead_minutes,
+                SAFE_OPERATION_LEAD_MINUTES,
+            ),
+            caption_soft_limit=self.config.caption_soft_limit,
+        )
+        try:
+            delivery = self.repository.get_delivery_for_platform(
+                post_id, Platform.TIKTOK
+            )
+        except Exception:
+            check = CheckResult(False, "TIKTOK_DESTINATION", "Bài chưa có tác vụ TikTok.")
+        else:
+            check = CheckResult(
+                bool(delivery.account_id),
+                "TIKTOK_DESTINATION",
+                f"Hồ sơ TikTok đã khóa: {delivery.account_id}."
+                if delivery.account_id
+                else "Bài chưa khóa hồ sơ TikTok.",
+            )
+        return DryRunReport(report.checks + (check,), report.video_info)
+
     def verify_facebook_connection(self) -> str:
         publisher = self._facebook_publisher()
         try:
@@ -152,10 +188,10 @@ class PublishingOrchestrator:
         return str(identity.get("name") or self.config.facebook_page_id)
 
     def verify_facebook_browser_connection(self) -> BrowserConnectionResult:
-        return self.facebook_browser.open_and_check()
+        return self.chrome_login.open_facebook()
 
-    def verify_tiktok_connection(self) -> TikTokConnectionResult:
-        return self.tiktok.check_connection()
+    def verify_tiktok_connection(self) -> BrowserConnectionResult:
+        return self.chrome_login.open_tiktok()
 
     def dry_run(self, post_id: str) -> DryRunReport:
         post = self.repository.get_post(post_id)
@@ -275,8 +311,8 @@ class PublishingOrchestrator:
         return DryRunReport(report.checks + tuple(setup_checks), report.video_info)
 
     def prepare_tiktok(self, post_id: str) -> ActionResult:
-        self.assert_platform_setup(post_id)
-        report = self.dry_run(post_id)
+        self.assert_tiktok_setup(post_id)
+        report = self.dry_run_tiktok(post_id)
         if not report.ready:
             raise OrchestrationError(report.as_text())
         post = self.repository.get_post(post_id)
