@@ -603,11 +603,16 @@ class _FakeChromium:
         self.context = context
         self.calls: list[dict[str, object]] = []
 
-    def launch_persistent_context(self, _profile: str, **kwargs: object):
-        self.calls.append(kwargs)
+    def connect_over_cdp(self, endpoint: str, **kwargs: object):
+        self.calls.append({"endpoint": endpoint, **kwargs})
         if self.context is None:
-            raise RuntimeError("channel missing")
-        return self.context
+            raise RuntimeError("endpoint missing")
+        return _FakeBrowser(self.context)
+
+
+class _FakeBrowser:
+    def __init__(self, context: _FakeContext) -> None:
+        self.contexts = [context]
 
 
 class _FakePlaywrightManager:
@@ -630,20 +635,21 @@ def _install_fake_playwright(monkeypatch: pytest.MonkeyPatch, manager) -> None:
     monkeypatch.setitem(sys.modules, "playwright.sync_api", module)
 
 
-def test_required_browser_channel_has_no_chromium_fallback(
+def test_browser_attaches_to_existing_shared_chrome_endpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     chromium = _FakeChromium()
     manager = _FakePlaywrightManager(chromium)
     _install_fake_playwright(monkeypatch, manager)
+    monkeypatch.setattr(tiktok_module, "wait_for_devtools_port", lambda *_args, **_kwargs: 9222)
 
-    with pytest.raises(RuntimeError, match="kênh trình duyệt bắt buộc chrome"):
+    with pytest.raises(RuntimeError, match="Chrome dùng chung"):
         tiktok_module._PlaywrightBrowserSession(
             tmp_path / "profile", "chrome", False
         )
 
     assert len(chromium.calls) == 1
-    assert chromium.calls[0]["channel"] == "chrome"
+    assert chromium.calls[0]["endpoint"] == "http://127.0.0.1:9222"
     assert manager.stop_calls == 1
 
 
@@ -654,6 +660,7 @@ def test_browser_session_close_stops_manager_only_once(
     chromium = _FakeChromium(context=context)
     manager = _FakePlaywrightManager(chromium)
     _install_fake_playwright(monkeypatch, manager)
+    monkeypatch.setattr(tiktok_module, "wait_for_devtools_port", lambda *_args, **_kwargs: 9222)
     session = tiktok_module._PlaywrightBrowserSession(
         tmp_path / "profile", "chrome", False
     )
@@ -661,7 +668,7 @@ def test_browser_session_close_stops_manager_only_once(
     session.close()
     session.close()
 
-    assert context.close_calls == 1
+    assert context.close_calls == 0
     assert manager.stop_calls == 1
 
 

@@ -1,4 +1,4 @@
-# MXH Publisher V0.5.2 — bản pilot Windows
+# MXH Publisher V0.5.3 — bản pilot Windows
 
 Ứng dụng Windows hỗ trợ quản lý, duyệt và lên lịch cùng một video lên Facebook Fanpage và TikTok.
 
@@ -8,14 +8,16 @@ hoặc để lại cửa sổ CMD.
 Trước khi lưu bài, ứng dụng cắt đầu/cuối video, ghép khung PNG và xuất một bản
 dùng chung 1080×1920, 30 fps, H.264/AAC cho cả Facebook và TikTok.
 
-- Facebook: Meta Graph API v25.
-- Kết nối: Facebook và TikTok mở trong cùng một hồ sơ Chrome bền vững; người dùng
-  tự đăng nhập, ứng dụng dùng lại cookie/phiên đó và không đọc mật khẩu.
-- TikTok: Playwright mở TikTok Studio có giao diện, tự chọn video đã biên tập,
+- Facebook: mở Meta Business Suite trong Chrome, tự chọn video đã biên tập và
+  điền caption; người dùng kiểm tra rồi bấm Đăng/Lên lịch.
+- Kết nối: Facebook và TikTok dùng cùng một tiến trình/hồ sơ Chrome bền vững;
+  người dùng tự đăng nhập, ứng dụng gắn vào đúng cửa sổ đó và không đọc mật khẩu.
+- TikTok: Playwright gắn vào Chrome đang mở, tự chọn video đã biên tập,
   điền caption, đặt lịch và bấm bước cuối khi đã nhận diện chắc chắn điều khiển.
   CAPTCHA/2FA hoặc giao diện không chắc chắn luôn làm tác vụ dừng.
 - Dữ liệu: SQLite cục bộ; trạng thái, link và lỗi lưu riêng từng nền tảng.
-- Bảo mật: Page token lưu trong Windows Credential Manager; không lưu mật khẩu, cookie hay token trong mã nguồn/database/log.
+- Bảo mật: luồng mặc định không cần Facebook Page token; không lưu mật khẩu,
+  cookie hay token trong mã nguồn/database/log.
 
 Đây là bản pilot để kiểm thử trên một Fanpage và một tài khoản TikTok thử. Chưa
 phải bản production đã được ký mã hoặc xác nhận bằng tài khoản thật.
@@ -26,13 +28,14 @@ Các ranh giới an toàn quan trọng:
 - Chống cùng một nội dung/lịch/tài khoản bị tạo thành hai bài cục bộ khác nhau.
 - Băm lại toàn bộ video ngay trước khi giao cho TikTok hoặc Facebook.
 - Chỉ cho TikTok upload tới đúng `https://www.tiktok.com/tiktokstudio/upload`.
-- Kết quả Facebook chưa rõ được đối soát chỉ-đọc theo `video_id`, không upload lại.
+- Sau khi file đã được đưa vào trình duyệt, tác vụ chuyển `Chờ xác nhận` và không
+  upload lại khi bấm nút lần nữa.
 - Không lưu ảnh màn hình login, CAPTCHA hoặc 2FA; ảnh TikTok khác tự hết hạn sau 7 ngày.
 
 ## Quy trình sử dụng
 
-1. Bấm kết nối Facebook/TikTok, đăng nhập trong Chrome thường rồi bấm kiểm tra lại.
-2. Đóng toàn bộ cửa sổ Chrome do app mở trước khi tải TikTok.
+1. Bấm kết nối Facebook/TikTok và đăng nhập trong Chrome dùng chung của app.
+2. Giữ cửa sổ Chrome này mở trong suốt lúc đăng Facebook/TikTok.
 3. Chọn MP4 nguồn, nhập tiêu đề, caption, hashtag và giờ Việt Nam.
 4. Bấm `Sửa video`; app dùng sẵn `nen.png`, cắt và lưu bản xuất vào `media/edited`.
 5. Bấm `Đăng TikTok` hoặc `Đăng FB`; hai nút độc lập và có thể dùng theo bất kỳ
@@ -40,10 +43,9 @@ Các ranh giới an toàn quan trọng:
 6. App tải video, điền caption, chọn giờ Việt Nam và tự bấm nút cuối khi nhận
    diện chắc chắn giao diện TikTok Studio. CAPTCHA/2FA hoặc giao diện lạ sẽ làm
    app dừng để người dùng xử lý, không tự gửi lại.
-7. Nút `Đăng FB` upload và lên lịch Facebook Fanpage bằng Meta API, không còn
-   chờ trạng thái TikTok.
-8. Sau giờ đăng, worker đối soát trạng thái Facebook; TikTok được giữ trạng thái
-   đã ghi nhận để không gửi trùng.
+7. Nút `Đăng FB` mở đúng trình soạn Reel của Fanpage, tự chọn file và điền
+   caption. Kiểm tra nội dung rồi bấm Đăng/Lên lịch ngay trong Chrome.
+8. Mỗi nút khóa trạng thái sau khi đã đưa file lên để tránh upload trùng.
 
 Lịch phải cách hiện tại ít nhất 60 phút để còn đủ thời gian thao tác và gửi lịch
 an toàn. Mỗi nền tảng có trạng thái và khóa chống gửi trùng riêng.
@@ -82,23 +84,11 @@ py -3.12 -m venv .venv
 
 TikTok dùng Google Chrome đã cài trên Windows nên không cần tải trình duyệt Chromium riêng.
 
-## Thiết lập Facebook
+## Kết nối Facebook và TikTok
 
-Ứng dụng cần một Meta App hợp lệ, Page ID và Page access token có các quyền cần
-thiết cho Fanpage. App Secret không được đưa vào EXE. Xem checklist tại
-[docs/FACEBOOK_SETUP.md](docs/FACEBOOK_SETUP.md).
-
-Cách lưu Page ID/token an toàn:
-
-```powershell
-.\.venv\Scripts\python.exe -m mxh_publisher configure-facebook --page-id PAGE_ID_CUA_THAY
-```
-
-Lệnh sẽ yêu cầu dán token bằng trường ẩn và lưu vào Windows Credential Manager.
-TikTok mặc định dùng chính hồ sơ Chrome đã đăng nhập; không bắt buộc nhập
-`@username` và không phụ thuộc Facebook Page ID khi chỉ đăng TikTok.
-
-Tham khảo chính thức: [Meta Reels Publishing API](https://developers.facebook.com/documentation/video-api/guides/reels-publishing).
+Không cần Meta App hoặc Page access token. Bấm nút kết nối, tự đăng nhập trong
+Chrome của ứng dụng và giữ Chrome mở. Page ID chỉ dùng để mở đúng trình soạn Reel
+của Fanpage; TikTok dùng cùng hồ sơ Chrome đó.
 
 ## Kiểm thử
 
@@ -113,7 +103,7 @@ Bộ test bao phủ:
 - Lease và phục hồi sau crash.
 - TikTok chỉ click nút cuối sau khi nhận diện đủ video, caption, lịch và điều
   khiển tin cậy; kết quả không rõ bị khóa chống gửi lại.
-- Facebook start/upload/finish/status/permalink và unknown outcome.
+- Facebook chọn đúng Fanpage/file, kiểm tra SHA-256 và khóa chống upload lặp.
 - Luồng Facebook/TikTok độc lập và chống lặp thao tác theo từng nền tảng.
 
 ## Build EXE

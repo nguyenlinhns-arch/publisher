@@ -1,21 +1,13 @@
-# Thiết lập Facebook Fanpage thử
+# Kết nối Facebook Fanpage thử
 
-1. Dùng một Fanpage thử, không bắt đầu bằng Page chính.
-2. Tạo/chọn Meta App do chính chủ quản lý và cấu hình theo tài liệu Reels
-   Publishing API hiện hành của Meta.
-3. Cấp Page access token cho đúng Page. Quyền cụ thể phụ thuộc trạng thái và loại
-   Meta App; kiểm tra lại trong tài liệu Meta tại thời điểm cấu hình.
-4. Chạy một lần lệnh `MXHPublisher.exe configure-facebook --page-id
-   1099792776546051`, rồi dán token vào trường ẩn. Token chỉ được lưu trong
-   Windows Credential Manager và không xuất hiện trong giao diện chính.
-5. Khởi động lại ứng dụng, chạy `doctor` và `Dry-run`.
-6. Tạo một video thử không nhạy cảm, hẹn cách ít nhất 60 phút.
-7. Sau khi gửi, đối chiếu `video_id`, trạng thái và permalink trên chính Page.
+1. Dùng một Fanpage thử trước khi dùng Page chính.
+2. Bấm `Kết nối Facebook`; app mở Facebook trong hồ sơ Chrome riêng dùng chung
+   với TikTok.
+3. Tự đăng nhập và chọn đúng Fanpage. Giữ cửa sổ Chrome mở.
+4. Sửa video, khóa lịch rồi bấm `Đăng FB`.
+5. App mở Meta Business Suite theo Page ID đã khóa, chọn đúng file đã sửa và
+   điền caption. Kiểm tra preview rồi tự bấm Đăng/Lên lịch trong Chrome.
+6. Lần bấm tiếp theo bị khóa ở trạng thái `Chờ xác nhận` để tránh tải trùng.
 
-Không dán token vào GitHub, email, ảnh chụp hoặc file cấu hình. Khi nghi ngờ lộ
-token, thu hồi/đổi token tại Meta ngay. Bản V0.2.0 xác nhận token tồn tại cục bộ;
-việc token còn hạn, đúng Page và đủ quyền chỉ được chứng minh bằng lần gọi API
-trên Page thử.
-
-Tài liệu chính thức:
-<https://developers.facebook.com/documentation/video-api/guides/reels-publishing>
+Luồng mặc định không cần Meta App hoặc Page access token. App không lưu mật khẩu
+và không chạm vào hồ sơ Chrome cá nhân.

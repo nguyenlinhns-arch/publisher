@@ -6,9 +6,9 @@
 - `repository`: SQLite, migration, state transition, lease và attempt log.
 - `services/media`: hash, ingest và ffprobe.
 - `services/dry_run`: kiểm tra điều kiện trước khi chuẩn bị đăng.
-- `services/orchestrator`: thực thi TikTok-first và Facebook scheduling.
-- `publishers/facebook`: Meta Graph API v25.
-- `publishers/tiktok`: TikTok Studio, headed Playwright, human-in-the-loop.
+- `services/orchestrator`: điều phối và khóa chống upload lặp theo nền tảng.
+- `publishers/facebook_browser`: Meta Business Suite qua Chrome dùng chung.
+- `publishers/tiktok`: TikTok Studio qua cùng Chrome, tự động có chốt an toàn.
 - `worker`: đối soát trạng thái có lease, không gọi publish theo giờ.
 
 ## Ranh giới an toàn
@@ -19,7 +19,9 @@
 - `content_hash` khóa media/nội dung; `idempotency_key` khóa thêm platform,
   account và lịch UTC. Mutation chỉ chạy khi cả hai còn khớp.
 - Mọi bí mật được cung cấp cho adapter tại thời điểm chạy, không được serialize.
-- TikTok adapter trả về sau khi điền preview; không bấm nút cuối.
+- Facebook dừng ở preview để người dùng kiểm tra nút cuối.
+- TikTok chỉ bấm nút cuối sau khi nhận diện chắc chắn đủ điều khiển; CAPTCHA/2FA
+  hoặc giao diện lạ luôn dừng.
 
 ## Nguồn thời gian
 

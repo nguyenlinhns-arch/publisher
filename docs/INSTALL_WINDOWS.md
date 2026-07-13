@@ -46,25 +46,15 @@ Nếu đang dùng bản cũ chưa có tùy chọn `--system-only`, chạy:
 Kết quả phải có 0 lỗi chặn. Kiểm tra này không cần Page token Facebook và không
 đăng nội dung lên bất kỳ nền tảng nào.
 
-## Cấu hình Facebook
-
-```powershell
-.\MXHPublisher.exe configure-facebook --page-id PAGE_ID_CUA_THAY
-```
-
-Page access token được nhập ẩn và lưu trong Windows Credential Manager. Không
-đưa token vào file cấu hình, ảnh chụp, issue GitHub hoặc log.
-
 ## Mở ứng dụng
 
 ```powershell
 .\MXHPublisher.exe gui
 ```
 
-Facebook và TikTok dùng chung một hồ sơ Chrome của ứng dụng. Các nút kết nối mở
-Google Chrome thường, không gắn trình gỡ lỗi. Tự đăng nhập rồi bấm `Kiểm tra lại`;
-phiên được dùng lại ở những lần sau. Đóng toàn bộ cửa sổ Chrome này trước khi bấm
-`Đăng TikTok` để ứng dụng có thể mở hồ sơ đã lưu cho bước upload.
+Facebook và TikTok dùng chung một hồ sơ và một cửa sổ Chrome của ứng dụng. Tự
+đăng nhập rồi giữ Chrome mở; các nút đăng sẽ gắn vào đúng cửa sổ đó để chọn file
+đã sửa. Luồng mặc định không cần Facebook Page access token.
 
 Ứng dụng không lưu mật khẩu. CAPTCHA và 2FA luôn do người dùng xử lý.
 

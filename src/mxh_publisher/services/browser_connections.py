@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import os
 import shutil
+import socket
 import sqlite3
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -15,6 +17,7 @@ TIKTOK_LOGIN_URL = (
     "https://www.tiktok.com/login?redirect_url="
     "https%3A%2F%2Fwww.tiktok.com%2Ftiktokstudio%2Fupload"
 )
+DEVTOOLS_ACTIVE_PORT_FILE = "DevToolsActivePort"
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,7 +48,12 @@ def find_google_chrome() -> Path:
 
 
 def launch_normal_chrome(executable: Path, profile_dir: Path, url: str) -> None:
-    """Open an ordinary detached Chrome window using the app's shared profile."""
+    """Open detached Chrome with the app profile and a local automation endpoint.
+
+    Chrome remains an ordinary, user-visible browser.  The local endpoint lets
+    the publisher attach to this *same process* later instead of starting a
+    second browser that loses login state or locks the profile.
+    """
 
     profile_dir.mkdir(parents=True, exist_ok=True)
     creation_flags = 0
@@ -58,6 +66,8 @@ def launch_normal_chrome(executable: Path, profile_dir: Path, url: str) -> None:
             str(executable),
             f"--user-data-dir={profile_dir}",
             "--profile-directory=Default",
+            "--remote-debugging-address=127.0.0.1",
+            "--remote-debugging-port=0",
             "--start-maximized",
             url,
         ],
@@ -67,6 +77,34 @@ def launch_normal_chrome(executable: Path, profile_dir: Path, url: str) -> None:
         close_fds=True,
         creationflags=creation_flags,
     )
+
+
+def read_devtools_port(profile_dir: Path) -> int | None:
+    """Return the live Chrome debugging port recorded in the app profile."""
+
+    marker = profile_dir / DEVTOOLS_ACTIVE_PORT_FILE
+    try:
+        first_line = marker.read_text(encoding="utf-8").splitlines()[0].strip()
+        port = int(first_line)
+    except (OSError, ValueError, IndexError):
+        return None
+    return port if 1 <= port <= 65535 else None
+
+
+def wait_for_devtools_port(profile_dir: Path, timeout_seconds: float = 10.0) -> int | None:
+    """Wait briefly for Chrome to expose its local endpoint after launch."""
+
+    deadline = time.monotonic() + max(timeout_seconds, 0.0)
+    while True:
+        if port := read_devtools_port(profile_dir):
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.25):
+                    return port
+            except OSError:
+                pass
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(0.2)
 
 
 class ChromeLoginManager:
@@ -145,12 +183,13 @@ class ChromeLoginManager:
         if connected:
             return BrowserConnectionResult(
                 True,
-                "Đã kết nối Facebook bằng phiên Chrome đã lưu. Có thể đóng Chrome.",
+                "Đã nhận phiên Facebook trong Chrome dùng chung. Hãy giữ Chrome mở; "
+                "nút Đăng FB sẽ đưa video đã sửa vào chính cửa sổ này.",
             )
         return BrowserConnectionResult(
             False,
-            "Facebook đã mở trong Chrome thường. Hãy đăng nhập, chờ trang chính hiện ra, "
-            "rồi bấm Kiểm tra lại.",
+            "Facebook đã mở trong Chrome dùng chung. Hãy đăng nhập và giữ Chrome mở; "
+            "sau đó có thể bấm Đăng FB trực tiếp.",
         )
 
     def open_tiktok(self) -> BrowserConnectionResult:
@@ -171,15 +210,14 @@ class ChromeLoginManager:
             self._open("https://www.tiktok.com/tiktokstudio/upload")
             return BrowserConnectionResult(
                 True,
-                "Đã kết nối TikTok bằng phiên Chrome đã lưu. Hãy đóng toàn bộ cửa sổ "
-                "Chrome này trước khi bấm Đăng TikTok.",
+                "Đã nhận phiên TikTok trong Chrome dùng chung. Hãy giữ Chrome mở; "
+                "nút Đăng TikTok sẽ dùng chính cửa sổ này.",
             )
         self._open(TIKTOK_LOGIN_URL)
         return BrowserConnectionResult(
             False,
-            "TikTok đã mở trong Chrome thường, không gắn trình gỡ lỗi. Hãy đăng nhập, "
-            "chờ TikTok Studio hiện ra, rồi bấm Kiểm tra lại. Sau khi kết nối, hãy "
-            "đóng Chrome trước khi bấm Đăng TikTok.",
+            "TikTok đã mở trong Chrome dùng chung. Hãy đăng nhập, chờ TikTok Studio "
+            "hiện ra và giữ Chrome mở; sau đó bấm Đăng TikTok.",
         )
 
 

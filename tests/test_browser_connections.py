@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from mxh_publisher.services import browser_connections as browser_module
 from mxh_publisher.services.browser_connections import ChromeLoginManager
 
 
@@ -44,7 +45,7 @@ def test_facebook_saved_cookie_is_connected_and_opens_normal_chrome(
     result = manager.open_facebook()
 
     assert result.connected
-    assert "Đã kết nối" in result.message
+    assert "Chrome dùng chung" in result.message
     assert launcher.calls[0][2] == "https://www.facebook.com/"
 
 
@@ -57,7 +58,7 @@ def test_tiktok_without_cookie_opens_login_and_requests_check_again(
     result = manager.open_tiktok()
 
     assert not result.connected
-    assert "Chrome thường" in result.message
+    assert "Chrome dùng chung" in result.message
     assert "tiktok.com/login" in launcher.calls[0][2]
 
 
@@ -69,7 +70,7 @@ def test_tiktok_session_cookie_is_connected(tmp_path: Path) -> None:
     result = manager.open_tiktok()
 
     assert result.connected
-    assert "đóng toàn bộ" in result.message
+    assert "giữ Chrome mở" in result.message
     assert "tiktokstudio/upload" in launcher.calls[0][2]
 
 
@@ -82,3 +83,28 @@ def test_tiktok_passport_cookie_is_recognized_as_connected(tmp_path: Path) -> No
 
     assert result.connected
     assert "tiktokstudio/upload" in launcher.calls[0][2]
+
+
+def test_normal_chrome_uses_shared_profile_and_local_debug_endpoint(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    class _Process:
+        pass
+
+    def fake_popen(command, **_kwargs):
+        calls.append(command)
+        return _Process()
+
+    monkeypatch.setattr(browser_module.subprocess, "Popen", fake_popen)
+    profile = tmp_path / "profile"
+
+    browser_module.launch_normal_chrome(
+        tmp_path / "chrome.exe", profile, "https://www.facebook.com/"
+    )
+
+    command = calls[0]
+    assert f"--user-data-dir={profile}" in command
+    assert "--remote-debugging-address=127.0.0.1" in command
+    assert "--remote-debugging-port=0" in command

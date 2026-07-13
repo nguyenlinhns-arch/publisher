@@ -23,6 +23,11 @@ from typing import Any, Callable, Protocol, Sequence
 from urllib.parse import urlsplit, urlunsplit
 from zoneinfo import ZoneInfo
 
+from ..services.browser_connections import (
+    find_google_chrome,
+    launch_normal_chrome,
+    wait_for_devtools_port,
+)
 from .base import PublishRequest, PublishResult, PublisherError
 
 
@@ -331,7 +336,12 @@ def _detect_challenge(session: BrowserSession) -> _Challenge | None:
 
 
 class _PlaywrightBrowserSession:
-    """Thin synchronous Playwright wrapper used only by the default factory."""
+    """Attach Playwright to the already-open, app-owned Chrome process.
+
+    Login and publishing deliberately share one visible Chrome process.  This
+    avoids profile locks, discarded TikTok sessions and the extra automated
+    login window that earlier builds created.
+    """
 
     def __init__(self, profile_dir: Path, browser_channel: str, headless: bool) -> None:
         try:
@@ -348,40 +358,41 @@ class _PlaywrightBrowserSession:
                 "không dùng Chromium dự phòng."
             )
 
+        if headless:
+            raise RuntimeError("Phiên đăng bài bắt buộc phải hiển thị Chrome.")
+
         self._manager: Any | None = sync_playwright().start()
+        self._browser = None
         self._context = None
         self._closed = False
         profile_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            self._context = self._manager.chromium.launch_persistent_context(
-                str(profile_dir),
-                channel=requested,
-                headless=headless,
-                no_viewport=True,
-                args=["--start-maximized"],
+            port = wait_for_devtools_port(profile_dir, timeout_seconds=0.5)
+            if port is None:
+                launch_normal_chrome(
+                    find_google_chrome(), profile_dir, DEFAULT_UPLOAD_URL
+                )
+                port = wait_for_devtools_port(profile_dir, timeout_seconds=10.0)
+            if port is None:
+                raise RuntimeError(
+                    "Chrome cũ đang dùng hồ sơ nhưng chưa bật kết nối nội bộ. "
+                    "Hãy đóng các cửa sổ Chrome do MXH Publisher đã mở, bấm "
+                    "Kết nối TikTok một lần rồi thử lại."
+                )
+            self._browser = self._manager.chromium.connect_over_cdp(
+                f"http://127.0.0.1:{port}", timeout=15_000
             )
+            if not self._browser.contexts:
+                raise RuntimeError("Chrome dùng chung chưa tạo được hồ sơ trình duyệt.")
+            self._context = self._browser.contexts[0]
         except Exception as exc:  # pragma: no cover - browser installation-specific
             manager = self._manager
             self._manager = None
             manager.stop()
             detail = str(exc)
-            folded = detail.casefold()
-            if any(
-                marker in folded
-                for marker in (
-                    "processsingleton",
-                    "profile in use",
-                    "user data directory is already in use",
-                    "singletonlock",
-                )
-            ):
-                raise RuntimeError(
-                    "Hồ sơ Chrome đăng nhập đang được sử dụng. Hãy đóng toàn bộ cửa "
-                    "sổ Chrome do ứng dụng mở, chờ vài giây rồi bấm Đăng TikTok lại."
-                ) from exc
             raise RuntimeError(
-                f"Không mở được kênh trình duyệt bắt buộc {requested}: {detail}"
+                f"Không gắn được vào Chrome dùng chung ({requested}): {detail}"
             ) from exc
 
         self._page = (
@@ -460,15 +471,15 @@ class _PlaywrightBrowserSession:
         if self._closed:
             return
         self._closed = True
-        try:
-            if self._context is not None:
-                self._context.close()
-                self._context = None
-        finally:
-            manager = self._manager
-            self._manager = None
-            if manager is not None:
-                manager.stop()
+        # Never close the remote context/browser: it is the visible Chrome that
+        # the operator uses for both Facebook and TikTok.  Stopping Playwright
+        # only detaches this local control connection.
+        self._context = None
+        self._browser = None
+        manager = self._manager
+        self._manager = None
+        if manager is not None:
+            manager.stop()
 
 
 def start_playwright_session(

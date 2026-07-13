@@ -31,6 +31,11 @@ class FakeSecrets:
         return "fake-token"
 
 
+class EmptySecrets:
+    def get(self, _name: str) -> str | None:
+        return None
+
+
 class FakeTikTok:
     def __init__(self) -> None:
         self.calls = []
@@ -283,6 +288,67 @@ def test_facebook_can_be_scheduled_while_tiktok_is_still_pending(
         repository.get_delivery_for_platform(post.id, Platform.TIKTOK).status
         is DeliveryStatus.PENDING
     )
+
+
+def test_default_facebook_upload_uses_browser_without_page_token(
+    monkeypatch, tmp_path: Path
+) -> None:
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"dummy-video")
+    repository = Repository(tmp_path / "db.sqlite3")
+    post = repository.create_post(
+        video_path=str(video),
+        video_sha256=sha256_file(video),
+        caption="Nội dung",
+    )
+    repository.approve_post(post.id)
+    repository.schedule_post(
+        post.id,
+        datetime.now(UTC) + timedelta(hours=2),
+        destinations={
+            Platform.FACEBOOK: "123456",
+            Platform.TIKTOK: "@test_account",
+        },
+    )
+    monkeypatch.setattr(
+        "mxh_publisher.services.orchestrator.run_dry_run",
+        lambda **_kwargs: DryRunReport((CheckResult(True, "OK", "OK"),)),
+    )
+
+    calls = []
+
+    class FakeBrowserFacebook:
+        def __init__(self, **kwargs):
+            calls.append(("init", kwargs))
+
+        def publish(self, request):
+            calls.append(("publish", request))
+            return PublishResult(
+                state=STATE_AWAITING_CONFIRMATION,
+                metadata={"video_uploaded": True},
+                message="Đã đưa video vào Chrome.",
+            )
+
+        def close(self):
+            calls.append(("close",))
+
+    monkeypatch.setattr(
+        "mxh_publisher.services.orchestrator.FacebookBrowserPublisher",
+        FakeBrowserFacebook,
+    )
+    orchestrator = PublishingOrchestrator(
+        repository,
+        _config(tmp_path),
+        tiktok=FakeTikTok(),
+        secret_store=EmptySecrets(),
+    )
+
+    result = orchestrator.schedule_facebook(post.id)
+
+    delivery = repository.get_delivery_for_platform(post.id, Platform.FACEBOOK)
+    assert result.platform_result is not None
+    assert delivery.status is DeliveryStatus.AWAITING_CONFIRMATION
+    assert any(call[0] == "publish" for call in calls)
 
 
 def test_changed_tiktok_account_is_blocked_before_tiktok_upload(tmp_path: Path) -> None:

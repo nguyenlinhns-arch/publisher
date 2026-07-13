@@ -17,6 +17,7 @@ from ..publishers.base import (
     PublisherError,
 )
 from ..publishers.facebook import FacebookPublisher
+from ..publishers.facebook_browser import FacebookBrowserPublisher
 from ..publishers.tiktok import (
     STATE_AWAITING_CONFIRMATION,
     STATE_PUBLISHED,
@@ -80,6 +81,7 @@ class PublishingOrchestrator:
             auto_submit=True,
         )
         self.chrome_login = ChromeLoginManager(shared_profile)
+        self.shared_browser_profile = shared_profile
         self.facebook_factory = facebook_factory
 
     def close(self) -> None:
@@ -112,6 +114,24 @@ class PublishingOrchestrator:
             return self.facebook_factory(checkpoint_callback)
         return self._default_facebook_factory(checkpoint_callback)
 
+    def _facebook_upload_publisher(
+        self,
+        checkpoint_callback: PublishCheckpointCallback | None = None,
+    ) -> FacebookPublisher | FacebookBrowserPublisher:
+        """Use injected/API publishers only in tests/legacy integrations.
+
+        Normal desktop publishing uses the same visible Chrome as TikTok and
+        therefore never asks the operator for a Facebook Page access token.
+        """
+
+        if self.facebook_factory is not None:
+            return self.facebook_factory(checkpoint_callback)
+        return FacebookBrowserPublisher(
+            page_id=self.config.facebook_page_id,
+            browser_profile_dir=self.shared_browser_profile,
+            browser_channel=self.config.browser_channel,
+        )
+
     def assert_platform_setup(self, post_id: str | None = None) -> None:
         page_id = self.config.facebook_page_id.strip()
         if not page_id.isdigit():
@@ -119,9 +139,6 @@ class PublishingOrchestrator:
         tiktok_account = self.config.tiktok_account_id.strip()
         if not tiktok_account:
             raise OrchestrationError("Chưa cấu hình tài khoản TikTok đích.")
-        token = self.secret_store.get(FACEBOOK_TOKEN_NAME)
-        if not token:
-            raise OrchestrationError("Chưa lưu Facebook Page access token.")
         if post_id is not None:
             facebook = self.repository.get_delivery_for_platform(
                 post_id, Platform.FACEBOOK
@@ -151,10 +168,6 @@ class PublishingOrchestrator:
         page_id = self.config.facebook_page_id.strip()
         if not page_id.isdigit():
             raise OrchestrationError("Chưa cấu hình Facebook Page ID hợp lệ.")
-        if not self.secret_store.get(FACEBOOK_TOKEN_NAME):
-            raise OrchestrationError(
-                "Chưa có Facebook Page access token trong Windows Credential Manager."
-            )
         delivery = self.repository.get_delivery_for_platform(
             post_id, Platform.FACEBOOK
         )
@@ -188,7 +201,6 @@ class PublishingOrchestrator:
             matches = delivery.account_id == page_id
         except Exception:
             matches = False
-        token_available = bool(self.secret_store.get(FACEBOOK_TOKEN_NAME))
         checks = (
             CheckResult(
                 page_id.isdigit(),
@@ -196,13 +208,6 @@ class PublishingOrchestrator:
                 f"Facebook Page ID: {page_id}."
                 if page_id.isdigit()
                 else "Facebook Page ID chưa hợp lệ.",
-            ),
-            CheckResult(
-                token_available,
-                "FACEBOOK_TOKEN",
-                "Đã có Facebook Page token."
-                if token_available
-                else "Chưa có Facebook Page access token.",
             ),
             CheckResult(
                 matches,
@@ -250,18 +255,21 @@ class PublishingOrchestrator:
         return DryRunReport(report.checks + (check,), report.video_info)
 
     def verify_facebook_connection(self) -> str:
-        publisher = self._facebook_publisher()
-        try:
-            identity = publisher.verify_page_access()
-        finally:
-            publisher.close()
-        return str(identity.get("name") or self.config.facebook_page_id)
+        result = self.chrome_login.open_facebook()
+        return "Chrome dùng chung" if result.connected else "Chờ đăng nhập trong Chrome"
 
     def verify_facebook_browser_connection(self) -> BrowserConnectionResult:
         return self.chrome_login.open_facebook()
 
     def verify_tiktok_connection(self) -> BrowserConnectionResult:
-        return self.chrome_login.open_tiktok()
+        opened = self.chrome_login.open_tiktok()
+        if opened.connected:
+            return opened
+        try:
+            checked = self.tiktok.check_connection()
+        except Exception:
+            return opened
+        return BrowserConnectionResult(checked.connected, checked.message)
 
     def dry_run(self, post_id: str) -> DryRunReport:
         post = self.repository.get_post(post_id)
@@ -300,19 +308,6 @@ class PublishingOrchestrator:
                 else "Chưa cấu hình tài khoản TikTok đích.",
             ),
         ]
-        try:
-            token_available = bool(self.secret_store.get(FACEBOOK_TOKEN_NAME))
-            token_message = (
-                "Đã tìm thấy Facebook Page token trong kho bí mật."
-                if token_available
-                else "Chưa lưu Facebook Page access token."
-            )
-        except Exception as exc:
-            token_available = False
-            token_message = f"Không đọc được kho bí mật Facebook: {exc}"
-        setup_checks.append(
-            CheckResult(token_available, "FACEBOOK_TOKEN", token_message)
-        )
         accounts_match = False
         try:
             facebook = self.repository.get_delivery_for_platform(
@@ -337,47 +332,15 @@ class PublishingOrchestrator:
                     else "Tài khoản đích đã thay đổi; không được tiếp tục đăng.",
                 )
             )
-        if token_available and page_id.isdigit() and tiktok_account and accounts_match:
-            publisher: FacebookPublisher | None = None
-            try:
-                publisher = self._facebook_publisher()
-                identity = publisher.verify_page_access()
-                page_name = str(identity.get("name") or page_id)
-            except PublisherError as exc:
-                setup_checks.append(
-                    CheckResult(
-                        False,
-                        "FACEBOOK_PAGE_ACCESS",
-                        f"Không xác minh được Page/token Facebook: {exc.message}",
-                    )
-                )
-            except Exception as exc:
-                setup_checks.append(
-                    CheckResult(
-                        False,
-                        "FACEBOOK_PAGE_ACCESS",
-                        f"Không xác minh được Page/token Facebook: {exc}",
-                    )
-                )
-            else:
-                setup_checks.append(
-                    CheckResult(
-                        True,
-                        "FACEBOOK_PAGE_ACCESS",
-                        f"Meta xác nhận token truy cập đúng Page: {page_name}.",
-                    )
-                )
-            finally:
-                if publisher is not None:
-                    publisher.close()
-        else:
-            setup_checks.append(
-                CheckResult(
-                    False,
-                    "FACEBOOK_PAGE_ACCESS",
-                    "Chưa đủ cấu hình để xác minh Page/token trực tiếp với Meta.",
-                )
+        setup_checks.append(
+            CheckResult(
+                page_id.isdigit() and accounts_match,
+                "SHARED_CHROME_UPLOAD",
+                "Facebook sẽ dùng Chrome chung và không cần Page access token."
+                if page_id.isdigit() and accounts_match
+                else "Chưa khóa đúng Fanpage cho luồng tải qua Chrome.",
             )
+        )
         return DryRunReport(report.checks + tuple(setup_checks), report.video_info)
 
     def prepare_tiktok(self, post_id: str) -> ActionResult:
@@ -548,7 +511,9 @@ class PublishingOrchestrator:
             facebook_delivery.id,
             lease_token,
             phase="schedule_facebook",
-            details={"graph_version": self.config.graph_version},
+            details={
+                "mode": "injected" if self.facebook_factory is not None else "shared_chrome"
+            },
         )
         self.repository.mark_preparing(facebook_delivery.id, lease_token)
 
@@ -564,9 +529,9 @@ class PublishingOrchestrator:
                 lease_seconds=REMOTE_MUTATION_LEASE_SECONDS,
             )
 
-        publisher: FacebookPublisher | None = None
+        publisher: FacebookPublisher | FacebookBrowserPublisher | None = None
         try:
-            publisher = self._facebook_publisher(save_checkpoint)
+            publisher = self._facebook_upload_publisher(save_checkpoint)
             with LeaseHeartbeat(
                 self.repository,
                 facebook_delivery.id,
@@ -587,7 +552,13 @@ class PublishingOrchestrator:
                 str(result.metadata.get("video_id") or result.remote_id or "") or None
             )
             post_remote_id = str(result.metadata.get("post_id") or "") or None
-            if result.state == "scheduled":
+            if result.state == STATE_AWAITING_CONFIRMATION:
+                self.repository.mark_awaiting_confirmation(
+                    facebook_delivery.id,
+                    lease_token,
+                    next_check_at=post.scheduled_at,
+                )
+            elif result.state == "scheduled":
                 self.repository.mark_scheduled(
                     facebook_delivery.id,
                     lease_token,

@@ -99,7 +99,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.5.2 — Biên tập, Facebook & TikTok")
+        self.title("MXH Publisher v0.5.3 — Biên tập, Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -298,8 +298,9 @@ class MainWindow(tk.Tk):
         ttk.Label(
             form,
             text=(
-                "TikTok: ứng dụng tự tải, điền caption và đăng/lên lịch khi xác định "
-                "chắc chắn các điều khiển. Facebook đăng Fanpage độc lập bằng Meta API."
+                "Facebook và TikTok dùng cùng Chrome đã đăng nhập. Ứng dụng đưa file "
+                "đã sửa vào trang tải lên; TikTok tự đăng/lên lịch khi xác định chắc "
+                "chắn, Facebook để Thầy kiểm tra nút cuối. Không cần Page token."
             ),
             wraplength=650,
             foreground="#444444",
@@ -345,7 +346,7 @@ class MainWindow(tk.Tk):
 
     def _facebook_browser_connection_success(self, result) -> None:
         self.facebook_connection_var.set(
-            "Đã kết nối" if result.connected else "Chờ đăng nhập"
+            "Đã nhận phiên" if result.connected else "Chrome đã mở — hãy đăng nhập"
         )
         self.status_var.set(result.message)
         title = "Đã kết nối" if result.connected else "Đăng nhập Facebook"
@@ -361,7 +362,9 @@ class MainWindow(tk.Tk):
     def _tiktok_connection_success(self, result) -> None:
         account = self.config_data.tiktok_account_id.strip() or "TikTok"
         self.tiktok_connection_var.set(
-            f"Đã kết nối: {account}" if result.connected else "Chờ đăng nhập/xác minh"
+            f"Đã kết nối: {account}"
+            if result.connected
+            else "Chrome đã mở — hãy đăng nhập/xác minh"
         )
         self.status_var.set(result.message)
         title = "Đã kết nối" if result.connected else "Cần đăng nhập/xác minh"
@@ -711,6 +714,30 @@ class MainWindow(tk.Tk):
         if post.status in {PostStatus.DRAFT, PostStatus.APPROVED}:
             self.approve_and_schedule(continue_to_facebook=True)
             return
+        try:
+            delivery = self.repository.get_delivery_for_platform(
+                post_id, Platform.FACEBOOK
+            )
+        except Exception:
+            delivery = None
+        if delivery is not None and delivery.status is DeliveryStatus.AWAITING_CONFIRMATION:
+            messagebox.showinfo(
+                "Facebook đang chờ xác nhận",
+                "Video đã được đưa vào Facebook trong Chrome. Hãy kiểm tra rồi bấm "
+                "Đăng/Lên lịch trên Facebook. Ứng dụng không tải lại để tránh trùng.",
+                parent=self,
+            )
+            return
+        if delivery is not None and delivery.status in {
+            DeliveryStatus.SCHEDULED,
+            DeliveryStatus.PUBLISHED,
+        }:
+            messagebox.showinfo(
+                "Facebook đã xử lý",
+                "Facebook đã được đăng/lên lịch. Ứng dụng không gửi lại để tránh trùng.",
+                parent=self,
+            )
+            return
         self.schedule_facebook()
 
     def delete_published_video(self) -> None:
@@ -822,7 +849,7 @@ class MainWindow(tk.Tk):
 
         self._run_background(
             lambda: self.orchestrator.schedule_facebook(post_id),
-            working_message="Đang upload và lên lịch Facebook qua API…",
+            working_message="Đang đưa video đã sửa vào Facebook trong Chrome…",
             success=success,
         )
 

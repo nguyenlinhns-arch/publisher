@@ -121,7 +121,7 @@ def _secret_store_check(store: SecretStore, *, blocking: bool) -> DoctorCheck:
         else (
             "Kho bí mật hoạt động nhưng chưa có Facebook Page token."
             if blocking
-            else "Kho bí mật có thể truy cập; bỏ qua token ở chế độ system-only."
+            else "Kho bí mật có thể truy cập; luồng Chrome không cần Page token."
         ),
         blocking=blocking,
     )
@@ -158,7 +158,10 @@ def run_doctor(
         )
 
     store = secret_store or SecretStore()
-    checks.append(_secret_store_check(store, blocking=include_accounts))
+    # Browser publishing does not require a Facebook Page token.  Keep this
+    # legacy-store diagnostic informational for upgrades that still contain an
+    # old token, but never block normal desktop use.
+    checks.append(_secret_store_check(store, blocking=False))
     if include_accounts:
         page_id = config.facebook_page_id.strip()
         checks.append(

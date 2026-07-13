@@ -17,9 +17,8 @@ Không đưa backup lên GitHub hoặc dịch vụ chia sẻ công khai.
 ## Gỡ
 
 1. Chạy `tools\uninstall_verification_task.ps1` nếu đã cài task.
-2. Thu hồi/xóa Facebook Page token trong Windows Credential Manager.
-3. Xóa thư mục ứng dụng portable.
-4. Chỉ khi không cần lịch sử/audit nữa mới xóa
+2. Xóa thư mục ứng dụng portable.
+3. Chỉ khi không cần lịch sử/audit và phiên đăng nhập nữa mới xóa
    `%LOCALAPPDATA%\MXHPublisher`; thao tác này xóa cả database, media và phiên
    TikTok.
 
