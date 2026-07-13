@@ -84,10 +84,12 @@ class MainWindow(tk.Tk):
             )
         )
         self.status_var = tk.StringVar(value=startup_status)
+        self.facebook_connection_var = tk.StringVar()
+        self.tiktok_connection_var = tk.StringVar()
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.3 — Facebook & TikTok")
+        self.title("MXH Publisher v0.3.1 — Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -118,10 +120,49 @@ class MainWindow(tk.Tk):
         outer.grid(sticky="nsew")
         outer.columnconfigure(0, weight=2)
         outer.columnconfigure(1, weight=3)
-        outer.rowconfigure(0, weight=1)
+        outer.rowconfigure(1, weight=1)
+
+        connections = ttk.LabelFrame(outer, text="Kết nối nền tảng", padding=8)
+        connections.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+        connections.columnconfigure(1, weight=1)
+        connections.columnconfigure(5, weight=1)
+
+        ttk.Label(connections, text="Facebook", width=10).grid(
+            row=0, column=0, sticky="w"
+        )
+        ttk.Label(connections, textvariable=self.facebook_connection_var).grid(
+            row=0, column=1, sticky="w", padx=(0, 8)
+        )
+        facebook_connect = ttk.Button(
+            connections, text="Kết nối/đổi", command=self.open_settings
+        )
+        facebook_connect.grid(row=0, column=2, padx=3)
+        facebook_check = ttk.Button(
+            connections, text="Kiểm tra", command=self.check_facebook_connection
+        )
+        facebook_check.grid(row=0, column=3, padx=(3, 14))
+
+        ttk.Label(connections, text="TikTok", width=8).grid(
+            row=0, column=4, sticky="w"
+        )
+        ttk.Label(connections, textvariable=self.tiktok_connection_var).grid(
+            row=0, column=5, sticky="w", padx=(0, 8)
+        )
+        tiktok_connect = ttk.Button(
+            connections, text="Mở kết nối", command=self.check_tiktok_connection
+        )
+        tiktok_connect.grid(row=0, column=6, padx=3)
+        tiktok_check = ttk.Button(
+            connections, text="Kiểm tra lại", command=self.check_tiktok_connection
+        )
+        tiktok_check.grid(row=0, column=7, padx=3)
+        self._busy_widgets.extend(
+            [facebook_connect, facebook_check, tiktok_connect, tiktok_check]
+        )
+        self._refresh_connection_summary()
 
         list_frame = ttk.LabelFrame(outer, text="Danh sách bài", padding=8)
-        list_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        list_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 8))
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
         self.tree = ttk.Treeview(
@@ -152,7 +193,7 @@ class MainWindow(tk.Tk):
         )
 
         form = ttk.LabelFrame(outer, text="Nội dung và lịch đăng", padding=12)
-        form.grid(row=0, column=1, sticky="nsew")
+        form.grid(row=1, column=1, sticky="nsew")
         form.columnconfigure(1, weight=1)
         form.rowconfigure(2, weight=1)
 
@@ -223,6 +264,49 @@ class MainWindow(tk.Tk):
             self, textvariable=self.status_var, relief="sunken", anchor="w"
         )
         status.grid(row=1, column=0, sticky="ew")
+
+    def _refresh_connection_summary(self) -> None:
+        page_id = self.config_data.facebook_page_id.strip()
+        try:
+            has_token = bool(self.secret_store.get(FACEBOOK_TOKEN_NAME))
+        except Exception:
+            has_token = False
+        if page_id.isdigit() and has_token:
+            self.facebook_connection_var.set(f"Đã cấu hình Page ID {page_id}")
+        elif page_id.isdigit():
+            self.facebook_connection_var.set("Thiếu Page access token")
+        else:
+            self.facebook_connection_var.set("Chưa kết nối")
+        account = self.config_data.tiktok_account_id.strip()
+        self.tiktok_connection_var.set(
+            f"Đã cấu hình {account}" if account else "Chưa kết nối"
+        )
+
+    def check_facebook_connection(self) -> None:
+        self._run_background(
+            self.orchestrator.verify_facebook_connection,
+            working_message="Đang kiểm tra kết nối Facebook…",
+            success=self._facebook_connection_success,
+        )
+
+    def _facebook_connection_success(self, page_name: str) -> None:
+        self.facebook_connection_var.set(f"Đã kết nối: {page_name}")
+        self.status_var.set(f"Meta xác nhận kết nối Facebook Page: {page_name}.")
+
+    def check_tiktok_connection(self) -> None:
+        self._run_background(
+            self.orchestrator.verify_tiktok_connection,
+            working_message="Đang mở và kiểm tra TikTok Studio…",
+            success=self._tiktok_connection_success,
+        )
+
+    def _tiktok_connection_success(self, result) -> None:
+        account = self.config_data.tiktok_account_id.strip() or "TikTok"
+        self.tiktok_connection_var.set(
+            f"Đã kết nối: {account}" if result.connected else "Chờ đăng nhập/xác minh"
+        )
+        self.status_var.set(result.message)
+        messagebox.showinfo("Kết nối TikTok", result.message, parent=self)
 
     def run_primary_action(self) -> None:
         action = next_action(self.repository, self.selected_post_id)
@@ -686,6 +770,7 @@ class MainWindow(tk.Tk):
             self.orchestrator = PublishingOrchestrator(
                 self.repository, self.config_data, secret_store=self.secret_store
             )
+            self._refresh_connection_summary()
 
         def doctor() -> None:
             result_box.delete("1.0", "end")
