@@ -12,7 +12,7 @@
 
 - Đọc lỗi trong giao diện/log.
 - Với 401/403: kiểm tra Page, token, quyền; không upload lại.
-- Với CAPTCHA/2FA/login: xử lý trực tiếp trong Edge.
+- Với CAPTCHA/2FA/login: xử lý trực tiếp trong Chrome.
 - Với account mismatch: đổi lại đúng account đã khóa hoặc tạo bài mới và duyệt
   lại; không đổi delivery đã có remote evidence.
 

@@ -80,6 +80,18 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(raw["tiktok"]["account_id"], injected)
         self.assertNotIn("attacker", raw)
 
+    def test_old_edge_setting_is_migrated_to_chrome(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "old.toml"
+            path.write_text(
+                '[tiktok]\nbrowser_channel = "msedge"\n', encoding="utf-8"
+            )
+            with patch("mxh_publisher.config.app_data_dir", return_value=root):
+                config = load_config(path)
+
+        self.assertEqual(config.browser_channel, "chrome")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -290,13 +290,13 @@ class _PlaywrightBrowserSession:
             from playwright.sync_api import sync_playwright
         except ImportError as exc:  # pragma: no cover - environment-dependent
             raise RuntimeError(
-                "Chưa cài Playwright. Hãy cài playwright và Microsoft Edge."
+                "Chưa cài Playwright. Hãy cài playwright và Google Chrome."
             ) from exc
 
         requested = browser_channel.strip().lower()
         if not requested or requested == "chromium":
             raise RuntimeError(
-                "Phải cấu hình một kênh trình duyệt đã cài đặt, ví dụ msedge; "
+                "Phải cấu hình một kênh trình duyệt đã cài đặt, ví dụ chrome; "
                 "không dùng Chromium dự phòng."
             )
 
@@ -422,7 +422,7 @@ class TikTokPublisher:
         browser_profile_dir: Path | None = None,
         screenshots_dir: Path | None = None,
         upload_url: str = DEFAULT_UPLOAD_URL,
-        browser_channel: str = "msedge",
+        browser_channel: str = "chrome",
         session_factory: BrowserSessionFactory | None = None,
         navigation_timeout_ms: int = 45_000,
         control_timeout_ms: int = 20_000,
@@ -488,13 +488,13 @@ class TikTokPublisher:
             if challenge.kind == "login":
                 return TikTokConnectionResult(
                     False,
-                    "TikTok chưa đăng nhập. Hãy đăng nhập trong cửa sổ Edge vừa mở, "
+                    "TikTok chưa đăng nhập. Hãy đăng nhập trong cửa sổ Chrome vừa mở, "
                     "sau đó bấm Kiểm tra lại.",
                 )
             return TikTokConnectionResult(
                 False,
                 "TikTok yêu cầu CAPTCHA hoặc mã xác minh. Hãy tự hoàn tất trong "
-                "cửa sổ Edge rồi bấm Kiểm tra lại.",
+                "cửa sổ Chrome rồi bấm Kiểm tra lại.",
             )
         if not _is_trusted_studio_url(session.url):
             return TikTokConnectionResult(
@@ -505,7 +505,7 @@ class TikTokPublisher:
             return TikTokConnectionResult(
                 False,
                 "Đã mở TikTok Studio nhưng chưa xác nhận được phiên đăng nhập. "
-                "Hãy kiểm tra cửa sổ Edge.",
+                "Hãy kiểm tra cửa sổ Chrome.",
             )
         return TikTokConnectionResult(
             True, "TikTok Studio đã đăng nhập và sẵn sàng chuẩn bị video."
@@ -556,7 +556,7 @@ class TikTokPublisher:
             state = STATE_AUTHENTICATION_REQUIRED
             message = (
                 "TikTok yêu cầu đăng nhập. Hãy đăng nhập trực tiếp trong cửa sổ "
-                "Edge rồi chạy lại; ứng dụng không lưu mật khẩu."
+                "Chrome rồi chạy lại; ứng dụng không lưu mật khẩu."
             )
         else:
             state = STATE_VERIFICATION_REQUIRED

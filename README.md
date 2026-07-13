@@ -1,4 +1,4 @@
-# MXH Publisher V0.4.2 — bản pilot Windows
+# MXH Publisher V0.4.3 — bản pilot Windows
 
 Ứng dụng Windows hỗ trợ quản lý, duyệt và lên lịch cùng một video lên Facebook Fanpage và TikTok.
 
@@ -6,7 +6,7 @@ Trước khi lưu bài, ứng dụng cắt đầu/cuối video, ghép khung PNG 
 dùng chung 1080×1920, 30 fps, H.264/AAC cho cả Facebook và TikTok.
 
 - Facebook: Meta Graph API v25.
-- Kết nối: Facebook và TikTok mở trong cùng một hồ sơ Edge bền vững; người dùng
+- Kết nối: Facebook và TikTok mở trong cùng một hồ sơ Chrome bền vững; người dùng
   tự đăng nhập, ứng dụng dùng lại cookie/phiên đó và không đọc mật khẩu.
 - TikTok: Playwright mở TikTok Studio có giao diện, tự chọn video đã biên tập và
   điền caption; người dùng tự kiểm tra và bấm `Lên lịch`.
@@ -64,7 +64,7 @@ Yêu cầu:
 
 - Windows 10/11.
 - Python 3.12.
-- Microsoft Edge.
+- Google Chrome.
 - `ffmpeg.exe` và `ffprobe.exe` trong thư mục `bin`, hoặc FFmpeg có trong `PATH`.
 
 PowerShell:
@@ -76,7 +76,7 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m mxh_publisher gui
 ```
 
-TikTok dùng Edge đã cài trên Windows nên không cần tải trình duyệt Chromium riêng.
+TikTok dùng Google Chrome đã cài trên Windows nên không cần tải trình duyệt Chromium riêng.
 
 ## Thiết lập Facebook
 

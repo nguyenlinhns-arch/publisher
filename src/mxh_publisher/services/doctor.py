@@ -182,20 +182,23 @@ def run_doctor(
         )
 
     if sys.platform == "win32":
-        edge_candidates = [
-            Path(os.environ.get("PROGRAMFILES(X86)", ""))
-            / "Microsoft/Edge/Application/msedge.exe",
-            Path(os.environ.get("PROGRAMFILES", ""))
-            / "Microsoft/Edge/Application/msedge.exe",
+        chrome_candidates = [
+            Path(root) / "Google/Chrome/Application/chrome.exe"
+            for root in (
+                os.environ.get("PROGRAMFILES", ""),
+                os.environ.get("PROGRAMFILES(X86)", ""),
+                os.environ.get("LOCALAPPDATA", ""),
+            )
+            if root
         ]
-        found = next((path for path in edge_candidates if path.is_file()), None)
+        found = next((path for path in chrome_candidates if path.is_file()), None)
         checks.append(
             DoctorCheck(
-                "Microsoft Edge",
+                "Google Chrome",
                 found is not None,
-                f"Microsoft Edge: {found}"
+                f"Google Chrome: {found}"
                 if found
-                else "Không tìm thấy Microsoft Edge.",
+                else "Không tìm thấy Google Chrome.",
             )
         )
     else:

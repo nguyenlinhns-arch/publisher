@@ -7,7 +7,7 @@ Dữ liệu nằm tại `%LOCALAPPDATA%\MXHPublisher`:
 - `logs`: log đã che token.
 - `screenshots`: ảnh TikTok không nhạy cảm; ảnh quá 7 ngày tự được dọn khi app
   chụp ảnh mới.
-- `browser_profile`: phiên Edge/TikTok, có dữ liệu đăng nhập nhạy cảm.
+- `browser_profile`: phiên Chrome dùng chung cho Facebook/TikTok, có dữ liệu đăng nhập nhạy cảm.
 
 ## Sao lưu
 

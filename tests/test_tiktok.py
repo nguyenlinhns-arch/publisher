@@ -206,7 +206,7 @@ def test_prepare_uploads_and_fills_but_never_submits(tmp_path: Path) -> None:
     assert "?" not in result.metadata["current_url"]
     assert Path(str(result.metadata["screenshot_path"])).is_file()
 
-    assert factory.calls == [(tmp_path / "browser-profile", "msedge", False)]
+    assert factory.calls == [(tmp_path / "browser-profile", "chrome", False)]
     operation_names = [str(operation[0]) for operation in session.operations]
     assert "set_input_files" in operation_names
     assert "fill" in operation_names
@@ -628,13 +628,13 @@ def test_required_browser_channel_has_no_chromium_fallback(
     manager = _FakePlaywrightManager(chromium)
     _install_fake_playwright(monkeypatch, manager)
 
-    with pytest.raises(RuntimeError, match="kênh trình duyệt bắt buộc msedge"):
+    with pytest.raises(RuntimeError, match="kênh trình duyệt bắt buộc chrome"):
         tiktok_module._PlaywrightBrowserSession(
-            tmp_path / "profile", "msedge", False
+            tmp_path / "profile", "chrome", False
         )
 
     assert len(chromium.calls) == 1
-    assert chromium.calls[0]["channel"] == "msedge"
+    assert chromium.calls[0]["channel"] == "chrome"
     assert manager.stop_calls == 1
 
 
@@ -646,7 +646,7 @@ def test_browser_session_close_stops_manager_only_once(
     manager = _FakePlaywrightManager(chromium)
     _install_fake_playwright(monkeypatch, manager)
     session = tiktok_module._PlaywrightBrowserSession(
-        tmp_path / "profile", "msedge", False
+        tmp_path / "profile", "chrome", False
     )
 
     session.close()
@@ -689,12 +689,12 @@ def test_shared_browser_factory_reuses_one_session_for_both_platforms(
     factory = tiktok_module.SharedBrowserSessionFactory()
     profile = tmp_path / "shared-profile"
 
-    facebook_session = factory(profile, "msedge", False)
-    tiktok_session = factory(profile, "msedge", False)
+    facebook_session = factory(profile, "chrome", False)
+    tiktok_session = factory(profile, "chrome", False)
 
     assert facebook_session is session
     assert tiktok_session is session
-    assert starts == [(profile.resolve(), "msedge", False)]
+    assert starts == [(profile.resolve(), "chrome", False)]
 
 
 def test_adapter_source_contains_no_click_call() -> None:

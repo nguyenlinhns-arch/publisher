@@ -24,13 +24,13 @@ class BrowserConnectionResult:
 
 
 class FacebookBrowserConnection:
-    """Own a visible, persistent Edge profile used only for Facebook login."""
+    """Open Facebook in the shared, persistent Google Chrome profile."""
 
     def __init__(
         self,
         profile_dir: Path,
         *,
-        browser_channel: str = "msedge",
+        browser_channel: str = "chrome",
         session_factory: BrowserSessionFactory | None = None,
     ) -> None:
         self.profile_dir = profile_dir.expanduser().resolve()
@@ -53,7 +53,7 @@ class FacebookBrowserConnection:
             body = session.body_text().casefold()
         except Exception as exc:
             return BrowserConnectionResult(
-                False, f"Không mở được Facebook bằng Edge: {exc}"
+                False, f"Không mở được Facebook bằng Google Chrome: {exc}"
             )
         parts = urlsplit(current_url)
         login_page = "/login" in parts.path.casefold()
@@ -63,11 +63,11 @@ class FacebookBrowserConnection:
             return BrowserConnectionResult(
                 True,
                 "Đã kết nối Facebook. Phiên đăng nhập đã được lưu trong hồ sơ "
-                "Edge riêng của ứng dụng.",
+                "Google Chrome riêng của ứng dụng.",
             )
         return BrowserConnectionResult(
             False,
-            "Facebook đã được mở. Hãy đăng nhập trực tiếp trong cửa sổ Edge, "
+            "Facebook đã được mở. Hãy đăng nhập trực tiếp trong cửa sổ Chrome, "
             "sau đó bấm Kiểm tra lại.",
         )
 
