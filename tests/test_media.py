@@ -11,6 +11,7 @@ from mxh_publisher.services.dry_run import run_dry_run
 from mxh_publisher.services.media import (
     VideoEditSpec,
     VideoInfo,
+    _wrapped_video_title,
     inspect_video,
     render_social_video,
     sha256_file,
@@ -149,8 +150,27 @@ class MediaTests(unittest.TestCase):
         command = run.call_args.args[0]
         self.assertEqual(command[command.index("-ss") + 1], "6.200")
         self.assertEqual(command[command.index("-t") + 1], "17.600")
-        self.assertIn("overlay=0:0", command[command.index("-filter_complex") + 1])
+        video_filter = command[command.index("-filter_complex") + 1]
+        self.assertIn("overlay=0:360", video_filter)
+        self.assertIn("ass=filename=", video_filter)
         self.assertEqual((result.width, result.height, result.fps), (1080, 1920, 30))
+
+    def test_default_edit_removes_6_2_seconds_start_and_4_seconds_end(self) -> None:
+        spec = VideoEditSpec()
+
+        self.assertEqual(spec.trim_start_seconds, 6.2)
+        self.assertEqual(spec.trim_end_seconds, 4.0)
+
+    def test_project_title_is_split_like_the_reference_layout(self) -> None:
+        title = _wrapped_video_title(
+            "Than Vàng Danh gặp mặt, biểu dương 130 gia đình công nhân tiêu biểu"
+        )
+
+        self.assertEqual(
+            title,
+            "THAN VÀNG DANH\\NGẶP MẶT, BIỂU DƯƠNG\\N"
+            "130 GIA ĐÌNH CÔNG NHÂN TIÊU BIỂU",
+        )
 
     @patch("mxh_publisher.services.media.inspect_video")
     def test_render_blocks_output_longer_than_90_seconds(self, inspect) -> None:

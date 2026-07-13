@@ -82,7 +82,7 @@ class MainWindow(tk.Tk):
         self.video_source = tk.StringVar()
         self.frame_source = tk.StringVar()
         self.trim_start_var = tk.StringVar(value="6.2")
-        self.trim_end_var = tk.StringVar(value="6.2")
+        self.trim_end_var = tk.StringVar(value="4.0")
         self.title_var = tk.StringVar()
         self.hashtags_var = tk.StringVar(value=DEFAULT_HASHTAGS)
         self.schedule_var = tk.StringVar(
@@ -96,7 +96,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.4.0 — Biên tập, Facebook & TikTok")
+        self.title("MXH Publisher v0.4.1 — Biên tập, Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -208,7 +208,7 @@ class MainWindow(tk.Tk):
         form.columnconfigure(1, weight=1)
         form.rowconfigure(5, weight=1)
 
-        ttk.Label(form, text="Tiêu đề quản lý").grid(
+        ttk.Label(form, text="Tiêu đề trên video").grid(
             row=0, column=0, sticky="w", pady=4
         )
         ttk.Entry(form, textvariable=self.title_var).grid(
@@ -223,7 +223,9 @@ class MainWindow(tk.Tk):
             row=1, column=2, padx=(6, 0), pady=4
         )
 
-        ttk.Label(form, text="Khung PNG").grid(row=2, column=0, sticky="w", pady=4)
+        ttk.Label(form, text="Khung nền (tùy chọn)").grid(
+            row=2, column=0, sticky="w", pady=4
+        )
         ttk.Entry(form, textvariable=self.frame_source, state="readonly").grid(
             row=2, column=1, sticky="ew", pady=4
         )
@@ -245,7 +247,9 @@ class MainWindow(tk.Tk):
 
         ttk.Label(
             form,
-            text="Ứng dụng sẽ xuất 1080×1920, 30 fps, H.264/AAC trước khi đăng.",
+            text=(
+                "Mặc định: khung xanh mẫu, video ngang ở giữa, tiêu đề trắng viền đen."
+            ),
             foreground="#555555",
         ).grid(row=4, column=1, columnspan=2, sticky="w", pady=(0, 4))
 
@@ -445,7 +449,7 @@ class MainWindow(tk.Tk):
         self.video_source.set("")
         self.frame_source.set("")
         self.trim_start_var.set("6.2")
-        self.trim_end_var.set("6.2")
+        self.trim_end_var.set("4.0")
         self.caption_text.delete("1.0", "end")
         self.hashtags_var.set(DEFAULT_HASHTAGS)
         self.schedule_var.set(
@@ -513,10 +517,6 @@ class MainWindow(tk.Tk):
         if same_rendered_video:
             info = inspect_video(draft.source)
         else:
-            if draft.frame is None:
-                raise ValueError(
-                    "Hãy chọn khung PNG trước khi biên tập video mới."
-                )
             info = render_social_video(
                 draft.source,
                 self.config_data.media_dir,
@@ -524,6 +524,7 @@ class MainWindow(tk.Tk):
                     trim_start_seconds=draft.trim_start_seconds,
                     trim_end_seconds=draft.trim_end_seconds,
                     frame_path=draft.frame,
+                    title=draft.title,
                 ),
             )
         if not info.is_valid:
@@ -950,7 +951,7 @@ class MainWindow(tk.Tk):
         self.video_source.set(post.video_path)
         self.frame_source.set("")
         self.trim_start_var.set("6.2")
-        self.trim_end_var.set("6.2")
+        self.trim_end_var.set("4.0")
         self.caption_text.delete("1.0", "end")
         self.caption_text.insert("1.0", post.caption)
         self.hashtags_var.set(" ".join(post.hashtags))
