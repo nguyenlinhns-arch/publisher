@@ -362,7 +362,7 @@ class _PlaywrightBrowserSession:
                 manager.stop()
 
 
-def _start_playwright_session(
+def start_playwright_session(
     profile_dir: Path, browser_channel: str, headless: bool
 ) -> BrowserSession:
     return _PlaywrightBrowserSession(profile_dir, browser_channel, headless)
@@ -399,7 +399,7 @@ class TikTokPublisher:
         )
         self.upload_url = _validate_configured_upload_url(upload_url)
         self.browser_channel = browser_channel
-        self._session_factory = session_factory or _start_playwright_session
+        self._session_factory = session_factory or start_playwright_session
         self.navigation_timeout_ms = navigation_timeout_ms
         self.control_timeout_ms = control_timeout_ms
         self.preview_timeout_ms = preview_timeout_ms
