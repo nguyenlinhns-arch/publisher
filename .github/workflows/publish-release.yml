@@ -1,4 +1,4 @@
-# Release trigger for the standalone video-only application.
+# Release trigger for the standalone video-only application and packaged render smoke-test.
 name: Publish MXH Video Editor Windows release
 
 "on":

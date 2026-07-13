@@ -83,7 +83,7 @@ try {
 
     $RenderArguments = @(
         "render", "--input", $InputVideo,
-        "--title", "VIDEO KIỂM TRA KHUNG XANH",
+        "--title", "VIDEO_KIEM_TRA_KHUNG_XANH",
         "--output-dir", $OutputDirectory
     )
     Assert-ExitCode "Sửa video đóng gói" (Invoke-PackagedCommand -Arguments $RenderArguments)
