@@ -1,4 +1,4 @@
-param([string]$Version = "0.3.2")
+param([string]$Version = "0.3.3")
 $ErrorActionPreference = "Stop"
 $portable = Join-Path $PSScriptRoot "..\dist\MXHPublisher-$Version-Windows-x64"
 if (-not (Test-Path $portable)) { throw "Portable build not found: $portable" }

@@ -59,14 +59,14 @@ jobs:
       - name: Publish stable GitHub release
         shell: pwsh
         run: |
-          $tag = "v0.3.2"
-          $title = "MXH Publisher v0.3.2"
+          $tag = "v0.3.3"
+          $title = "MXH Publisher v0.3.3"
           $files = Get-ChildItem release -File | ForEach-Object { $_.FullName }
           if (-not $files) { throw "No release files were produced." }
           gh release view $tag --repo "${{ github.repository }}" 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $files --clobber --repo "${{ github.repository }}"
           } else {
-            gh release create $tag $files --title $title --notes-file RELEASE_NOTES_V0.3.2.md --repo "${{ github.repository }}"
+            gh release create $tag $files --title $title --notes-file RELEASE_NOTES_V0.3.3.md --repo "${{ github.repository }}"
           }
           if ($LASTEXITCODE -ne 0) { throw "GitHub Release upload failed." }
