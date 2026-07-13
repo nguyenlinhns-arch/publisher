@@ -1,4 +1,4 @@
-# MXH Publisher V0.4.0 — bản pilot Windows
+# MXH Publisher V0.4.1 — bản pilot Windows
 
 Ứng dụng Windows hỗ trợ quản lý, duyệt và lên lịch cùng một video lên Facebook Fanpage và TikTok.
 
@@ -46,8 +46,10 @@ gian thao tác và gửi lịch Facebook an toàn.
 
 ## Biên tập và chuẩn video
 
-- Mặc định bỏ 6,2 giây đầu và 6,2 giây cuối; có thể đổi riêng phần cuối.
-- Video được scale/crop giữa khung thành 1080×1920 và phủ khung PNG lên trên.
+- Mặc định bỏ 6,2 giây đầu và 4 giây cuối; có thể đổi riêng phần cuối.
+- Video ngang được đặt ở giữa khung xanh 1080×1920 theo đúng mẫu đã chốt.
+- Tiêu đề bài được viết hoa, tự chia tối đa ba dòng, chữ trắng viền đen; có thể
+  dùng dấu `|` trong tiêu đề để chủ động ngắt dòng.
 - App xuất bản upload bất biến bằng FFmpeg rồi mới chạy kiểm tra chuẩn.
 
 - MP4, H.264, AAC, có âm thanh.

@@ -5,6 +5,7 @@ import json
 import shutil
 import subprocess
 import sys
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -46,12 +47,113 @@ class MediaInspectionError(RuntimeError):
 @dataclass(frozen=True, slots=True)
 class VideoEditSpec:
     trim_start_seconds: float = 6.2
-    trim_end_seconds: float = 6.2
+    trim_end_seconds: float = 4.0
     frame_path: Path | None = None
+    title: str = ""
 
 
 class VideoEditError(RuntimeError):
     pass
+
+
+FRAME_BLUE = "0x0752AD"
+VIDEO_TOP = 360
+VIDEO_HEIGHT = 608
+
+
+def _wrapped_video_title(value: str) -> str:
+    cleaned = " ".join(value.replace("{", "（").replace("}", "）").split())
+    cleaned = cleaned.replace("\\", "／").upper()
+    if "|" in cleaned:
+        lines = [part.strip() for part in cleaned.split("|") if part.strip()]
+    else:
+        words = cleaned.split()
+        action_words = {
+            "GẶP",
+            "TỔ",
+            "TUYÊN",
+            "BIỂU",
+            "TRAO",
+            "ĐÓN",
+            "KHEN",
+            "KHAI",
+            "PHÁT",
+            "THĂM",
+            "CHÚC",
+            "CÔNG",
+        }
+        action_at = next(
+            (index for index, word in enumerate(words[2:7], start=2) if word in action_words),
+            None,
+        )
+        number_at = next(
+            (index for index, word in enumerate(words) if any(ch.isdigit() for ch in word)),
+            None,
+        )
+        if action_at is not None and number_at is not None and action_at < number_at:
+            lines = [
+                " ".join(words[:action_at]),
+                " ".join(words[action_at:number_at]),
+                " ".join(words[number_at:]),
+            ]
+        else:
+            lines = textwrap.wrap(
+                cleaned,
+                width=34,
+                break_long_words=False,
+                break_on_hyphens=False,
+            ) or ["NỘI DUNG VIDEO"]
+    if len(lines) > 3:
+        lines = lines[:3]
+        lines[-1] = textwrap.shorten(lines[-1], width=26, placeholder="…")
+    return r"\N".join(lines)
+
+
+def _ass_time(seconds: float) -> str:
+    total_centiseconds = max(0, round(seconds * 100))
+    hours, remainder = divmod(total_centiseconds, 360_000)
+    minutes, remainder = divmod(remainder, 6_000)
+    whole_seconds, centiseconds = divmod(remainder, 100)
+    return f"{hours}:{minutes:02d}:{whole_seconds:02d}.{centiseconds:02d}"
+
+
+def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
+    end = _ass_time(duration_seconds)
+    wrapped = _wrapped_video_title(title)
+    content = "\n".join(
+        [
+            "[Script Info]",
+            "ScriptType: v4.00+",
+            "PlayResX: 1080",
+            "PlayResY: 1920",
+            "WrapStyle: 2",
+            "ScaledBorderAndShadow: yes",
+            "",
+            "[V4+ Styles]",
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+            "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
+            "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+            "Alignment, MarginL, MarginR, MarginV, Encoding",
+            "Style: Title,Arial,48,&H00FFFFFF,&H00FFFFFF,&H00000000,&H50000000,"
+            "-1,0,0,0,100,100,0,0,1,4,2,8,55,55,0,1",
+            "Style: Brand,Arial,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H50000000,"
+            "-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
+            "",
+            "[Events]",
+            "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, "
+            "Effect, Text",
+            f"Dialogue: 0,0:00:00.00,{end},Title,,0,0,0,,"
+            rf"{{\an8\pos(540,1040)}}{wrapped}",
+            f"Dialogue: 0,0:00:00.00,{end},Brand,,0,0,0,,"
+            r"{\an8\pos(540,1510)}Thầy Linh - Tuyển Thợ Mỏ",
+        ]
+    )
+    path.write_text(content, encoding="utf-8-sig")
+
+
+def _ffmpeg_filter_path(path: Path) -> str:
+    value = path.resolve().as_posix()
+    return value.replace("\\", "\\\\").replace(":", r"\:").replace("'", r"\'")
 
 
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
@@ -304,9 +406,11 @@ def render_social_video(
             "frame": frame_digest,
             "trim_start": round(spec.trim_start_seconds, 3),
             "trim_end": round(spec.trim_end_seconds, 3),
+            "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "codec": "h264-aac-v1",
+            "layout": "blue-horizontal-title-v4",
+            "codec": "h264-aac-v2",
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -321,7 +425,9 @@ def render_social_video(
 
     executable = find_ffmpeg(ffmpeg_path)
     temporary = destination.with_name(destination.stem + ".partial.mp4")
+    title_ass = output_dir / f"title_{recipe_digest[:24]}.ass"
     temporary.unlink(missing_ok=True)
+    _write_title_ass(title_ass, spec.title or source.stem, output_duration)
     command = [
         executable,
         "-hide_banner",
@@ -350,18 +456,21 @@ def render_social_video(
         )
         audio_map = f"{silence_index}:a:0"
 
-    base_filter = (
-        "scale=1080:1920:force_original_aspect_ratio=increase,"
-        "crop=1080:1920,fps=30"
+    video_scale = (
+        f"scale=1080:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,"
+        f"crop=1080:{VIDEO_HEIGHT},fps=30"
     )
     if frame is None:
-        video_filter = f"[0:v]{base_filter},format=yuv420p[v]"
+        background_filter = f"color=c={FRAME_BLUE}:s=1080x1920:r=30[background]"
     else:
-        video_filter = (
-            f"[0:v]{base_filter}[base];"
-            "[1:v]scale=1080:1920,format=rgba[frame];"
-            "[base][frame]overlay=0:0:format=auto,format=yuv420p[v]"
-        )
+        background_filter = "[1:v]scale=1080:1920,format=rgba[background]"
+    ass_path = _ffmpeg_filter_path(title_ass)
+    video_filter = (
+        f"[0:v]{video_scale}[video];"
+        f"{background_filter};"
+        f"[background][video]overlay=0:{VIDEO_TOP}:shortest=1[layout];"
+        f"[layout]ass=filename='{ass_path}',format=yuv420p[v]"
+    )
     command.extend(
         [
             "-filter_complex",
@@ -402,7 +511,9 @@ def render_social_video(
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         temporary.unlink(missing_ok=True)
+        title_ass.unlink(missing_ok=True)
         raise VideoEditError(f"Không xuất được video: {exc}") from exc
+    title_ass.unlink(missing_ok=True)
     if completed.returncode != 0:
         temporary.unlink(missing_ok=True)
         detail = completed.stderr.strip() or "ffmpeg trả về lỗi không xác định."
