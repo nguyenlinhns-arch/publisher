@@ -42,6 +42,17 @@ function Assert-ExitCode {
     }
 }
 
+function Invoke-PackagedCommand {
+    param([Parameter(Mandatory = $true)][string[]]$Arguments)
+    $CommandProcess = Start-Process `
+        -FilePath $Application `
+        -ArgumentList $Arguments `
+        -WorkingDirectory $Sandbox `
+        -Wait `
+        -PassThru
+    return $CommandProcess.ExitCode
+}
+
 function Restore-EnvironmentValue {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -81,22 +92,23 @@ Remove-Item Env:MXH_FACEBOOK_PAGE_TOKEN -ErrorAction SilentlyContinue
 
 Push-Location $Sandbox
 try {
-    & $Application --help
-    Assert-ExitCode "MXHPublisher --help" $LASTEXITCODE
+    $HelpExitCode = Invoke-PackagedCommand -Arguments @("--help")
+    Assert-ExitCode "MXHPublisher --help" $HelpExitCode
 
     # Newer builds expose --system-only. Exit code 2 means an older parser, so
     # fall back to the existing doctor command without ever requiring FB tokens.
-    & $Application doctor --system-only
-    $DoctorExitCode = $LASTEXITCODE
+    $DoctorExitCode = Invoke-PackagedCommand `
+        -Arguments @("doctor", "--system-only")
     if ($DoctorExitCode -eq 2) {
-        & $Application doctor
-        Assert-ExitCode "MXHPublisher doctor" $LASTEXITCODE
+        $FallbackDoctorExitCode = Invoke-PackagedCommand -Arguments @("doctor")
+        Assert-ExitCode "MXHPublisher doctor" $FallbackDoctorExitCode
     } else {
         Assert-ExitCode "MXHPublisher doctor --system-only" $DoctorExitCode
     }
 
-    & $Application worker --verify-due --max-items 1
-    Assert-ExitCode "Worker với database trống" $LASTEXITCODE
+    $WorkerExitCode = Invoke-PackagedCommand `
+        -Arguments @("worker", "--verify-due", "--max-items", "1")
+    Assert-ExitCode "Worker với database trống" $WorkerExitCode
 
     $BundledFfprobe = Get-ChildItem -LiteralPath $IsolatedBundle `
         -Recurse -Filter "ffprobe.exe" -File | Select-Object -First 1
