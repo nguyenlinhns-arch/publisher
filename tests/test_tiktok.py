@@ -152,6 +152,33 @@ def _publisher(
     return publisher, factory
 
 
+def test_connection_check_confirms_active_studio_session(tmp_path: Path) -> None:
+    session = FakeBrowserSession(visible_selectors={UPLOAD_INPUT_SELECTORS[0]})
+    publisher, _factory = _publisher(tmp_path, session)
+
+    result = publisher.check_connection()
+
+    assert result.connected
+    assert "sẵn sàng" in result.message
+    assert not any(operation[0] == "set_input_files" for operation in session.operations)
+    assert not any(operation[0] == "click" for operation in session.operations)
+
+
+def test_connection_check_opens_login_without_bypassing_it(tmp_path: Path) -> None:
+    session = FakeBrowserSession(
+        current_url="https://www.tiktok.com/login",
+        body_text="Log in to TikTok",
+    )
+    publisher, _factory = _publisher(tmp_path, session)
+
+    result = publisher.check_connection()
+
+    assert not result.connected
+    assert "đăng nhập" in result.message.casefold()
+    assert not any(operation[0] == "set_input_files" for operation in session.operations)
+    assert not any(operation[0] == "click" for operation in session.operations)
+
+
 def test_prepare_uploads_and_fills_but_never_submits(tmp_path: Path) -> None:
     video = tmp_path / "video.mp4"
     video.write_bytes(b"video")
