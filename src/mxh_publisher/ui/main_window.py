@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import tkinter as tk
-import webbrowser
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -90,7 +89,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.3.2 — Facebook & TikTok")
+        self.title("MXH Publisher v0.3.3 — Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -135,11 +134,15 @@ class MainWindow(tk.Tk):
             row=0, column=1, sticky="w", padx=(0, 8)
         )
         facebook_connect = ttk.Button(
-            connections, text="Kết nối Facebook", command=self.connect_facebook
+            connections,
+            text="Kết nối Facebook",
+            command=self.check_facebook_browser_connection,
         )
         facebook_connect.grid(row=0, column=2, padx=3)
         facebook_check = ttk.Button(
-            connections, text="Kiểm tra", command=self.check_facebook_connection
+            connections,
+            text="Kiểm tra lại",
+            command=self.check_facebook_browser_connection,
         )
         facebook_check.grid(row=0, column=3, padx=(3, 14))
 
@@ -267,20 +270,17 @@ class MainWindow(tk.Tk):
         status.grid(row=1, column=0, sticky="ew")
 
     def _refresh_connection_summary(self) -> None:
-        page_id = self.config_data.facebook_page_id.strip()
-        try:
-            has_token = bool(self.secret_store.get(FACEBOOK_TOKEN_NAME))
-        except Exception:
-            has_token = False
-        if page_id.isdigit() and has_token:
-            self.facebook_connection_var.set(f"Đã cấu hình Page ID {page_id}")
-        elif page_id.isdigit():
-            self.facebook_connection_var.set("Thiếu Page access token")
-        else:
-            self.facebook_connection_var.set("Chưa kết nối")
-        account = self.config_data.tiktok_account_id.strip()
+        facebook_profile = self.config_data.browser_profile_dir / "facebook"
+        tiktok_profile = self.config_data.browser_profile_dir / "tiktok"
+        self.facebook_connection_var.set(
+            "Có phiên đã lưu — bấm Kiểm tra"
+            if facebook_profile.exists()
+            else "Chưa kết nối"
+        )
         self.tiktok_connection_var.set(
-            f"Đã cấu hình {account}" if account else "Chưa kết nối"
+            "Có phiên đã lưu — bấm Kiểm tra"
+            if tiktok_profile.exists()
+            else "Chưa kết nối"
         )
 
     def check_facebook_connection(self) -> None:
@@ -296,17 +296,20 @@ class MainWindow(tk.Tk):
         self.status_var.set(message)
         messagebox.showinfo("Đã kết nối", message, parent=self)
 
-    def connect_facebook(self) -> None:
-        opened = webbrowser.open(
-            "https://developers.facebook.com/tools/explorer/", new=2
+    def check_facebook_browser_connection(self) -> None:
+        self._run_background(
+            self.orchestrator.verify_facebook_browser_connection,
+            working_message="Đang mở Facebook bằng hồ sơ Edge của ứng dụng…",
+            success=self._facebook_browser_connection_success,
         )
-        if not opened:
-            messagebox.showwarning(
-                "Không mở được trình duyệt",
-                "Hãy mở https://developers.facebook.com/tools/explorer/ rồi đăng nhập.",
-                parent=self,
-            )
-        self.open_settings()
+
+    def _facebook_browser_connection_success(self, result) -> None:
+        self.facebook_connection_var.set(
+            "Đã kết nối" if result.connected else "Chờ đăng nhập"
+        )
+        self.status_var.set(result.message)
+        title = "Đã kết nối" if result.connected else "Đăng nhập Facebook"
+        messagebox.showinfo(title, result.message, parent=self)
 
     def check_tiktok_connection(self) -> None:
         self._run_background(
