@@ -147,6 +147,12 @@ class _Challenge:
     evidence: str
 
 
+@dataclass(frozen=True, slots=True)
+class TikTokConnectionResult:
+    connected: bool
+    message: str
+
+
 def _default_app_data_dir() -> Path:
     if os.name == "nt":
         root = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
@@ -426,6 +432,41 @@ class TikTokPublisher:
                 unknown_outcome=False,
             ) from exc
         return self._session
+
+    def check_connection(self) -> TikTokConnectionResult:
+        """Open Studio in the dedicated profile and inspect login state only."""
+        session = self._browser()
+        try:
+            session.goto(self.upload_url, timeout_ms=self.navigation_timeout_ms)
+        except Exception as exc:
+            return TikTokConnectionResult(False, f"Không mở được TikTok Studio: {exc}")
+        challenge = _detect_challenge(session)
+        if challenge is not None:
+            if challenge.kind == "login":
+                return TikTokConnectionResult(
+                    False,
+                    "TikTok chưa đăng nhập. Hãy đăng nhập trong cửa sổ Edge vừa mở, "
+                    "sau đó bấm Kiểm tra lại.",
+                )
+            return TikTokConnectionResult(
+                False,
+                "TikTok yêu cầu CAPTCHA hoặc mã xác minh. Hãy tự hoàn tất trong "
+                "cửa sổ Edge rồi bấm Kiểm tra lại.",
+            )
+        if not _is_trusted_studio_url(session.url):
+            return TikTokConnectionResult(
+                False, "TikTok đã chuyển khỏi Studio; chưa thể xác nhận kết nối."
+            )
+        upload = session.first_present(UPLOAD_INPUT_SELECTORS, timeout_ms=5_000)
+        if upload is None:
+            return TikTokConnectionResult(
+                False,
+                "Đã mở TikTok Studio nhưng chưa xác nhận được phiên đăng nhập. "
+                "Hãy kiểm tra cửa sổ Edge.",
+            )
+        return TikTokConnectionResult(
+            True, "TikTok Studio đã đăng nhập và sẵn sàng chuẩn bị video."
+        )
 
     def _capture(
         self, session: BrowserSession, request: PublishRequest, label: str
