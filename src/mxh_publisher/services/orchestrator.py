@@ -25,6 +25,7 @@ from ..publishers.tiktok import (
 from ..repository import Repository
 from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
 from .dry_run import CheckResult, DryRunReport, run_dry_run
+from .browser_connections import BrowserConnectionResult, FacebookBrowserConnection
 from .lease import LeaseHeartbeat, LeaseHeartbeatError
 
 
@@ -75,10 +76,15 @@ class PublishingOrchestrator:
             upload_url=config.tiktok_upload_url,
             browser_channel=config.browser_channel,
         )
+        self.facebook_browser = FacebookBrowserConnection(
+            config.browser_profile_dir / "facebook",
+            browser_channel=config.browser_channel,
+        )
         self.facebook_factory = facebook_factory
 
     def close(self) -> None:
         self.tiktok.close()
+        self.facebook_browser.close()
 
     def _default_facebook_factory(
         self,
@@ -139,6 +145,9 @@ class PublishingOrchestrator:
         finally:
             publisher.close()
         return str(identity.get("name") or self.config.facebook_page_id)
+
+    def verify_facebook_browser_connection(self) -> BrowserConnectionResult:
+        return self.facebook_browser.open_and_check()
 
     def verify_tiktok_connection(self) -> TikTokConnectionResult:
         return self.tiktok.check_connection()
