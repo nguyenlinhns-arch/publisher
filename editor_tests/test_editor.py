@@ -6,6 +6,10 @@ import pytest
 
 from mxh_publisher.services.media import (
     WINDOWS_CREATE_NO_WINDOW,
+    _wrapped_video_title,
+    default_fonts_dir,
+    default_intro_sound_path,
+    probe_media_duration,
     subprocess_creation_flags,
 )
 from mxh_video_editor.config import EditorConfig
@@ -32,6 +36,24 @@ def test_fixed_trim_values() -> None:
 def test_ffmpeg_child_processes_are_hidden_on_windows() -> None:
     assert subprocess_creation_flags("win32") == WINDOWS_CREATE_NO_WINDOW
     assert subprocess_creation_flags("linux") == 0
+
+
+def test_hyphen_creates_manual_title_line_break() -> None:
+    assert _wrapped_video_title("NGHỀ MỎ KHÔNG-PHẢI NGHỀ NHÀN") == (
+        r"NGHỀ MỎ KHÔNG\NPHẢI NGHỀ NHÀN"
+    )
+
+
+def test_bundled_vietnamese_fonts_exist() -> None:
+    fonts = default_fonts_dir()
+    assert (fonts / "BeVietnamPro-ExtraBold.ttf").is_file()
+    assert (fonts / "BeVietnamPro-SemiBold.ttf").is_file()
+
+
+def test_default_intro_sound_is_valid() -> None:
+    sound = default_intro_sound_path()
+    assert sound.stat().st_size > 0
+    assert probe_media_duration(sound) == pytest.approx(0.36, abs=0.02)
 
 
 @pytest.mark.parametrize(

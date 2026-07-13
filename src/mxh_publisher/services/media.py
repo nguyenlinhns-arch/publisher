@@ -49,6 +49,7 @@ class VideoEditSpec:
     trim_start_seconds: float = 6.2
     trim_end_seconds: float = 4.0
     frame_path: Path | None = None
+    intro_sound_path: Path | None = None
     title: str = ""
 
 
@@ -81,11 +82,53 @@ def default_frame_path() -> Path:
     return frame.resolve()
 
 
+def default_fonts_dir() -> Path:
+    """Return the bundled Be Vietnam Pro fonts used by the video template."""
+
+    if getattr(sys, "frozen", False):
+        runtime_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    else:
+        runtime_root = Path(__file__).resolve().parents[3]
+    fonts = runtime_root / "assets" / "fonts"
+    required = (
+        fonts / "BeVietnamPro-ExtraBold.ttf",
+        fonts / "BeVietnamPro-SemiBold.ttf",
+    )
+    missing = [path.name for path in required if not path.is_file()]
+    if missing:
+        raise VideoEditError("Thiếu font chữ đóng gói: " + ", ".join(missing))
+    return fonts.resolve()
+
+
+def default_intro_sound_path() -> Path:
+    """Return the short sound that replaces the opening audio of every video."""
+
+    if getattr(sys, "frozen", False):
+        runtime_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    else:
+        runtime_root = Path(__file__).resolve().parents[3]
+    sound = runtime_root / "assets" / "sound.mp3"
+    if not sound.is_file() or sound.stat().st_size == 0:
+        raise VideoEditError(f"Thiếu âm thanh mở đầu hợp lệ: {sound}")
+    return sound.resolve()
+
+
 def _wrapped_video_title(value: str) -> str:
     cleaned = " ".join(value.replace("{", "（").replace("}", "）").split())
     cleaned = cleaned.replace("\\", "／").upper()
-    if "|" in cleaned:
-        lines = [part.strip() for part in cleaned.split("|") if part.strip()]
+    cleaned = cleaned.replace("–", "-").replace("—", "-")
+    if "|" in cleaned or "-" in cleaned:
+        manual_parts = cleaned.replace("|", "-").split("-")
+        lines = []
+        for part in manual_parts:
+            lines.extend(
+                textwrap.wrap(
+                    part.strip(),
+                    width=32,
+                    break_long_words=False,
+                    break_on_hyphens=False,
+                )
+            )
     else:
         words = cleaned.split()
         action_words = {
@@ -154,10 +197,10 @@ def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
             "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
             "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
             "Alignment, MarginL, MarginR, MarginV, Encoding",
-            "Style: Title,Arial,48,&H00FFFFFF,&H00FFFFFF,&H00000000,&H50000000,"
-            "-1,0,0,0,100,100,0,0,1,4,2,8,55,55,0,1",
-            "Style: Brand,Arial,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H50000000,"
-            "-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
+            "Style: Title,Be Vietnam Pro ExtraBold,50,&H00FFFFFF,&H00FFFFFF,"
+            "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,4,1,8,55,55,0,1",
+            "Style: Brand,Be Vietnam Pro SemiBold,38,&H00FFFFFF,&H00FFFFFF,"
+            "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
             "",
             "[Events]",
             "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, "
@@ -248,6 +291,47 @@ def find_ffmpeg(explicit_path: Path | None = None) -> str:
     raise VideoEditError(
         "Không tìm thấy ffmpeg. Hãy cài FFmpeg hoặc đặt ffmpeg.exe trong thư mục bin."
     )
+
+
+def probe_media_duration(path: Path, ffprobe_path: Path | None = None) -> float:
+    """Read a media duration without requiring a video stream."""
+
+    target = path.expanduser().resolve()
+    if not target.is_file():
+        raise MediaInspectionError(f"Không tìm thấy tệp âm thanh: {target}")
+    command = [
+        find_ffprobe(ffprobe_path),
+        "-v",
+        "error",
+        "-print_format",
+        "json",
+        "-show_entries",
+        "format=duration",
+        str(target),
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=60,
+            check=False,
+            creationflags=subprocess_creation_flags(),
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise MediaInspectionError(f"Không đọc được thời lượng âm thanh: {exc}") from exc
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or "ffprobe trả về lỗi không xác định."
+        raise MediaInspectionError(detail)
+    try:
+        duration = float(json.loads(completed.stdout)["format"]["duration"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise MediaInspectionError("Không đọc được thời lượng âm thanh.") from exc
+    if duration <= 0:
+        raise MediaInspectionError("Âm thanh mở đầu có thời lượng không hợp lệ.")
+    return duration
 
 
 def inspect_video(path: Path, ffprobe_path: Path | None = None) -> VideoInfo:
@@ -403,6 +487,13 @@ def render_social_video(
     )
     if not frame.is_file():
         raise VideoEditError(f"Không tìm thấy khung hình: {frame}")
+    intro_sound = (
+        spec.intro_sound_path.expanduser().resolve()
+        if spec.intro_sound_path
+        else default_intro_sound_path()
+    )
+    if not intro_sound.is_file() or intro_sound.stat().st_size == 0:
+        raise VideoEditError(f"Không tìm thấy âm thanh mở đầu: {intro_sound}")
 
     source_info = inspect_video(source)
     output_duration = (
@@ -416,16 +507,28 @@ def render_social_video(
         )
 
     frame_digest = sha256_file(frame)
+    intro_sound_digest = sha256_file(intro_sound)
+    intro_sound_duration = min(probe_media_duration(intro_sound), output_duration)
+    fonts_dir = default_fonts_dir()
+    font_digest = hashlib.sha256(
+        "".join(
+            sha256_file(path)
+            for path in sorted(fonts_dir.glob("BeVietnamPro-*.ttf"))
+        ).encode("ascii")
+    ).hexdigest()
     recipe = json.dumps(
         {
             "source": source_info.sha256,
             "frame": frame_digest,
+            "fonts": font_digest,
+            "intro_sound": intro_sound_digest,
+            "intro_sound_duration": round(intro_sound_duration, 3),
             "trim_start": round(spec.trim_start_seconds, 3),
             "trim_end": round(spec.trim_end_seconds, 3),
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-blue-horizontal-title-v1",
+            "layout": "standalone-blue-horizontal-title-sound-v3",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,
@@ -456,11 +559,13 @@ def render_social_video(
         str(source),
     ]
     command.extend(["-loop", "1", "-i", str(frame)])
+    intro_sound_index = 2
+    command.extend(["-i", str(intro_sound)])
 
     if source_info.has_audio:
-        audio_map = "0:a:0"
+        source_audio_map = "0:a:0"
     else:
-        silence_index = 2
+        silence_index = 3
         command.extend(
             [
                 "-f",
@@ -469,7 +574,7 @@ def render_social_video(
                 "anullsrc=channel_layout=stereo:sample_rate=48000",
             ]
         )
-        audio_map = f"{silence_index}:a:0"
+        source_audio_map = f"{silence_index}:a:0"
 
     video_scale = (
         f"scale=1080:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,"
@@ -477,20 +582,39 @@ def render_social_video(
     )
     background_filter = "[1:v]scale=1080:1920,format=rgba[background]"
     ass_path = _ffmpeg_filter_path(title_ass)
+    fonts_path = _ffmpeg_filter_path(fonts_dir)
     video_filter = (
         f"[0:v]{video_scale}[video];"
         f"{background_filter};"
         f"[background][video]overlay=0:{VIDEO_TOP}:shortest=1[layout];"
-        f"[layout]ass=filename='{ass_path}',format=yuv420p[v]"
+        f"[layout]ass=filename='{ass_path}':fontsdir='{fonts_path}',format=yuv420p[v]"
     )
+    intro_audio_filter = (
+        f"[{intro_sound_index}:a:0]aresample=48000,"
+        "aformat=sample_fmts=fltp:channel_layouts=stereo,apad,"
+        f"atrim=duration={intro_sound_duration:.3f},asetpts=PTS-STARTPTS[introa]"
+    )
+    remaining_audio_duration = output_duration - intro_sound_duration
+    if remaining_audio_duration > 0:
+        main_audio_filter = (
+            f"[{source_audio_map}]aresample=48000,"
+            "aformat=sample_fmts=fltp:channel_layouts=stereo,apad,"
+            f"atrim=start={intro_sound_duration:.3f}:"
+            f"duration={remaining_audio_duration:.3f},asetpts=PTS-STARTPTS[maina];"
+            "[introa][maina]concat=n=2:v=0:a=1[a]"
+        )
+        audio_filter = intro_audio_filter + ";" + main_audio_filter
+    else:
+        audio_filter = intro_audio_filter + ";[introa]anull[a]"
+    combined_filter = video_filter + ";" + audio_filter
     command.extend(
         [
             "-filter_complex",
-            video_filter,
+            combined_filter,
             "-map",
             "[v]",
             "-map",
-            audio_map,
+            "[a]",
             "-t",
             f"{output_duration:.3f}",
             "-c:v",

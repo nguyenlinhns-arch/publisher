@@ -16,6 +16,8 @@ $Python = Join-Path $Venv "Scripts\python.exe"
 $Ffprobe = Join-Path $Root "bin\ffprobe.exe"
 $Ffmpeg = Join-Path $Root "bin\ffmpeg.exe"
 $DefaultFrame = Join-Path $Root "assets\nen.png"
+$IntroSound = Join-Path $Root "assets\sound.mp3"
+$FontsDirectory = Join-Path $Root "assets\fonts"
 $DistPath = Join-Path $Root "dist"
 $WorkPath = Join-Path $Root "build\pyinstaller"
 $SpecPath = Join-Path $Root "build\pyinstaller-spec"
@@ -48,6 +50,12 @@ if (-not (Test-Path -LiteralPath $Ffmpeg -PathType Leaf)) {
 }
 if (-not (Test-Path -LiteralPath $DefaultFrame -PathType Leaf)) {
     throw "Thiếu assets\nen.png — khung nền mặc định của dự án."
+}
+if (-not (Test-Path -LiteralPath $IntroSound -PathType Leaf)) {
+    throw "Thiếu assets\sound.mp3 — âm thanh mở đầu mặc định."
+}
+if (-not (Test-Path -LiteralPath $FontsDirectory -PathType Container)) {
+    throw "Thiếu thư mục font assets\fonts."
 }
 
 & $Ffprobe -version
@@ -100,6 +108,8 @@ try {
         "--add-binary", "$Ffprobe;bin",
         "--add-binary", "$Ffmpeg;bin",
         "--add-data", "$DefaultFrame;assets",
+        "--add-data", "$IntroSound;assets",
+        "--add-data", "$FontsDirectory;assets\fonts",
         $EntryPoint
     )
     & $Python -m PyInstaller @Arguments

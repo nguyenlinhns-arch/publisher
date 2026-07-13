@@ -61,12 +61,25 @@ $BundledFfmpeg = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
     -Filter "ffmpeg.exe" -File | Select-Object -First 1
 $BundledFrame = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
     -Filter "nen.png" -File | Select-Object -First 1
-if ($null -eq $BundledFfprobe -or $null -eq $BundledFfmpeg -or $null -eq $BundledFrame) {
-    throw "Bản đóng gói thiếu ffmpeg, ffprobe hoặc nền mặc định."
+$BundledIntroSound = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
+    -Filter "sound.mp3" -File | Select-Object -First 1
+$BundledTitleFont = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
+    -Filter "BeVietnamPro-ExtraBold.ttf" -File | Select-Object -First 1
+$BundledBrandFont = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
+    -Filter "BeVietnamPro-SemiBold.ttf" -File | Select-Object -First 1
+if ($null -eq $BundledFfprobe -or $null -eq $BundledFfmpeg `
+        -or $null -eq $BundledFrame -or $null -eq $BundledIntroSound `
+        -or $null -eq $BundledTitleFont `
+        -or $null -eq $BundledBrandFont) {
+    throw "Bản đóng gói thiếu ffmpeg, ffprobe, nền mặc định hoặc font chữ."
 }
 $FrameHash = (Get-FileHash -LiteralPath $BundledFrame.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($FrameHash -ne "d66882d0e60f73cdde049d6ad997a859ee0d379571bb0dc36e6155df58c6d910") {
     throw "Khung nền mặc định không đúng tệp đã duyệt."
+}
+$SoundHash = (Get-FileHash -LiteralPath $BundledIntroSound.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($SoundHash -ne "d2a6e6eb3191c0498637b24897b420717bcae71c4b73f1ab5237db9c47a802f6") {
+    throw "Âm thanh mở đầu không đúng tệp người dùng cung cấp."
 }
 
 Push-Location $Sandbox
@@ -83,7 +96,7 @@ try {
 
     $RenderArguments = @(
         "render", "--input", $InputVideo,
-        "--title", "VIDEO_KIEM_TRA_KHUNG_XANH",
+        "--title", "VIDEO_KIEM_TRA-FONT_VIET_NAM",
         "--output-dir", $OutputDirectory
     )
     Assert-ExitCode "Sửa video đóng gói" (Invoke-PackagedCommand -Arguments $RenderArguments)
