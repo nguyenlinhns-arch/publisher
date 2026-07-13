@@ -97,6 +97,7 @@ class FacebookBrowserPublisher:
         browser_profile_dir: Path,
         browser_channel: str = "chrome",
         session_factory: BrowserSessionFactory | None = None,
+        close_session_on_close: bool = True,
         navigation_timeout_ms: int = 45_000,
         control_timeout_ms: int = 20_000,
         upload_settle_ms: int = 2_000,
@@ -105,6 +106,7 @@ class FacebookBrowserPublisher:
         self.browser_profile_dir = browser_profile_dir.expanduser().resolve()
         self.browser_channel = browser_channel
         self._session_factory = session_factory or start_playwright_session
+        self._close_session_on_close = close_session_on_close
         self.navigation_timeout_ms = navigation_timeout_ms
         self.control_timeout_ms = control_timeout_ms
         self.upload_settle_ms = upload_settle_ms
@@ -216,7 +218,7 @@ class FacebookBrowserPublisher:
     def close(self) -> None:
         session = self._session
         self._session = None
-        if session is not None:
+        if session is not None and self._close_session_on_close:
             session.close()
 
 

@@ -221,6 +221,16 @@ class SharedBrowserSessionFactory:
                 )
             return self._session
 
+    def close(self) -> None:
+        """Close the one shared control connection when the app exits."""
+
+        with self._lock:
+            session = self._session
+            self._session = None
+            self._settings = None
+        if session is not None:
+            session.close()
+
 
 @dataclass(frozen=True, slots=True)
 class _Challenge:

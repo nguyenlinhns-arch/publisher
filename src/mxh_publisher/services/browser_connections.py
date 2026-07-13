@@ -217,7 +217,8 @@ class ChromeLoginManager:
         return BrowserConnectionResult(
             False,
             "TikTok đã mở trong Chrome dùng chung. Hãy đăng nhập, chờ TikTok Studio "
-            "hiện ra và giữ Chrome mở; sau đó bấm Đăng TikTok.",
+            "hiện ra và giữ Chrome mở. Trong lúc đăng nhập, ứng dụng chưa gắn "
+            "Playwright; sau khi đăng nhập xong hãy bấm Đăng TikTok.",
         )
 
 

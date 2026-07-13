@@ -78,6 +78,11 @@ class MainWindow(tk.Tk):
         self.orchestrator = PublishingOrchestrator(
             repository, config, secret_store=self.secret_store
         )
+        if self.orchestrator.recovered_browser_failures:
+            startup_status += (
+                f" Đã mở khóa {self.orchestrator.recovered_browser_failures} tác vụ "
+                "lỗi trình duyệt của v0.5.3; có thể bấm đăng lại."
+            )
         self.executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="publisher"
         )
@@ -99,7 +104,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.5.3 — Biên tập, Facebook & TikTok")
+        self.title("MXH Publisher v0.5.4 — Biên tập, Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)

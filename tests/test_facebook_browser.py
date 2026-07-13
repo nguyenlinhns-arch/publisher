@@ -125,3 +125,20 @@ def test_changed_video_is_blocked_before_browser_mutation(tmp_path: Path) -> Non
         _publisher(tmp_path, session).publish(_request(video, expected_hash="0" * 64))
 
     assert session.operations == []
+
+
+def test_shared_session_is_not_closed_by_short_lived_facebook_adapter(
+    tmp_path: Path,
+) -> None:
+    session = FakeBrowser(selectors={UPLOAD_INPUT_SELECTORS[0]})
+    publisher = FacebookBrowserPublisher(
+        page_id="123456",
+        browser_profile_dir=tmp_path / "profile",
+        session_factory=lambda *_args: session,
+        close_session_on_close=False,
+    )
+    publisher._browser()
+
+    publisher.close()
+
+    assert session.closed is False

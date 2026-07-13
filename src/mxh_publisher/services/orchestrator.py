@@ -19,9 +19,12 @@ from ..publishers.base import (
 from ..publishers.facebook import FacebookPublisher
 from ..publishers.facebook_browser import FacebookBrowserPublisher
 from ..publishers.tiktok import (
+    SharedBrowserSessionFactory,
+    STATE_AUTHENTICATION_REQUIRED,
     STATE_AWAITING_CONFIRMATION,
     STATE_PUBLISHED,
     STATE_SCHEDULED,
+    STATE_VERIFICATION_REQUIRED,
     TikTokPublisher,
 )
 from ..repository import Repository
@@ -34,6 +37,14 @@ from .lease import LeaseHeartbeat, LeaseHeartbeatError
 LOGGER = logging.getLogger(__name__)
 REMOTE_MUTATION_LEASE_SECONDS = 3600
 SAFE_OPERATION_LEAD_MINUTES = 60
+SAFE_BROWSER_START_ERROR_CODES = frozenset(
+    {
+        "FACEBOOK_BROWSER_START_FAILED",
+        "TIKTOK_BROWSER_START_FAILED",
+        "tiktok.authentication_required",
+        "tiktok.verification_required",
+    }
+)
 
 
 class OrchestrationError(RuntimeError):
@@ -73,19 +84,48 @@ class PublishingOrchestrator:
         self.secret_store = secret_store or SecretStore()
         self.worker_id = worker_id or f"{socket.gethostname()}-{id(self):x}"
         shared_profile = config.browser_profile_dir / "chrome"
+        self.shared_browser_sessions = SharedBrowserSessionFactory()
         self.tiktok = tiktok or TikTokPublisher(
             browser_profile_dir=shared_profile,
             screenshots_dir=config.screenshots_dir / "tiktok",
             upload_url=config.tiktok_upload_url,
             browser_channel=config.browser_channel,
+            session_factory=self.shared_browser_sessions,
             auto_submit=True,
         )
         self.chrome_login = ChromeLoginManager(shared_profile)
         self.shared_browser_profile = shared_profile
         self.facebook_factory = facebook_factory
+        self.recovered_browser_failures = self._recover_safe_browser_start_failures()
 
     def close(self) -> None:
-        self.tiktok.close()
+        try:
+            self.tiktok.close()
+        finally:
+            self.shared_browser_sessions.close()
+
+    def _recover_safe_browser_start_failures(self) -> int:
+        """Unlock v0.5.3 local-start failures that happened before any upload."""
+
+        recovered = 0
+        deliveries = self.repository.list_deliveries(
+            statuses=DeliveryStatus.NEEDS_ACTION
+        )
+        for delivery in deliveries:
+            if (
+                delivery.last_error_code not in SAFE_BROWSER_START_ERROR_CODES
+                or delivery.remote_upload_id
+                or delivery.remote_post_id
+                or delivery.remote_url
+            ):
+                continue
+            self.repository.requeue_delivery(
+                delivery.id,
+                confirmed_no_remote=True,
+                next_attempt_at=datetime.now(UTC),
+            )
+            recovered += 1
+        return recovered
 
     def _default_facebook_factory(
         self,
@@ -130,6 +170,8 @@ class PublishingOrchestrator:
             page_id=self.config.facebook_page_id,
             browser_profile_dir=self.shared_browser_profile,
             browser_channel=self.config.browser_channel,
+            session_factory=self.shared_browser_sessions,
+            close_session_on_close=False,
         )
 
     def assert_platform_setup(self, post_id: str | None = None) -> None:
@@ -262,14 +304,11 @@ class PublishingOrchestrator:
         return self.chrome_login.open_facebook()
 
     def verify_tiktok_connection(self) -> BrowserConnectionResult:
-        opened = self.chrome_login.open_tiktok()
-        if opened.connected:
-            return opened
-        try:
-            checked = self.tiktok.check_connection()
-        except Exception:
-            return opened
-        return BrowserConnectionResult(checked.connected, checked.message)
+        # Never attach Playwright while the login surface is open.  TikTok can
+        # pause or reject authentication when a debugger is attached.  The
+        # publisher connects to this same Chrome only after the operator has
+        # completed login and explicitly presses Đăng TikTok.
+        return self.chrome_login.open_tiktok()
 
     def dry_run(self, post_id: str) -> DryRunReport:
         post = self.repository.get_post(post_id)
@@ -427,6 +466,33 @@ class PublishingOrchestrator:
                     result.message, self.repository.get_post(post_id), result
                 )
 
+            safe_preupload_retry = (
+                result.state
+                in {STATE_AUTHENTICATION_REQUIRED, STATE_VERIFICATION_REQUIRED}
+                and result.metadata.get("phase") == "before_upload"
+            )
+            if safe_preupload_retry:
+                self.repository.mark_retry_wait(
+                    delivery.id,
+                    token,
+                    next_attempt_at=datetime.now(UTC),
+                    error_code=f"tiktok.{result.state}",
+                    error_message=result.message,
+                )
+                self.repository.finish_attempt(
+                    attempt.id,
+                    AttemptStatus.FAILED,
+                    retryable=True,
+                    error_code=f"tiktok.{result.state}",
+                    error_message=result.message,
+                    details=dict(result.metadata),
+                )
+                return ActionResult(
+                    result.message + " Sau khi hoàn tất, có thể bấm Đăng TikTok lại.",
+                    self.repository.get_post(post_id),
+                    result,
+                )
+
             self.repository.mark_needs_action(
                 delivery.id,
                 token,
@@ -453,6 +519,15 @@ class PublishingOrchestrator:
                     error_message=exc.message,
                 )
                 attempt_status = AttemptStatus.UNKNOWN
+            elif exc.retryable:
+                self.repository.mark_retry_wait(
+                    delivery.id,
+                    token,
+                    next_attempt_at=datetime.now(UTC),
+                    error_code=exc.code,
+                    error_message=exc.message,
+                )
+                attempt_status = AttemptStatus.FAILED
             else:
                 self.repository.mark_needs_action(
                     delivery.id,
@@ -464,12 +539,13 @@ class PublishingOrchestrator:
             self.repository.finish_attempt(
                 attempt.id,
                 attempt_status,
-                retryable=False,
+                retryable=exc.retryable,
                 error_code=exc.code,
                 error_message=exc.message,
                 details=exc.metadata,
             )
-            raise OrchestrationError(exc.message) from exc
+            suffix = " Có thể bấm lại sau khi kiểm tra Chrome." if exc.retryable else ""
+            raise OrchestrationError(exc.message + suffix) from exc
 
     def schedule_facebook(self, post_id: str) -> ActionResult:
         """Schedule Facebook independently, preserving per-platform idempotency."""
@@ -605,6 +681,15 @@ class PublishingOrchestrator:
                     error_message=exc.message,
                 )
                 status = AttemptStatus.UNKNOWN
+            elif exc.retryable and not error_video_id:
+                self.repository.mark_retry_wait(
+                    facebook_delivery.id,
+                    lease_token,
+                    next_attempt_at=datetime.now(UTC),
+                    error_code=exc.code,
+                    error_message=exc.message,
+                )
+                status = AttemptStatus.FAILED
             else:
                 self.repository.mark_needs_action(
                     facebook_delivery.id,
@@ -617,13 +702,15 @@ class PublishingOrchestrator:
             self.repository.finish_attempt(
                 attempt.id,
                 status,
-                retryable=False,
+                retryable=exc.retryable and not exc.unknown_outcome,
                 error_code=exc.code,
                 error_message=exc.message,
                 details=exc.metadata,
             )
             raise OrchestrationError(
-                "Facebook chưa lên lịch: " + exc.message
+                "Facebook chưa lên lịch: "
+                + exc.message
+                + (" Có thể bấm Đăng FB lại." if exc.retryable else "")
             ) from exc
         except LeaseHeartbeatError as exc:
             current = self.repository.get_delivery(facebook_delivery.id)
