@@ -42,6 +42,17 @@ function Assert-ExitCode {
     }
 }
 
+function Invoke-PackagedCommand {
+    param([Parameter(Mandatory = $true)][string[]]$Arguments)
+    $CommandProcess = Start-Process `
+        -FilePath $Application `
+        -ArgumentList $Arguments `
+        -WorkingDirectory $Sandbox `
+        -Wait `
+        -PassThru
+    return $CommandProcess.ExitCode
+}
+
 function Restore-EnvironmentValue {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -60,6 +71,20 @@ if (-not (Test-Path -LiteralPath $Application -PathType Leaf)) {
     throw "Không tìm thấy EXE trong bản onedir biệt lập: $Application"
 }
 
+# PE optional-header Subsystem 2 means IMAGE_SUBSYSTEM_WINDOWS_GUI. This is a
+# release invariant: Windows must not create a CMD/console window for the app.
+$ExecutableBytes = [System.IO.File]::ReadAllBytes($Application)
+$PeHeaderOffset = [System.BitConverter]::ToInt32($ExecutableBytes, 0x3c)
+$OptionalHeaderOffset = $PeHeaderOffset + 24
+$Subsystem = [System.BitConverter]::ToUInt16(
+    $ExecutableBytes,
+    $OptionalHeaderOffset + 68
+)
+if ($Subsystem -ne 2) {
+    throw "MXHPublisher.exe không phải Windows GUI subsystem; CMD có thể xuất hiện."
+}
+Write-Host "PE subsystem đạt: Windows GUI (không tạo cửa sổ CMD)."
+
 $env:LOCALAPPDATA = Join-Path $Sandbox "LocalAppData"
 $env:APPDATA = Join-Path $Sandbox "RoamingAppData"
 Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
@@ -67,22 +92,23 @@ Remove-Item Env:MXH_FACEBOOK_PAGE_TOKEN -ErrorAction SilentlyContinue
 
 Push-Location $Sandbox
 try {
-    & $Application --help
-    Assert-ExitCode "MXHPublisher --help" $LASTEXITCODE
+    $HelpExitCode = Invoke-PackagedCommand -Arguments @("--help")
+    Assert-ExitCode "MXHPublisher --help" $HelpExitCode
 
     # Newer builds expose --system-only. Exit code 2 means an older parser, so
     # fall back to the existing doctor command without ever requiring FB tokens.
-    & $Application doctor --system-only
-    $DoctorExitCode = $LASTEXITCODE
+    $DoctorExitCode = Invoke-PackagedCommand `
+        -Arguments @("doctor", "--system-only")
     if ($DoctorExitCode -eq 2) {
-        & $Application doctor
-        Assert-ExitCode "MXHPublisher doctor" $LASTEXITCODE
+        $FallbackDoctorExitCode = Invoke-PackagedCommand -Arguments @("doctor")
+        Assert-ExitCode "MXHPublisher doctor" $FallbackDoctorExitCode
     } else {
         Assert-ExitCode "MXHPublisher doctor --system-only" $DoctorExitCode
     }
 
-    & $Application worker --verify-due --max-items 1
-    Assert-ExitCode "Worker với database trống" $LASTEXITCODE
+    $WorkerExitCode = Invoke-PackagedCommand `
+        -Arguments @("worker", "--verify-due", "--max-items", "1")
+    Assert-ExitCode "Worker với database trống" $WorkerExitCode
 
     $BundledFfprobe = Get-ChildItem -LiteralPath $IsolatedBundle `
         -Recurse -Filter "ffprobe.exe" -File | Select-Object -First 1

@@ -79,6 +79,7 @@ try {
         "--noconfirm",
         "--clean",
         "--onedir",
+        "--windowed",
         "--noupx",
         "--name", "MXHPublisher",
         "--distpath", $DistPath,

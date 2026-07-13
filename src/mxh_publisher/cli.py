@@ -9,7 +9,7 @@ from .logging_utils import configure_logging
 
 
 def hide_console_window_for_gui(command: str) -> None:
-    """Hide the packaging console when the Windows GUI is launched."""
+    """Fallback for development builds; releases use the GUI PE subsystem."""
     if sys.platform != "win32" or command != "gui":
         return
     try:

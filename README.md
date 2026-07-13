@@ -1,6 +1,9 @@
-# MXH Publisher V0.4.3 — bản pilot Windows
+# MXH Publisher V0.4.4 — bản pilot Windows
 
 Ứng dụng Windows hỗ trợ quản lý, duyệt và lên lịch cùng một video lên Facebook Fanpage và TikTok.
+
+EXE được đóng gói dạng ứng dụng Windows GUI nên khi mở ứng dụng sẽ không tạo
+hoặc để lại cửa sổ CMD.
 
 Trước khi lưu bài, ứng dụng cắt đầu/cuối video, ghép khung PNG và xuất một bản
 dùng chung 1080×1920, 30 fps, H.264/AAC cho cả Facebook và TikTok.
