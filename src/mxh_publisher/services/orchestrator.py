@@ -19,6 +19,7 @@ from ..publishers.base import (
 from ..publishers.facebook import FacebookPublisher
 from ..publishers.tiktok import (
     STATE_AWAITING_CONFIRMATION,
+    TikTokConnectionResult,
     TikTokPublisher,
 )
 from ..repository import Repository
@@ -130,6 +131,17 @@ class PublishingOrchestrator:
                 raise OrchestrationError(
                     "Tài khoản TikTok hiện tại khác tài khoản đã khóa khi duyệt bài."
                 )
+
+    def verify_facebook_connection(self) -> str:
+        publisher = self._facebook_publisher()
+        try:
+            identity = publisher.verify_page_access()
+        finally:
+            publisher.close()
+        return str(identity.get("name") or self.config.facebook_page_id)
+
+    def verify_tiktok_connection(self) -> TikTokConnectionResult:
+        return self.tiktok.check_connection()
 
     def dry_run(self, post_id: str) -> DryRunReport:
         post = self.repository.get_post(post_id)
