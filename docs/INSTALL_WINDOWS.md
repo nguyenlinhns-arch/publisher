@@ -18,8 +18,8 @@ Gói thử nghiệm hiện chưa ký mã. Windows SmartScreen có thể cảnh b
 4. Mở PowerShell tại thư mục đó và kiểm tra:
 
    ```powershell
-   Get-FileHash .\MXHPublisher-0.4.1-Windows-x64.zip -Algorithm SHA256
-   Get-Content .\MXHPublisher-0.4.1-Windows-x64.zip.sha256
+   Get-FileHash .\MXHPublisher-0.4.2-Windows-x64.zip -Algorithm SHA256
+   Get-Content .\MXHPublisher-0.4.2-Windows-x64.zip.sha256
    ```
 
 5. Hai giá trị phải giống nhau. Sau đó giải nén ZIP đến một thư mục cố định.

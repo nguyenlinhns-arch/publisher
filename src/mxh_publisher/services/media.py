@@ -298,10 +298,6 @@ def inspect_video(path: Path, ffprobe_path: Path | None = None) -> VideoInfo:
         issues.append(MediaIssue("error", "NO_AUDIO", "Video không có âm thanh."))
     elif audio_codec != "aac":
         issues.append(MediaIssue("error", "AUDIO_CODEC", "Âm thanh phải dùng AAC."))
-    if duration < 3 or duration > 90:
-        issues.append(
-            MediaIssue("error", "DURATION", "Thời lượng chung phải từ 3 đến 90 giây.")
-        )
     if width < 540 or height < 960 or width >= height:
         issues.append(
             MediaIssue("error", "RESOLUTION", "Video phải dọc, tối thiểu 540×960.")
@@ -389,14 +385,9 @@ def render_social_video(
         - spec.trim_start_seconds
         - spec.trim_end_seconds
     )
-    if output_duration < 3:
+    if output_duration <= 0:
         raise VideoEditError(
-            "Video còn dưới 3 giây sau khi cắt. Hãy giảm thời gian cắt đầu/cuối."
-        )
-    if output_duration > 90:
-        raise VideoEditError(
-            f"Video sau khi cắt còn {output_duration:.1f} giây; cần tối đa 90 giây. "
-            "Hãy tăng số giây cắt cuối."
+            "Thời gian cắt đầu/cuối đã vượt toàn bộ thời lượng video."
         )
 
     frame_digest = sha256_file(frame) if frame else "no-frame"
