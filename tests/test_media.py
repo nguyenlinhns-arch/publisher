@@ -135,11 +135,11 @@ class MediaTests(unittest.TestCase):
                 return result
 
             run.side_effect = execute
-            inspect.side_effect = lambda path: self._video_info(
-                Path(path),
-                duration=30 if Path(path) == source else 17.6,
-                valid=Path(path) != source,
-            )
+            inspect.side_effect = [
+                self._video_info(source, duration=30, valid=False),
+                self._video_info(root / "temporary.mp4", duration=17.6, valid=True),
+                self._video_info(root / "result.mp4", duration=17.6, valid=True),
+            ]
             result = render_social_video(
                 source,
                 root / "output",
