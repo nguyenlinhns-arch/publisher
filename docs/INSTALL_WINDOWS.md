@@ -3,7 +3,7 @@
 ## Yêu cầu
 
 - Windows 10 hoặc Windows 11, máy x64.
-- Microsoft Edge bản ổn định.
+- Google Chrome bản ổn định.
 - Tài khoản Facebook Fanpage và TikTok do người dùng tự đăng nhập/cấu hình.
 
 Gói thử nghiệm hiện chưa ký mã. Windows SmartScreen có thể cảnh báo khi mở lần
@@ -18,8 +18,8 @@ Gói thử nghiệm hiện chưa ký mã. Windows SmartScreen có thể cảnh b
 4. Mở PowerShell tại thư mục đó và kiểm tra:
 
    ```powershell
-   Get-FileHash .\MXHPublisher-0.4.2-Windows-x64.zip -Algorithm SHA256
-   Get-Content .\MXHPublisher-0.4.2-Windows-x64.zip.sha256
+   Get-FileHash .\MXHPublisher-0.4.3-Windows-x64.zip -Algorithm SHA256
+   Get-Content .\MXHPublisher-0.4.3-Windows-x64.zip.sha256
    ```
 
 5. Hai giá trị phải giống nhau. Sau đó giải nén ZIP đến một thư mục cố định.
@@ -61,11 +61,11 @@ Page access token được nhập ẩn và lưu trong Windows Credential Manager
 .\MXHPublisher.exe gui
 ```
 
-Facebook và TikTok dùng chung một hồ sơ Edge của ứng dụng. Đăng nhập Facebook
-trước, sau đó bấm kết nối TikTok; TikTok mở trong cùng phiên Edge và phiên đăng
+Facebook và TikTok dùng chung một hồ sơ Chrome của ứng dụng. Đăng nhập Facebook
+trước, sau đó bấm kết nối TikTok; TikTok mở trong cùng phiên Chrome và phiên đăng
 nhập được dùng lại ở những lần sau.
 
-Lần đầu chuẩn bị TikTok, đăng nhập trực tiếp trong cửa sổ Edge do ứng dụng mở.
+Lần đầu chuẩn bị TikTok, đăng nhập trực tiếp trong cửa sổ Chrome do ứng dụng mở.
 Ứng dụng không lưu mật khẩu TikTok. CAPTCHA và 2FA luôn do người dùng xử lý.
 
 Dữ liệu cục bộ nằm tại `%LOCALAPPDATA%\MXHPublisher`, gồm database, media đã
@@ -73,7 +73,7 @@ nhập, log, ảnh chụp bằng chứng và hồ sơ trình duyệt TikTok.
 
 ## Build lại từ mã nguồn
 
-Cài Python 3.12 x64 và Microsoft Edge, rồi chạy tại thư mục repository:
+Cài Python 3.12 x64 và Google Chrome, rồi chạy tại thư mục repository:
 
 ```powershell
 python -m venv .venv

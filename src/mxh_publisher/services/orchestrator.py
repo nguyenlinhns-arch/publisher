@@ -72,7 +72,7 @@ class PublishingOrchestrator:
         self.secret_store = secret_store or SecretStore()
         self.worker_id = worker_id or f"{socket.gethostname()}-{id(self):x}"
         self._shared_browser_factory = SharedBrowserSessionFactory()
-        shared_profile = config.browser_profile_dir / "facebook"
+        shared_profile = config.browser_profile_dir / "chrome"
         self.tiktok = tiktok or TikTokPublisher(
             browser_profile_dir=shared_profile,
             screenshots_dir=config.screenshots_dir / "tiktok",

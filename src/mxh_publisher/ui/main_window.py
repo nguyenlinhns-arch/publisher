@@ -96,7 +96,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.4.2 — Biên tập, Facebook & TikTok")
+        self.title("MXH Publisher v0.4.3 — Biên tập, Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -307,7 +307,7 @@ class MainWindow(tk.Tk):
         status.grid(row=1, column=0, sticky="ew")
 
     def _refresh_connection_summary(self) -> None:
-        facebook_profile = self.config_data.browser_profile_dir / "facebook"
+        facebook_profile = self.config_data.browser_profile_dir / "chrome"
         self.facebook_connection_var.set(
             "Có phiên đã lưu — bấm Kiểm tra"
             if facebook_profile.exists()
@@ -335,7 +335,7 @@ class MainWindow(tk.Tk):
     def check_facebook_browser_connection(self) -> None:
         self._run_background(
             self.orchestrator.verify_facebook_browser_connection,
-            working_message="Đang mở Facebook bằng hồ sơ Edge của ứng dụng…",
+            working_message="Đang mở Facebook bằng hồ sơ Chrome của ứng dụng…",
             success=self._facebook_browser_connection_success,
         )
 

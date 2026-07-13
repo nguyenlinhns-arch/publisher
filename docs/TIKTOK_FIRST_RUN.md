@@ -1,7 +1,7 @@
 # TikTok — lần chạy đầu
 
 1. Trong thiết lập app, nhập đúng `@username` tài khoản thử.
-2. Bấm `Chuẩn bị TikTok`; ứng dụng chỉ được mở đúng TikTok Studio bằng Edge.
+2. Bấm `Chuẩn bị TikTok`; ứng dụng chỉ được mở đúng TikTok Studio bằng Chrome.
 3. Tự đăng nhập, xử lý CAPTCHA/2FA. Ứng dụng không chụp hoặc tự xử lý các màn
    hình này.
 4. Kiểm tra đúng account, video, caption và giờ Việt Nam app hiển thị.

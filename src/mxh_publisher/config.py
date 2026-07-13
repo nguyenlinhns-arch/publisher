@@ -51,7 +51,7 @@ class AppConfig:
     tiktok_account_id: str = ""
     tiktok_upload_url: str = "https://www.tiktok.com/tiktokstudio/upload"
     tiktok_content_url: str = "https://www.tiktok.com/tiktokstudio/content"
-    browser_channel: str = "msedge"
+    browser_channel: str = "chrome"
 
     @property
     def timezone(self) -> ZoneInfo:
@@ -103,7 +103,9 @@ def load_config(path: Path | None = None) -> AppConfig:
                 "studio_content_url", "https://www.tiktok.com/tiktokstudio/content"
             )
         ),
-        browser_channel=str(tiktok.get("browser_channel", "msedge")),
+        # V0.4.3 standardizes both connections on installed Google Chrome.
+        # Ignore the old ``msedge`` value so upgrades do not silently reopen Edge.
+        browser_channel="chrome",
     )
     config.ensure_directories()
     return config
