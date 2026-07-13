@@ -8,10 +8,32 @@ from pathlib import Path
 from unittest.mock import patch
 
 from mxh_publisher.services.dry_run import run_dry_run
-from mxh_publisher.services.media import VideoInfo, inspect_video, sha256_file
+from mxh_publisher.services.media import (
+    VideoEditSpec,
+    VideoInfo,
+    inspect_video,
+    render_social_video,
+    sha256_file,
+)
 
 
 class MediaTests(unittest.TestCase):
+    @staticmethod
+    def _video_info(path: Path, *, duration: float, valid: bool) -> VideoInfo:
+        return VideoInfo(
+            path=path,
+            sha256="a" * 64,
+            size_bytes=100,
+            duration_seconds=duration,
+            width=1080 if valid else 1920,
+            height=1920 if valid else 1080,
+            fps=30,
+            video_codec="h264",
+            audio_codec="aac",
+            has_audio=True,
+            issues=(),
+        )
+
     def test_sha256_is_stable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "sample.mp4"
@@ -93,6 +115,59 @@ class MediaTests(unittest.TestCase):
                 approved=True,
             )
         self.assertTrue(report.ready, report.as_text())
+
+    @patch("mxh_publisher.services.media.find_ffmpeg", return_value="ffmpeg")
+    @patch("mxh_publisher.services.media.inspect_video")
+    @patch("mxh_publisher.services.media.subprocess.run")
+    def test_render_trims_and_overlays_frame(self, run, inspect, _find) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.mp4"
+            frame = root / "frame.png"
+            source.write_bytes(b"source")
+            frame.write_bytes(b"frame")
+
+            def execute(command, **_kwargs):
+                Path(command[-1]).write_bytes(b"rendered")
+                result = unittest.mock.Mock()
+                result.returncode = 0
+                result.stderr = ""
+                return result
+
+            run.side_effect = execute
+            inspect.side_effect = [
+                self._video_info(source, duration=30, valid=False),
+                self._video_info(root / "temporary.mp4", duration=17.6, valid=True),
+                self._video_info(root / "result.mp4", duration=17.6, valid=True),
+            ]
+            result = render_social_video(
+                source,
+                root / "output",
+                VideoEditSpec(6.2, 6.2, frame),
+            )
+
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index("-ss") + 1], "6.200")
+        self.assertEqual(command[command.index("-t") + 1], "17.600")
+        self.assertIn("overlay=0:0", command[command.index("-filter_complex") + 1])
+        self.assertEqual((result.width, result.height, result.fps), (1080, 1920, 30))
+
+    @patch("mxh_publisher.services.media.inspect_video")
+    def test_render_blocks_output_longer_than_90_seconds(self, inspect) -> None:
+        from mxh_publisher.services.media import VideoEditError
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.mp4"
+            source.write_bytes(b"source")
+            inspect.return_value = self._video_info(
+                source, duration=120, valid=False
+            )
+            with self.assertRaisesRegex(VideoEditError, "tối đa 90 giây"):
+                render_social_video(
+                    source,
+                    Path(directory) / "output",
+                    VideoEditSpec(6.2, 6.2),
+                )
 
 
 if __name__ == "__main__":

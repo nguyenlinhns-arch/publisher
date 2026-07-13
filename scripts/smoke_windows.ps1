@@ -91,6 +91,13 @@ try {
     }
     & $BundledFfprobe.FullName -version
     Assert-ExitCode "ffprobe đóng gói" $LASTEXITCODE
+    $BundledFfmpeg = Get-ChildItem -LiteralPath $IsolatedBundle `
+        -Recurse -Filter "ffmpeg.exe" -File | Select-Object -First 1
+    if ($null -eq $BundledFfmpeg) {
+        throw "Bản onedir không chứa ffmpeg.exe."
+    }
+    & $BundledFfmpeg.FullName -version
+    Assert-ExitCode "ffmpeg đóng gói" $LASTEXITCODE
 
     $PlaywrightNode = Get-ChildItem -LiteralPath $IsolatedBundle `
         -Recurse -Filter "node.exe" -File |

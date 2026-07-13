@@ -1,9 +1,15 @@
-# MXH Publisher V0.2.0 — bản pilot Windows
+# MXH Publisher V0.4.0 — bản pilot Windows
 
 Ứng dụng Windows hỗ trợ quản lý, duyệt và lên lịch cùng một video lên Facebook Fanpage và TikTok.
 
+Trước khi lưu bài, ứng dụng cắt đầu/cuối video, ghép khung PNG và xuất một bản
+dùng chung 1080×1920, 30 fps, H.264/AAC cho cả Facebook và TikTok.
+
 - Facebook: Meta Graph API v25.
-- TikTok: Playwright mở TikTok Studio có giao diện, tự chọn video và điền caption; người dùng tự kiểm tra và bấm `Lên lịch`.
+- Kết nối: Facebook và TikTok mở trong cùng một hồ sơ Edge bền vững; người dùng
+  tự đăng nhập, ứng dụng dùng lại cookie/phiên đó và không đọc mật khẩu.
+- TikTok: Playwright mở TikTok Studio có giao diện, tự chọn video đã biên tập và
+  điền caption; người dùng tự kiểm tra và bấm `Lên lịch`.
 - Dữ liệu: SQLite cục bộ; trạng thái, link và lỗi lưu riêng từng nền tảng.
 - Bảo mật: Page token lưu trong Windows Credential Manager; không lưu mật khẩu, cookie hay token trong mã nguồn/database/log.
 
@@ -21,7 +27,7 @@ Các ranh giới an toàn quan trọng:
 
 ## Quy trình sử dụng
 
-1. Chọn MP4, nhập caption, hashtag và giờ Việt Nam.
+1. Chọn MP4 nguồn, khung PNG, số giây cắt đầu/cuối; nhập caption, hashtag và giờ Việt Nam.
 2. Bấm `Lưu nháp`.
 3. Kiểm tra lại nội dung rồi bấm `Duyệt nội dung + khóa lịch`; app khóa Page,
    TikTok account và lịch cho bài đó.
@@ -38,14 +44,16 @@ Không xác nhận bước 7 nếu sai TikTok account, sai giờ hoặc video ch
 trong danh sách hẹn giờ. Lịch phải cách hiện tại ít nhất 60 phút để còn đủ thời
 gian thao tác và gửi lịch Facebook an toàn.
 
-## Chuẩn video V1
+## Biên tập và chuẩn video
+
+- Mặc định bỏ 6,2 giây đầu và 6,2 giây cuối; có thể đổi riêng phần cuối.
+- Video được scale/crop giữa khung thành 1080×1920 và phủ khung PNG lên trên.
+- App xuất bản upload bất biến bằng FFmpeg rồi mới chạy kiểm tra chuẩn.
 
 - MP4, H.264, AAC, có âm thanh.
 - Dọc 9:16, tối thiểu 540×960; khuyến nghị 1080×1920.
 - 24–60 fps; khuyến nghị 30 fps.
 - 3–90 giây.
-
-App chỉ kiểm tra và báo lỗi, không tự cắt hoặc chuyển mã.
 
 ## Cài môi trường phát triển trên Windows
 
@@ -54,7 +62,7 @@ Yêu cầu:
 - Windows 10/11.
 - Python 3.12.
 - Microsoft Edge.
-- `ffprobe.exe` trong `bin\ffprobe.exe`, hoặc FFmpeg có trong `PATH`.
+- `ffmpeg.exe` và `ffprobe.exe` trong thư mục `bin`, hoặc FFmpeg có trong `PATH`.
 
 PowerShell:
 

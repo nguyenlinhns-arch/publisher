@@ -43,6 +43,17 @@ class MediaInspectionError(RuntimeError):
     pass
 
 
+@dataclass(frozen=True, slots=True)
+class VideoEditSpec:
+    trim_start_seconds: float = 6.2
+    trim_end_seconds: float = 6.2
+    frame_path: Path | None = None
+
+
+class VideoEditError(RuntimeError):
+    pass
+
+
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -86,6 +97,34 @@ def find_ffprobe(explicit_path: Path | None = None) -> str:
             return str(candidate.resolve())
     raise MediaInspectionError(
         "Không tìm thấy ffprobe. Hãy cài FFmpeg hoặc đặt ffprobe.exe trong thư mục bin."
+    )
+
+
+def find_ffmpeg(explicit_path: Path | None = None) -> str:
+    candidates = [explicit_path] if explicit_path else []
+    if getattr(sys, "frozen", False):
+        runtime_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    else:
+        runtime_root = Path(__file__).resolve().parents[3]
+    candidates.extend(
+        [
+            runtime_root / "bin" / "ffmpeg.exe",
+            Path(sys.executable).resolve().parent / "bin" / "ffmpeg.exe",
+            Path("bin/ffmpeg.exe"),
+            Path("ffmpeg"),
+        ]
+    )
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        if str(candidate) == "ffmpeg":
+            resolved = shutil.which("ffmpeg")
+            if resolved:
+                return resolved
+        elif candidate.exists():
+            return str(candidate.resolve())
+    raise VideoEditError(
+        "Không tìm thấy ffmpeg. Hãy cài FFmpeg hoặc đặt ffmpeg.exe trong thư mục bin."
     )
 
 
@@ -221,3 +260,164 @@ def ingest_video(source: Path, media_dir: Path, sha256: str | None = None) -> Pa
         raise MediaInspectionError("Video bị thay đổi trong lúc sao chép.")
     temporary.replace(destination)
     return destination
+
+
+def render_social_video(
+    source: Path,
+    output_dir: Path,
+    spec: VideoEditSpec,
+    *,
+    ffmpeg_path: Path | None = None,
+) -> VideoInfo:
+    """Trim and render one immutable 9:16 upload asset for both platforms."""
+
+    source = source.expanduser().resolve()
+    if not source.is_file():
+        raise VideoEditError(f"Không tìm thấy video gốc: {source}")
+    if spec.trim_start_seconds < 0 or spec.trim_end_seconds < 0:
+        raise VideoEditError("Thời gian cắt đầu/cuối không được âm.")
+
+    frame = spec.frame_path.expanduser().resolve() if spec.frame_path else None
+    if frame is not None and not frame.is_file():
+        raise VideoEditError(f"Không tìm thấy khung hình: {frame}")
+
+    source_info = inspect_video(source)
+    output_duration = (
+        source_info.duration_seconds
+        - spec.trim_start_seconds
+        - spec.trim_end_seconds
+    )
+    if output_duration < 3:
+        raise VideoEditError(
+            "Video còn dưới 3 giây sau khi cắt. Hãy giảm thời gian cắt đầu/cuối."
+        )
+    if output_duration > 90:
+        raise VideoEditError(
+            f"Video sau khi cắt còn {output_duration:.1f} giây; cần tối đa 90 giây. "
+            "Hãy tăng số giây cắt cuối."
+        )
+
+    frame_digest = sha256_file(frame) if frame else "no-frame"
+    recipe = json.dumps(
+        {
+            "source": source_info.sha256,
+            "frame": frame_digest,
+            "trim_start": round(spec.trim_start_seconds, 3),
+            "trim_end": round(spec.trim_end_seconds, 3),
+            "size": "1080x1920",
+            "fps": 30,
+            "codec": "h264-aac-v1",
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    recipe_digest = hashlib.sha256(recipe.encode("utf-8")).hexdigest()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    destination = output_dir / f"edited_{recipe_digest[:24]}.mp4"
+    if destination.is_file():
+        existing = inspect_video(destination)
+        if existing.is_valid:
+            return existing
+
+    executable = find_ffmpeg(ffmpeg_path)
+    temporary = destination.with_name(destination.stem + ".partial.mp4")
+    temporary.unlink(missing_ok=True)
+    command = [
+        executable,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-ss",
+        f"{spec.trim_start_seconds:.3f}",
+        "-i",
+        str(source),
+    ]
+    if frame is not None:
+        command.extend(["-loop", "1", "-i", str(frame)])
+
+    if source_info.has_audio:
+        audio_map = "0:a:0"
+    else:
+        silence_index = 2 if frame is not None else 1
+        command.extend(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "anullsrc=channel_layout=stereo:sample_rate=48000",
+            ]
+        )
+        audio_map = f"{silence_index}:a:0"
+
+    base_filter = (
+        "scale=1080:1920:force_original_aspect_ratio=increase,"
+        "crop=1080:1920,fps=30"
+    )
+    if frame is None:
+        video_filter = f"[0:v]{base_filter},format=yuv420p[v]"
+    else:
+        video_filter = (
+            f"[0:v]{base_filter}[base];"
+            "[1:v]scale=1080:1920,format=rgba[frame];"
+            "[base][frame]overlay=0:0:format=auto,format=yuv420p[v]"
+        )
+    command.extend(
+        [
+            "-filter_complex",
+            video_filter,
+            "-map",
+            "[v]",
+            "-map",
+            audio_map,
+            "-t",
+            f"{output_duration:.3f}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "20",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            "48000",
+            "-movflags",
+            "+faststart",
+            "-shortest",
+            str(temporary),
+        ]
+    )
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=3600,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        temporary.unlink(missing_ok=True)
+        raise VideoEditError(f"Không xuất được video: {exc}") from exc
+    if completed.returncode != 0:
+        temporary.unlink(missing_ok=True)
+        detail = completed.stderr.strip() or "ffmpeg trả về lỗi không xác định."
+        raise VideoEditError("Không xuất được video:\n" + detail[-2000:])
+
+    try:
+        rendered = inspect_video(temporary)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+    if not rendered.is_valid:
+        temporary.unlink(missing_ok=True)
+        errors = "; ".join(
+            issue.message for issue in rendered.issues if issue.severity == "error"
+        )
+        raise VideoEditError("Video sau khi xuất chưa đạt chuẩn: " + errors)
+    temporary.replace(destination)
+    return inspect_video(destination)

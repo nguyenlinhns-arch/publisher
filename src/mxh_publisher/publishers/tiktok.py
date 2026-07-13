@@ -19,6 +19,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
+from threading import Lock
 from time import monotonic
 from typing import Any, Callable, Protocol, Sequence
 from urllib.parse import urlsplit, urlunsplit
@@ -139,6 +140,33 @@ class BrowserSession(Protocol):
 
 
 BrowserSessionFactory = Callable[[Path, str, bool], BrowserSession]
+
+
+class SharedBrowserSessionFactory:
+    """Create exactly one persistent browser context for Facebook and TikTok."""
+
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._session: BrowserSession | None = None
+        self._settings: tuple[Path, str, bool] | None = None
+
+    def __call__(
+        self, profile_dir: Path, browser_channel: str, headless: bool
+    ) -> BrowserSession:
+        settings = (
+            profile_dir.expanduser().resolve(),
+            browser_channel.strip().lower(),
+            headless,
+        )
+        with self._lock:
+            if self._session is None:
+                self._session = start_playwright_session(*settings)
+                self._settings = settings
+            elif settings != self._settings:
+                raise RuntimeError(
+                    "Facebook và TikTok phải dùng cùng một hồ sơ và kênh trình duyệt."
+                )
+            return self._session
 
 
 @dataclass(frozen=True, slots=True)
@@ -302,6 +330,21 @@ class _PlaywrightBrowserSession:
         return self._page.url
 
     def goto(self, url: str, *, timeout_ms: int) -> None:
+        context = self._context
+        if context is None:
+            raise RuntimeError("Phiên trình duyệt đã đóng.")
+        target_host = urlsplit(url).hostname
+        for page in context.pages:
+            try:
+                if urlsplit(page.url).hostname == target_host:
+                    self._page = page
+                    page.bring_to_front()
+                    break
+            except Exception:
+                continue
+        else:
+            if self._page.url not in {"", "about:blank"}:
+                self._page = context.new_page()
         self._page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
 
     def body_text(self) -> str:
@@ -814,6 +857,7 @@ __all__ = [
     "STATE_AWAITING_CONFIRMATION",
     "STATE_MANUAL_ACTION_REQUIRED",
     "STATE_VERIFICATION_REQUIRED",
+    "SharedBrowserSessionFactory",
     "TikTokAssistedPublisher",
     "TikTokPublisher",
     "UPLOAD_INPUT_SELECTORS",

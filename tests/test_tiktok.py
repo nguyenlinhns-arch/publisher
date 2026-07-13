@@ -675,6 +675,28 @@ def test_close_is_explicit_and_session_is_reusable(tmp_path: Path) -> None:
     assert session.closed is True
 
 
+def test_shared_browser_factory_reuses_one_session_for_both_platforms(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = FakeBrowserSession()
+    starts: list[tuple[Path, str, bool]] = []
+
+    def start(profile: Path, channel: str, headless: bool):
+        starts.append((profile, channel, headless))
+        return session
+
+    monkeypatch.setattr(tiktok_module, "start_playwright_session", start)
+    factory = tiktok_module.SharedBrowserSessionFactory()
+    profile = tmp_path / "shared-profile"
+
+    facebook_session = factory(profile, "msedge", False)
+    tiktok_session = factory(profile, "msedge", False)
+
+    assert facebook_session is session
+    assert tiktok_session is session
+    assert starts == [(profile.resolve(), "msedge", False)]
+
+
 def test_adapter_source_contains_no_click_call() -> None:
     source = inspect.getsource(tiktok_module)
     assert ".click(" not in source

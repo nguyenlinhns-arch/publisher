@@ -11,7 +11,7 @@ from pathlib import Path
 
 from ..config import AppConfig
 from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
-from .media import MediaInspectionError, find_ffprobe
+from .media import MediaInspectionError, VideoEditError, find_ffmpeg, find_ffprobe
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +66,25 @@ def _ffprobe_check() -> DoctorCheck:
         return DoctorCheck("ffprobe", False, f"ffprobe lỗi: {detail}")
     first_line = (completed.stdout.splitlines() or ["ffprobe"])[0]
     return DoctorCheck("ffprobe", True, f"ffprobe hoạt động: {first_line}")
+
+
+def _ffmpeg_check() -> DoctorCheck:
+    try:
+        executable = find_ffmpeg()
+        completed = subprocess.run(
+            [executable, "-version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (VideoEditError, OSError, subprocess.TimeoutExpired) as exc:
+        return DoctorCheck("ffmpeg", False, f"Không chạy được ffmpeg: {exc}")
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"mã lỗi {completed.returncode}"
+        return DoctorCheck("ffmpeg", False, f"ffmpeg lỗi: {detail}")
+    first_line = (completed.stdout.splitlines() or ["ffmpeg"])[0]
+    return DoctorCheck("ffmpeg", True, f"ffmpeg hoạt động: {first_line}")
 
 
 def _playwright_check() -> DoctorCheck:
@@ -125,6 +144,7 @@ def run_doctor(
         _directory_check(config.screenshots_dir, "Thư mục ảnh chụp"),
         _database_check(config.database_path),
         _ffprobe_check(),
+        _ffmpeg_check(),
         _playwright_check(),
     ]
     for module, label in (("httpx", "HTTP client"), ("keyring", "Keyring")):
