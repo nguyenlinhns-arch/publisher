@@ -1,6 +1,6 @@
 # Third-party notices
 
-MXH Publisher bundles and depends on third-party software. Copyright and
+MXH Video Editor bundles and depends on third-party software. Copyright and
 license notices for those components remain the property of their respective
 authors.
 
@@ -19,7 +19,8 @@ Essentials Build.
   <https://github.com/FFmpeg/FFmpeg/commit/38b88335f9>
 - License reported by the build provider: GNU GPL version 3.
 
-`ffprobe.exe` is a separate executable invoked by MXH Publisher. The packaging
+`ffmpeg.exe` and `ffprobe.exe` are separate executables invoked by MXH Video
+Editor. The packaging
 process copies the license and README shipped in the downloaded FFmpeg archive
 into `licenses/ffmpeg/` when those files are present. The build also records
 the archive and executable SHA-256 values in `licenses/ffmpeg/SOURCE.txt`.
@@ -30,15 +31,5 @@ The GNU GPL version 3 text and source information are available at:
 - <https://ffmpeg.org/legal.html>
 - <https://ffmpeg.org/download.html#get-sources>
 
-## Playwright
-
-Playwright is licensed under the Apache License 2.0. Its Python package and
-driver retain their bundled `LICENSE`, `NOTICE`, and `ThirdPartyNotices.txt`
-files inside the PyInstaller onedir distribution.
-
-- <https://github.com/microsoft/playwright-python>
-- <https://www.apache.org/licenses/LICENSE-2.0>
-
-Other Python dependencies retain their package metadata and applicable notices
-inside the application bundle. This file is informational and is not legal
-advice.
+MXH Video Editor does not bundle Playwright or browser automation libraries.
+This file is informational and is not legal advice.

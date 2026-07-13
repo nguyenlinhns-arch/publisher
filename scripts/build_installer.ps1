@@ -1,6 +1,6 @@
-param([string]$Version = "0.5.4")
+param([string]$Version = "1.0.0")
 $ErrorActionPreference = "Stop"
-$portable = Join-Path $PSScriptRoot "..\dist\MXHPublisher-$Version-Windows-x64"
+$portable = Join-Path $PSScriptRoot "..\dist\MXHVideoEditor-$Version-Windows-x64"
 if (-not (Test-Path $portable)) { throw "Portable build not found: $portable" }
 $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
 if (-not $iscc) { throw "Inno Setup 6 (ISCC.exe) is required to build Setup.exe." }

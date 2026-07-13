@@ -3,17 +3,12 @@ requires = ["setuptools>=70", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mxh-publisher"
-version = "0.5.4"
-description = "Ứng dụng Windows hỗ trợ lên lịch video đồng bộ Facebook Fanpage và TikTok."
+name = "mxh-video-editor"
+version = "1.0.0"
+description = "Ứng dụng Windows cắt và dựng video dọc 9:16 độc lập."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-  "httpx==0.28.1",
-  "keyring==25.7.0",
-  "playwright==1.61.0",
-  "tzdata==2026.2",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = [
@@ -25,7 +20,7 @@ dev = [
 ]
 
 [project.scripts]
-mxh-publisher = "mxh_publisher.cli:main"
+mxh-video-editor = "mxh_video_editor.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -34,6 +29,6 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["editor_tests"]
 pythonpath = ["src"]
 addopts = "-q"

@@ -1,7 +1,5 @@
 [CmdletBinding()]
-param(
-    [string]$BundlePath
-)
+param([string]$BundlePath)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -13,7 +11,7 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 
 $Root = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($BundlePath)) {
-    $BundlePath = Join-Path $Root "dist\MXHPublisher"
+    $BundlePath = Join-Path $Root "dist\MXHVideoEditor"
 }
 $BundlePath = (Resolve-Path -LiteralPath $BundlePath).Path
 $TemporaryBase = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) {
@@ -21,134 +19,95 @@ $TemporaryBase = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) {
 } else {
     $env:RUNNER_TEMP
 }
-$Sandbox = Join-Path $TemporaryBase `
-    ("mxh-publisher-smoke-" + [guid]::NewGuid().ToString("N"))
-$IsolatedBundle = Join-Path $Sandbox "MXHPublisher"
-$Application = Join-Path $IsolatedBundle "MXHPublisher.exe"
+$Sandbox = Join-Path $TemporaryBase ("mxh-video-editor-smoke-" + [guid]::NewGuid().ToString("N"))
+$IsolatedBundle = Join-Path $Sandbox "MXHVideoEditor"
+$Application = Join-Path $IsolatedBundle "MXHVideoEditor.exe"
+$OutputDirectory = Join-Path $Sandbox "outputs"
+$InputVideo = Join-Path $Sandbox "sample.mp4"
 $Process = $null
 
-$OldLocalAppData = $env:LOCALAPPDATA
-$OldAppData = $env:APPDATA
-$OldPythonPath = $env:PYTHONPATH
-$OldFacebookToken = $env:MXH_FACEBOOK_PAGE_TOKEN
-
 function Assert-ExitCode {
-    param(
-        [Parameter(Mandatory = $true)][string]$Step,
-        [Parameter(Mandatory = $true)][int]$ExitCode
-    )
+    param([string]$Step, [int]$ExitCode)
     if ($ExitCode -ne 0) {
         throw "$Step thất bại với mã thoát $ExitCode."
     }
 }
 
 function Invoke-PackagedCommand {
-    param([Parameter(Mandatory = $true)][string[]]$Arguments)
-    $CommandProcess = Start-Process `
-        -FilePath $Application `
-        -ArgumentList $Arguments `
-        -WorkingDirectory $Sandbox `
-        -Wait `
-        -PassThru
+    param([string[]]$Arguments)
+    $CommandProcess = Start-Process -FilePath $Application -ArgumentList $Arguments `
+        -WorkingDirectory $Sandbox -Wait -PassThru
     return $CommandProcess.ExitCode
 }
 
-function Restore-EnvironmentValue {
-    param(
-        [Parameter(Mandatory = $true)][string]$Name,
-        [AllowNull()][string]$Value
-    )
-    if ($null -eq $Value) {
-        Remove-Item "Env:$Name" -ErrorAction SilentlyContinue
-    } else {
-        Set-Item "Env:$Name" $Value
-    }
-}
-
-New-Item -ItemType Directory -Force -Path $Sandbox | Out-Null
+New-Item -ItemType Directory -Force -Path $Sandbox, $OutputDirectory | Out-Null
 Copy-Item -LiteralPath $BundlePath -Destination $IsolatedBundle -Recurse
 if (-not (Test-Path -LiteralPath $Application -PathType Leaf)) {
-    throw "Không tìm thấy EXE trong bản onedir biệt lập: $Application"
+    throw "Không tìm thấy MXHVideoEditor.exe trong bản onedir."
 }
 
-# PE optional-header Subsystem 2 means IMAGE_SUBSYSTEM_WINDOWS_GUI. This is a
-# release invariant: Windows must not create a CMD/console window for the app.
+# IMAGE_SUBSYSTEM_WINDOWS_GUI = 2: chạy app không tạo cửa sổ CMD.
 $ExecutableBytes = [System.IO.File]::ReadAllBytes($Application)
 $PeHeaderOffset = [System.BitConverter]::ToInt32($ExecutableBytes, 0x3c)
 $OptionalHeaderOffset = $PeHeaderOffset + 24
-$Subsystem = [System.BitConverter]::ToUInt16(
-    $ExecutableBytes,
-    $OptionalHeaderOffset + 68
-)
+$Subsystem = [System.BitConverter]::ToUInt16($ExecutableBytes, $OptionalHeaderOffset + 68)
 if ($Subsystem -ne 2) {
-    throw "MXHPublisher.exe không phải Windows GUI subsystem; CMD có thể xuất hiện."
+    throw "MXHVideoEditor.exe không phải Windows GUI subsystem."
 }
-Write-Host "PE subsystem đạt: Windows GUI (không tạo cửa sổ CMD)."
 
-$env:LOCALAPPDATA = Join-Path $Sandbox "LocalAppData"
-$env:APPDATA = Join-Path $Sandbox "RoamingAppData"
-Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
-Remove-Item Env:MXH_FACEBOOK_PAGE_TOKEN -ErrorAction SilentlyContinue
+$BundledFfprobe = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
+    -Filter "ffprobe.exe" -File | Select-Object -First 1
+$BundledFfmpeg = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
+    -Filter "ffmpeg.exe" -File | Select-Object -First 1
+$BundledFrame = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
+    -Filter "nen.png" -File | Select-Object -First 1
+if ($null -eq $BundledFfprobe -or $null -eq $BundledFfmpeg -or $null -eq $BundledFrame) {
+    throw "Bản đóng gói thiếu ffmpeg, ffprobe hoặc nền mặc định."
+}
+$FrameHash = (Get-FileHash -LiteralPath $BundledFrame.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($FrameHash -ne "d66882d0e60f73cdde049d6ad997a859ee0d379571bb0dc36e6155df58c6d910") {
+    throw "Khung nền mặc định không đúng tệp đã duyệt."
+}
 
 Push-Location $Sandbox
 try {
-    $HelpExitCode = Invoke-PackagedCommand -Arguments @("--help")
-    Assert-ExitCode "MXHPublisher --help" $HelpExitCode
+    Assert-ExitCode "MXHVideoEditor --help" (Invoke-PackagedCommand -Arguments @("--help"))
+    Assert-ExitCode "MXHVideoEditor doctor" (Invoke-PackagedCommand -Arguments @("doctor"))
 
-    # Newer builds expose --system-only. Exit code 2 means an older parser, so
-    # fall back to the existing doctor command without ever requiring FB tokens.
-    $DoctorExitCode = Invoke-PackagedCommand `
-        -Arguments @("doctor", "--system-only")
-    if ($DoctorExitCode -eq 2) {
-        $FallbackDoctorExitCode = Invoke-PackagedCommand -Arguments @("doctor")
-        Assert-ExitCode "MXHPublisher doctor" $FallbackDoctorExitCode
-    } else {
-        Assert-ExitCode "MXHPublisher doctor --system-only" $DoctorExitCode
-    }
+    & $BundledFfmpeg.FullName -hide_banner -loglevel error -y `
+        -f lavfi -t 14 -i "testsrc2=size=640x360:rate=30" `
+        -f lavfi -t 14 -i "sine=frequency=880:sample_rate=48000" `
+        -shortest -c:v libx264 -preset ultrafast -pix_fmt yuv420p `
+        -c:a aac -movflags +faststart $InputVideo
+    Assert-ExitCode "Tạo video smoke-test" $LASTEXITCODE
 
-    $WorkerExitCode = Invoke-PackagedCommand `
-        -Arguments @("worker", "--verify-due", "--max-items", "1")
-    Assert-ExitCode "Worker với database trống" $WorkerExitCode
-
-    $BundledFfprobe = Get-ChildItem -LiteralPath $IsolatedBundle `
-        -Recurse -Filter "ffprobe.exe" -File | Select-Object -First 1
-    if ($null -eq $BundledFfprobe) {
-        throw "Bản onedir không chứa ffprobe.exe."
-    }
-    & $BundledFfprobe.FullName -version
-    Assert-ExitCode "ffprobe đóng gói" $LASTEXITCODE
-    $BundledFfmpeg = Get-ChildItem -LiteralPath $IsolatedBundle `
-        -Recurse -Filter "ffmpeg.exe" -File | Select-Object -First 1
-    if ($null -eq $BundledFfmpeg) {
-        throw "Bản onedir không chứa ffmpeg.exe."
-    }
-    & $BundledFfmpeg.FullName -version
-    Assert-ExitCode "ffmpeg đóng gói" $LASTEXITCODE
-
-    $BundledFrame = Get-ChildItem -LiteralPath $IsolatedBundle `
-        -Recurse -Filter "nen.png" -File | Select-Object -First 1
-    if ($null -eq $BundledFrame) {
-        throw "Bản onedir thiếu khung nền mặc định nen.png."
-    }
-    $FrameHash = (Get-FileHash -LiteralPath $BundledFrame.FullName `
-        -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($FrameHash -ne "d66882d0e60f73cdde049d6ad997a859ee0d379571bb0dc36e6155df58c6d910") {
-        throw "Khung nền mặc định không đúng tệp đã duyệt."
-    }
-
-    $PlaywrightNode = Get-ChildItem -LiteralPath $IsolatedBundle `
-        -Recurse -Filter "node.exe" -File |
-        Where-Object { $_.FullName -match 'playwright' } |
+    $RenderArguments = @(
+        "render", "--input", $InputVideo,
+        "--title", "VIDEO KIỂM TRA KHUNG XANH",
+        "--output-dir", $OutputDirectory
+    )
+    Assert-ExitCode "Sửa video đóng gói" (Invoke-PackagedCommand -Arguments $RenderArguments)
+    $Rendered = Get-ChildItem -LiteralPath $OutputDirectory -Filter "*.mp4" -File |
         Select-Object -First 1
-    $PlaywrightCli = Get-ChildItem -LiteralPath $IsolatedBundle `
-        -Recurse -Filter "cli.js" -File |
-        Where-Object { $_.FullName -match 'playwright' } |
-        Select-Object -First 1
-    if ($null -eq $PlaywrightNode -or $null -eq $PlaywrightCli) {
-        throw "Bản onedir thiếu Playwright driver (node.exe/cli.js)."
+    if ($null -eq $Rendered) {
+        throw "Ứng dụng không tạo video thành phẩm."
     }
-    & $PlaywrightNode.FullName $PlaywrightCli.FullName --version
-    Assert-ExitCode "Playwright driver đóng gói" $LASTEXITCODE
+    $ProbeJson = (& $BundledFfprobe.FullName -v error -show_entries `
+        "stream=codec_type,codec_name,width,height:format=duration" `
+        -of json $Rendered.FullName) | ConvertFrom-Json
+    Assert-ExitCode "Đọc video thành phẩm" $LASTEXITCODE
+    $VideoStream = $ProbeJson.streams | Where-Object { $_.codec_type -eq "video" } |
+        Select-Object -First 1
+    $AudioStream = $ProbeJson.streams | Where-Object { $_.codec_type -eq "audio" } |
+        Select-Object -First 1
+    if ($VideoStream.width -ne 1080 -or $VideoStream.height -ne 1920 `
+            -or $VideoStream.codec_name -ne "h264" -or $AudioStream.codec_name -ne "aac") {
+        throw "Video thành phẩm không đúng H.264/AAC 1080×1920."
+    }
+    $Duration = [double]$ProbeJson.format.duration
+    if ($Duration -lt 3.6 -or $Duration -gt 4.0) {
+        throw "Cắt 6,2 giây đầu và 4 giây cuối không đúng; thời lượng=$Duration."
+    }
 
     $Process = Start-Process -FilePath $Application -WorkingDirectory $Sandbox -PassThru
     Start-Sleep -Seconds 5
@@ -156,30 +115,15 @@ try {
     if ($Process.HasExited) {
         throw "Giao diện thoát sớm với mã $($Process.ExitCode)."
     }
-    Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue
+    Stop-Process -Id $Process.Id -Force
     $Process.WaitForExit(5000) | Out-Null
     $Process = $null
-
-    Write-Host "Smoke test Windows onedir đạt."
-} catch {
-    $LogDirectory = Join-Path $env:LOCALAPPDATA "MXHPublisher\logs"
-    if (Test-Path -LiteralPath $LogDirectory) {
-        Get-ChildItem -LiteralPath $LogDirectory -File |
-            ForEach-Object {
-                Write-Host "--- Log: $($_.FullName)"
-                Get-Content -LiteralPath $_.FullName -Tail 200
-            }
-    }
-    throw
+    Write-Host "Smoke test MXH Video Editor đạt."
 } finally {
     if ($null -ne $Process -and -not $Process.HasExited) {
         Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue
     }
     Pop-Location
-    Restore-EnvironmentValue "LOCALAPPDATA" $OldLocalAppData
-    Restore-EnvironmentValue "APPDATA" $OldAppData
-    Restore-EnvironmentValue "PYTHONPATH" $OldPythonPath
-    Restore-EnvironmentValue "MXH_FACEBOOK_PAGE_TOKEN" $OldFacebookToken
     if (Test-Path -LiteralPath $Sandbox) {
         Remove-Item -LiteralPath $Sandbox -Recurse -Force
     }

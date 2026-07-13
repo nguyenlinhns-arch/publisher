@@ -1,4 +1,4 @@
-name: Windows build
+name: MXH Video Editor Windows build
 
 "on":
   workflow_dispatch:
@@ -62,7 +62,7 @@ jobs:
       - name: Upload unsigned test build
         uses: actions/upload-artifact@v7
         with:
-          name: MXHPublisher-Windows-x64-${{ github.sha }}
+          name: MXHVideoEditor-Windows-x64-${{ github.sha }}
           path: release/*
           if-no-files-found: error
           retention-days: 30

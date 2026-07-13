@@ -19,7 +19,7 @@ $DefaultFrame = Join-Path $Root "assets\nen.png"
 $DistPath = Join-Path $Root "dist"
 $WorkPath = Join-Path $Root "build\pyinstaller"
 $SpecPath = Join-Path $Root "build\pyinstaller-spec"
-$EntryPoint = Join-Path $Root "src\mxh_publisher\__main__.py"
+$EntryPoint = Join-Path $Root "src\mxh_video_editor\__main__.py"
 
 function Assert-NativeSuccess {
     param([Parameter(Mandatory = $true)][string]$Step)
@@ -70,11 +70,18 @@ try {
     }
 
     if (-not $SkipQualityChecks) {
-        & $Python -m ruff check (Join-Path $Root "src") (Join-Path $Root "tests")
+        & $Python -m ruff check `
+            (Join-Path $Root "src\mxh_video_editor") `
+            (Join-Path $Root "src\mxh_publisher\services\media.py") `
+            (Join-Path $Root "editor_tests")
         Assert-NativeSuccess "Ruff"
-        & $Python -m mypy (Join-Path $Root "src")
+        & $Python -m mypy `
+            (Join-Path $Root "src\mxh_video_editor") `
+            (Join-Path $Root "src\mxh_publisher\services\media.py")
         Assert-NativeSuccess "Mypy"
-        & $Python -m compileall -q (Join-Path $Root "src")
+        & $Python -m compileall -q `
+            (Join-Path $Root "src\mxh_video_editor") `
+            (Join-Path $Root "src\mxh_publisher\services\media.py")
         Assert-NativeSuccess "Compileall"
     }
 
@@ -85,12 +92,10 @@ try {
         "--onedir",
         "--windowed",
         "--noupx",
-        "--name", "MXHPublisher",
+        "--name", "MXHVideoEditor",
         "--distpath", $DistPath,
         "--workpath", $WorkPath,
         "--specpath", $SpecPath,
-        "--collect-all", "playwright",
-        "--collect-all", "tzdata",
         "--paths", (Join-Path $Root "src"),
         "--add-binary", "$Ffprobe;bin",
         "--add-binary", "$Ffmpeg;bin",
@@ -103,21 +108,21 @@ try {
     Pop-Location
 }
 
-$Executable = Join-Path $DistPath "MXHPublisher\MXHPublisher.exe"
+$Executable = Join-Path $DistPath "MXHVideoEditor\MXHVideoEditor.exe"
 if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) {
     throw "PyInstaller không tạo được $Executable."
 }
-$BundledFfprobe = Get-ChildItem (Join-Path $DistPath "MXHPublisher") `
+$BundledFfprobe = Get-ChildItem (Join-Path $DistPath "MXHVideoEditor") `
     -Recurse -Filter "ffprobe.exe" -File | Select-Object -First 1
 if ($null -eq $BundledFfprobe) {
     throw "Bản onedir không chứa ffprobe.exe."
 }
-$BundledFfmpeg = Get-ChildItem (Join-Path $DistPath "MXHPublisher") `
+$BundledFfmpeg = Get-ChildItem (Join-Path $DistPath "MXHVideoEditor") `
     -Recurse -Filter "ffmpeg.exe" -File | Select-Object -First 1
 if ($null -eq $BundledFfmpeg) {
     throw "Bản onedir không chứa ffmpeg.exe."
 }
-$BundledFrame = Get-ChildItem (Join-Path $DistPath "MXHPublisher") `
+$BundledFrame = Get-ChildItem (Join-Path $DistPath "MXHVideoEditor") `
     -Recurse -Filter "nen.png" -File | Select-Object -First 1
 if ($null -eq $BundledFrame) {
     throw "Bản onedir không chứa khung nền assets\nen.png."

@@ -1,85 +1,12 @@
-# Cài và chạy MXH Publisher trên Windows
+# Cài và chạy MXH Video Editor trên Windows
 
-## Yêu cầu
+1. Tải `MXHVideoEditor-1.0.0-Windows-x64.zip`.
+2. Kiểm tra SHA-256 nếu cần.
+3. Giải nén toàn bộ ZIP vào một thư mục mới.
+4. Mở thư mục `MXHVideoEditor` và chạy `MXHVideoEditor.exe`.
 
-- Windows 10 hoặc Windows 11, máy x64.
-- Google Chrome bản ổn định.
-- Tài khoản Facebook Fanpage và TikTok do người dùng tự đăng nhập/cấu hình.
+Không chạy EXE trực tiếp bên trong cửa sổ ZIP. Bản pilot chưa ký mã nên Windows
+SmartScreen có thể yêu cầu chọn **More info → Run anyway**.
 
-Gói thử nghiệm hiện chưa ký mã. Windows SmartScreen có thể cảnh báo khi mở lần
-đầu. Chỉ sử dụng ZIP tải từ GitHub Actions của repository chính thức và luôn
-đối chiếu SHA-256 trước khi chạy.
-
-## Cài từ artifact GitHub Actions
-
-1. Mở workflow `Windows build` đã chạy thành công.
-2. Tải artifact có tên `MXHPublisher-Windows-x64-<commit>`.
-3. Giải nén artifact; bên trong có một ZIP phát hành và tệp `.sha256`.
-4. Mở PowerShell tại thư mục đó và kiểm tra:
-
-   ```powershell
-   Get-FileHash .\MXHPublisher-0.5.0-Windows-x64.zip -Algorithm SHA256
-   Get-Content .\MXHPublisher-0.5.0-Windows-x64.zip.sha256
-   ```
-
-5. Hai giá trị phải giống nhau. Sau đó giải nén ZIP đến một thư mục cố định.
-6. Giữ nguyên toàn bộ thư mục `MXHPublisher`; không chép riêng tệp EXE.
-
-Ứng dụng dùng PyInstaller `onedir`. Thư mục `_internal` chứa Python, Tcl/Tk,
-Playwright driver, múi giờ, `ffmpeg.exe` và `ffprobe.exe`; thiếu bất kỳ phần nào ứng dụng có
-thể không chạy hoặc không kiểm tra được video.
-
-## Kiểm tra hệ thống
-
-Từ PowerShell trong thư mục ứng dụng:
-
-```powershell
-.\MXHPublisher.exe doctor --system-only
-```
-
-Nếu đang dùng bản cũ chưa có tùy chọn `--system-only`, chạy:
-
-```powershell
-.\MXHPublisher.exe doctor
-```
-
-Kết quả phải có 0 lỗi chặn. Kiểm tra này không cần Page token Facebook và không
-đăng nội dung lên bất kỳ nền tảng nào.
-
-## Mở ứng dụng
-
-```powershell
-.\MXHPublisher.exe gui
-```
-
-Facebook và TikTok dùng chung một hồ sơ và một cửa sổ Chrome của ứng dụng. Tự
-đăng nhập rồi giữ Chrome mở; các nút đăng sẽ gắn vào đúng cửa sổ đó để chọn file
-đã sửa. Luồng mặc định không cần Facebook Page access token.
-
-Ứng dụng không lưu mật khẩu. CAPTCHA và 2FA luôn do người dùng xử lý.
-
-Dữ liệu cục bộ nằm tại `%LOCALAPPDATA%\MXHPublisher`, gồm database, video đã sửa
-trong `media\edited`, log, ảnh chụp bằng chứng và hồ sơ trình duyệt.
-
-## Build lại từ mã nguồn
-
-Cài Python 3.12 x64 và Google Chrome, rồi chạy tại thư mục repository:
-
-```powershell
-python -m venv .venv
-.\scripts\fetch_ffprobe.ps1
-.\scripts\build_windows.ps1
-.\scripts\smoke_windows.ps1
-.\scripts\package_windows.ps1
-```
-
-`fetch_ffprobe.ps1` tải đúng FFmpeg 8.1.2 từ gyan.dev và dừng ngay nếu SHA-256
-không khớp. Kết quả cuối nằm trong `release\` gồm ZIP và checksum. Quy trình
-không yêu cầu hoặc đọc token Facebook/TikTok.
-
-## Giới hạn của bản thử nghiệm
-
-- Đây là bản `UNSIGNED-TEST`, chưa phải installer và chưa ký mã.
-- CI chỉ kiểm tra hệ thống/đóng gói, không đăng thử Facebook hoặc TikTok.
-- Trước khi dùng tài khoản chính, phải kiểm thử thủ công trên Fanpage và tài
-  khoản TikTok thử theo hướng dẫn trong README.
+Ứng dụng không cài dịch vụ nền, không thêm Task Scheduler, không mở CMD và không
+kết nối Facebook/TikTok. Video thành phẩm nằm tại `Videos\MXH Video Editor`.

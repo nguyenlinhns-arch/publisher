@@ -1,4 +1,1 @@
-httpx==0.28.1
-keyring==25.7.0
-playwright==1.61.0
-tzdata==2026.2
+# MXH Video Editor không cần thư viện Python bên thứ ba khi chạy.

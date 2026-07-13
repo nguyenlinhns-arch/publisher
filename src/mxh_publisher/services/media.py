@@ -379,7 +379,7 @@ def render_social_video(
     *,
     ffmpeg_path: Path | None = None,
 ) -> VideoInfo:
-    """Trim and render one immutable 9:16 upload asset for both platforms."""
+    """Trim and render one immutable 9:16 video asset."""
 
     source = source.expanduser().resolve()
     if not source.is_file():
@@ -416,7 +416,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "bundled-blue-horizontal-title-v5",
+            "layout": "standalone-blue-horizontal-title-v1",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,
