@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import sys
 from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -57,6 +58,7 @@ def configure_logging(logs_dir: Path, *, verbose: bool = False) -> None:
     file_handler.setFormatter(JsonFormatter())
     root.addHandler(file_handler)
 
-    console = logging.StreamHandler()
-    console.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
-    root.addHandler(console)
+    if sys.stderr is not None:
+        console = logging.StreamHandler()
+        console.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+        root.addHandler(console)

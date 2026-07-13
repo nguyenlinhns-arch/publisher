@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+import webbrowser
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -89,7 +90,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.3.1 — Facebook & TikTok")
+        self.title("MXH Publisher v0.3.2 — Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -134,7 +135,7 @@ class MainWindow(tk.Tk):
             row=0, column=1, sticky="w", padx=(0, 8)
         )
         facebook_connect = ttk.Button(
-            connections, text="Kết nối/đổi", command=self.open_settings
+            connections, text="Kết nối Facebook", command=self.connect_facebook
         )
         facebook_connect.grid(row=0, column=2, padx=3)
         facebook_check = ttk.Button(
@@ -290,8 +291,22 @@ class MainWindow(tk.Tk):
         )
 
     def _facebook_connection_success(self, page_name: str) -> None:
+        message = f"Đã kết nối Facebook Page: {page_name}."
         self.facebook_connection_var.set(f"Đã kết nối: {page_name}")
-        self.status_var.set(f"Meta xác nhận kết nối Facebook Page: {page_name}.")
+        self.status_var.set(message)
+        messagebox.showinfo("Đã kết nối", message, parent=self)
+
+    def connect_facebook(self) -> None:
+        opened = webbrowser.open(
+            "https://developers.facebook.com/tools/explorer/", new=2
+        )
+        if not opened:
+            messagebox.showwarning(
+                "Không mở được trình duyệt",
+                "Hãy mở https://developers.facebook.com/tools/explorer/ rồi đăng nhập.",
+                parent=self,
+            )
+        self.open_settings()
 
     def check_tiktok_connection(self) -> None:
         self._run_background(
@@ -306,7 +321,8 @@ class MainWindow(tk.Tk):
             f"Đã kết nối: {account}" if result.connected else "Chờ đăng nhập/xác minh"
         )
         self.status_var.set(result.message)
-        messagebox.showinfo("Kết nối TikTok", result.message, parent=self)
+        title = "Đã kết nối" if result.connected else "Cần đăng nhập/xác minh"
+        messagebox.showinfo(title, result.message, parent=self)
 
     def run_primary_action(self) -> None:
         action = next_action(self.repository, self.selected_post_id)
