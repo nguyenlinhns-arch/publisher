@@ -100,20 +100,29 @@ class ChromeLoginManager:
     ) -> bool:
         if not database.is_file():
             return False
+        placeholders = ",".join("?" for _ in cookie_names)
+        query = (
+            "SELECT 1 FROM cookies WHERE host_key LIKE ? "
+            f"AND name IN ({placeholders}) "
+            "AND (length(value) > 0 OR length(encrypted_value) > 0) LIMIT 1"
+        )
+        parameters = (f"%{domain}", *cookie_names)
+        try:
+            uri = database.resolve().as_uri() + "?mode=ro"
+            with sqlite3.connect(uri, uri=True, timeout=1) as connection:
+                return connection.execute(query, parameters).fetchone() is not None
+        except (OSError, sqlite3.Error):
+            pass
         try:
             with tempfile.TemporaryDirectory(prefix="mxh-cookies-") as directory:
                 copied = Path(directory) / "Cookies"
                 shutil.copy2(database, copied)
-                placeholders = ",".join("?" for _ in cookie_names)
-                query = (
-                    "SELECT 1 FROM cookies WHERE host_key LIKE ? "
-                    f"AND name IN ({placeholders}) "
-                    "AND (length(value) > 0 OR length(encrypted_value) > 0) LIMIT 1"
-                )
+                for suffix in ("-wal", "-shm"):
+                    companion = Path(str(database) + suffix)
+                    if companion.is_file():
+                        shutil.copy2(companion, Path(str(copied) + suffix))
                 with sqlite3.connect(copied) as connection:
-                    row = connection.execute(
-                        query, (f"%{domain}", *cookie_names)
-                    ).fetchone()
+                    row = connection.execute(query, parameters).fetchone()
                 return row is not None
         except (OSError, sqlite3.Error):
             return False
