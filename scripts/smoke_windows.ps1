@@ -60,6 +60,20 @@ if (-not (Test-Path -LiteralPath $Application -PathType Leaf)) {
     throw "Không tìm thấy EXE trong bản onedir biệt lập: $Application"
 }
 
+# PE optional-header Subsystem 2 means IMAGE_SUBSYSTEM_WINDOWS_GUI. This is a
+# release invariant: Windows must not create a CMD/console window for the app.
+$ExecutableBytes = [System.IO.File]::ReadAllBytes($Application)
+$PeHeaderOffset = [System.BitConverter]::ToInt32($ExecutableBytes, 0x3c)
+$OptionalHeaderOffset = $PeHeaderOffset + 24
+$Subsystem = [System.BitConverter]::ToUInt16(
+    $ExecutableBytes,
+    $OptionalHeaderOffset + 68
+)
+if ($Subsystem -ne 2) {
+    throw "MXHPublisher.exe không phải Windows GUI subsystem; CMD có thể xuất hiện."
+}
+Write-Host "PE subsystem đạt: Windows GUI (không tạo cửa sổ CMD)."
+
 $env:LOCALAPPDATA = Join-Path $Sandbox "LocalAppData"
 $env:APPDATA = Join-Path $Sandbox "RoamingAppData"
 Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
