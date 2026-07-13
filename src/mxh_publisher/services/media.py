@@ -58,6 +58,14 @@ class VideoEditError(RuntimeError):
 
 VIDEO_TOP = 360
 VIDEO_HEIGHT = 608
+WINDOWS_CREATE_NO_WINDOW = 0x08000000
+
+
+def subprocess_creation_flags(platform: str | None = None) -> int:
+    """Prevent bundled FFmpeg tools from opening CMD windows on Windows."""
+
+    current_platform = platform if platform is not None else sys.platform
+    return WINDOWS_CREATE_NO_WINDOW if current_platform == "win32" else 0
 
 
 def default_frame_path() -> Path:
@@ -267,6 +275,7 @@ def inspect_video(path: Path, ffprobe_path: Path | None = None) -> VideoInfo:
             errors="replace",
             timeout=60,
             check=False,
+            creationflags=subprocess_creation_flags(),
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise MediaInspectionError(f"Không chạy được ffprobe: {exc}") from exc
@@ -511,6 +520,7 @@ def render_social_video(
             errors="replace",
             timeout=3600,
             check=False,
+            creationflags=subprocess_creation_flags(),
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         temporary.unlink(missing_ok=True)

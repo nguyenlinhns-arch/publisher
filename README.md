@@ -1,4 +1,4 @@
-# MXH Video Editor v1.0.0
+# MXH Video Editor v1.0.1
 
 Ứng dụng Windows độc lập để cắt và dựng video dọc 9:16. Bản này không có chức
 năng Facebook, TikTok, lịch đăng, token hoặc điều khiển trình duyệt.

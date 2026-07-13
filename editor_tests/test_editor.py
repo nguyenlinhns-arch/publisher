@@ -4,6 +4,10 @@ from pathlib import Path
 
 import pytest
 
+from mxh_publisher.services.media import (
+    WINDOWS_CREATE_NO_WINDOW,
+    subprocess_creation_flags,
+)
 from mxh_video_editor.config import EditorConfig
 from mxh_video_editor.editor import (
     TRIM_END_SECONDS,
@@ -23,6 +27,11 @@ def make_config(tmp_path: Path) -> EditorConfig:
 def test_fixed_trim_values() -> None:
     assert TRIM_START_SECONDS == 6.2
     assert TRIM_END_SECONDS == 4.0
+
+
+def test_ffmpeg_child_processes_are_hidden_on_windows() -> None:
+    assert subprocess_creation_flags("win32") == WINDOWS_CREATE_NO_WINDOW
+    assert subprocess_creation_flags("linux") == 0
 
 
 @pytest.mark.parametrize(
