@@ -1,4 +1,4 @@
-# Release trigger for v0.5.4 single Playwright session and login repair.
+# Release trigger for v0.5.4 single Playwright session, login and source-encoding repair.
 name: Publish Windows release
 
 "on":
