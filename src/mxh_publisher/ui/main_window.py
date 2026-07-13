@@ -10,13 +10,12 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Any, Callable
 
 from ..config import AppConfig, load_config, write_basic_config
-from ..models import Platform, Post
+from ..models import DeliveryStatus, Platform, Post, PostStatus
 from ..repository import Repository
 from ..secrets import FACEBOOK_TOKEN_NAME, SecretStore
 from ..services.doctor import format_doctor, run_doctor
 from ..services.media import VideoEditSpec, inspect_video, render_social_video
 from ..services.backup import backup_database
-from ..services.next_action import next_action
 from ..services.orchestrator import ActionResult, PublishingOrchestrator
 
 
@@ -96,7 +95,7 @@ class MainWindow(tk.Tk):
         self._busy_widgets: list[ttk.Button] = []
         self._busy = False
 
-        self.title("MXH Publisher v0.4.4 — Biên tập, Facebook & TikTok")
+        self.title("MXH Publisher v0.5.0 — Biên tập, Facebook & TikTok")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -167,8 +166,18 @@ class MainWindow(tk.Tk):
             connections, text="Kiểm tra lại", command=self.check_tiktok_connection
         )
         tiktok_check.grid(row=0, column=7, padx=3)
+        settings_button = ttk.Button(
+            connections, text="Thiết lập", command=self.open_settings
+        )
+        settings_button.grid(row=0, column=8, padx=(14, 3))
         self._busy_widgets.extend(
-            [facebook_connect, facebook_check, tiktok_connect, tiktok_check]
+            [
+                facebook_connect,
+                facebook_check,
+                tiktok_connect,
+                tiktok_check,
+                settings_button,
+            ]
         )
         self._refresh_connection_summary()
 
@@ -275,19 +284,15 @@ class MainWindow(tk.Tk):
         for index in range(4):
             actions.columnconfigure(index, weight=1)
 
-        self.primary_button = ttk.Button(actions, text="Tiếp tục", command=self.run_primary_action)
-        self.primary_button.grid(row=0, column=0, columnspan=4, sticky="ew", padx=3, pady=(3, 8))
-        self._busy_widgets.append(self.primary_button)
         buttons = [
-            ("Bài mới", self.clear_form),
-            ("Dry-run chi tiết", self.dry_run),
-            ("Ghi nhận link đã đăng", self.record_published),
-            ("Thử lại sau kiểm tra", self.requeue_after_check),
-            ("Thiết lập/kiểm tra", self.open_settings),
+            ("Sửa video", self.save_draft),
+            ("Đăng FB", self.publish_facebook),
+            ("Đăng TikTok", self.publish_tiktok),
+            ("Xóa video đã đăng", self.delete_published_video),
         ]
         for index, (label, command) in enumerate(buttons):
             button = ttk.Button(actions, text=label, command=command)
-            button.grid(row=1 + index // 4, column=index % 4, sticky="ew", padx=3, pady=3)
+            button.grid(row=0, column=index, sticky="ew", padx=3, pady=3)
             self._busy_widgets.append(button)
 
         ttk.Separator(form).grid(row=9, column=0, columnspan=3, sticky="ew", pady=12)
@@ -362,25 +367,6 @@ class MainWindow(tk.Tk):
         self.status_var.set(result.message)
         title = "Đã kết nối" if result.connected else "Cần đăng nhập/xác minh"
         messagebox.showinfo(title, result.message, parent=self)
-
-    def run_primary_action(self) -> None:
-        action = next_action(self.repository, self.selected_post_id)
-        commands = {
-            "save": self.save_draft,
-            "approve": self.approve_and_schedule,
-            "prepare_tiktok": self.prepare_tiktok,
-            "verify_tiktok": self.confirm_and_schedule_facebook,
-            "recover": self.requeue_after_check,
-            "reconcile": self.record_published,
-        }
-        command = commands.get(action.key)
-        if command:
-            command()
-
-    def _refresh_primary_action(self) -> None:
-        action = next_action(self.repository, self.selected_post_id)
-        self.primary_button.configure(text=action.label)
-        self.primary_button.state(["!disabled"] if action.enabled else ["disabled"])
 
     def _set_busy(self, busy: bool, message: str | None = None) -> None:
         self._busy = busy
@@ -459,7 +445,6 @@ class MainWindow(tk.Tk):
         )
         self.tree.selection_remove(self.tree.selection())
         self.status_var.set("Đang tạo bài mới.")
-        self._refresh_primary_action()
 
     def _local_schedule_utc(self) -> datetime:
         value = datetime.strptime(self.schedule_var.get().strip(), DATE_FORMAT)
@@ -588,7 +573,7 @@ class MainWindow(tk.Tk):
             return None
         return self.selected_post_id
 
-    def approve_and_schedule(self) -> None:
+    def approve_and_schedule(self, *, continue_to_tiktok: bool = False) -> None:
         post_id = self._require_selected()
         if not post_id:
             return
@@ -629,10 +614,15 @@ class MainWindow(tk.Tk):
                 },
             )
 
+        def success(saved_post: Post) -> None:
+            self._approved_success(saved_post)
+            if continue_to_tiktok:
+                self.after_idle(self.prepare_tiktok)
+
         self._run_background(
             task,
             working_message="Đang khóa nội dung và đặt lịch…",
-            success=lambda saved_post: self._approved_success(saved_post),
+            success=success,
         )
 
     def _approved_success(self, post: Post) -> None:
@@ -680,6 +670,110 @@ class MainWindow(tk.Tk):
         self._run_background(
             lambda: self.orchestrator.prepare_tiktok(post_id),
             working_message="Đang mở TikTok Studio và upload video…",
+            success=success,
+        )
+
+    def publish_tiktok(self) -> None:
+        post_id = self._require_selected()
+        if not post_id:
+            return
+        post = self.repository.get_post(post_id)
+        if post.status in {PostStatus.DRAFT, PostStatus.APPROVED}:
+            self.approve_and_schedule(continue_to_tiktok=True)
+            return
+        try:
+            delivery = self.repository.get_delivery_for_platform(
+                post_id, Platform.TIKTOK
+            )
+        except Exception:
+            messagebox.showerror(
+                "TikTok chưa có lịch",
+                "Bài chưa có tác vụ TikTok. Hãy sửa video rồi thử lại.",
+                parent=self,
+            )
+            return
+        if delivery.status in {DeliveryStatus.PENDING, DeliveryStatus.RETRY_WAIT}:
+            self.prepare_tiktok()
+            return
+        if delivery.status is DeliveryStatus.AWAITING_CONFIRMATION:
+            messagebox.showinfo(
+                "TikTok đang chờ xác nhận",
+                "Video đã được đưa vào TikTok Studio. Hãy kiểm tra và tự bấm "
+                "Lên lịch, sau đó dùng nút Đăng FB.",
+                parent=self,
+            )
+            return
+        messagebox.showinfo(
+            "Không tải lại TikTok",
+            f"TikTok đang ở trạng thái {STATUS_VI.get(delivery.status.value, delivery.status.value)}. "
+            "Ứng dụng không tải lại để tránh đăng trùng.",
+            parent=self,
+        )
+
+    def publish_facebook(self) -> None:
+        self.confirm_and_schedule_facebook()
+
+    def delete_published_video(self) -> None:
+        post_id = self._require_selected()
+        if not post_id:
+            return
+        post, deliveries = self.repository.get_post_with_deliveries(post_id)
+        by_platform = {delivery.platform: delivery for delivery in deliveries}
+        required = (Platform.FACEBOOK, Platform.TIKTOK)
+        if any(
+            platform not in by_platform
+            or by_platform[platform].status is not DeliveryStatus.PUBLISHED
+            for platform in required
+        ):
+            messagebox.showwarning(
+                "Chưa được xóa video",
+                "Chỉ xóa được file video sau khi cả Facebook và TikTok đều đã "
+                "được ghi nhận là Đã đăng.",
+                parent=self,
+            )
+            return
+        video = Path(post.video_path).expanduser().resolve()
+        media_root = self.config_data.media_dir.expanduser().resolve()
+        if media_root not in video.parents:
+            messagebox.showerror(
+                "Không xóa file gốc",
+                "Video này không nằm trong thư mục xuất của ứng dụng nên sẽ không "
+                "bị xóa. Ứng dụng không bao giờ xóa video gốc của Thầy.",
+                parent=self,
+            )
+            return
+        if not video.exists():
+            messagebox.showinfo(
+                "Video đã được xóa",
+                "File video xuất không còn trên máy; lịch sử đăng vẫn được giữ lại.",
+                parent=self,
+            )
+            return
+        confirmed = messagebox.askyesno(
+            "Xóa video đã đăng",
+            "Chỉ xóa bản video xuất trên máy. Bài trên Facebook/TikTok và lịch sử "
+            "đối soát vẫn được giữ nguyên.\n\nBạn có chắc muốn xóa không?",
+            parent=self,
+        )
+        if not confirmed:
+            return
+
+        def task() -> Path:
+            video.unlink()
+            return video
+
+        def success(deleted: Path) -> None:
+            self.status_var.set(f"Đã xóa file video đã đăng: {deleted.name}")
+            self.video_source.set("")
+            messagebox.showinfo(
+                "Đã xóa video",
+                "Đã xóa bản video xuất trên máy. Bài Facebook/TikTok không bị xóa.",
+                parent=self,
+            )
+
+        self._run_background(
+            task,
+            working_message="Đang xóa bản video đã đăng trên máy…",
             success=success,
         )
 
@@ -938,7 +1032,6 @@ class MainWindow(tk.Tk):
         if selected and self.tree.exists(selected):
             self.tree.selection_set(selected)
             self.tree.see(selected)
-        self._refresh_primary_action()
 
     def _on_select_post(self, _event=None) -> None:
         selection = self.tree.selection()

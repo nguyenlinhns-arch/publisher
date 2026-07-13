@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mxh-publisher"
-version = "0.4.4"
+version = "0.5.0"
 description = "Ứng dụng Windows hỗ trợ lên lịch video đồng bộ Facebook Fanpage và TikTok."
 readme = "README.md"
 requires-python = ">=3.12"

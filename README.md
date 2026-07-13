@@ -1,4 +1,4 @@
-# MXH Publisher V0.4.4 — bản pilot Windows
+# MXH Publisher V0.5.0 — bản pilot Windows
 
 Ứng dụng Windows hỗ trợ quản lý, duyệt và lên lịch cùng một video lên Facebook Fanpage và TikTok.
 
