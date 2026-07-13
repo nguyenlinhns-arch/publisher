@@ -8,6 +8,21 @@ from .config import load_config, write_basic_config
 from .logging_utils import configure_logging
 
 
+def hide_console_window_for_gui(command: str) -> None:
+    """Hide the packaging console when the Windows GUI is launched."""
+    if sys.platform != "win32" or command != "gui":
+        return
+    try:
+        import ctypes
+
+        window = ctypes.windll.kernel32.GetConsoleWindow()  # type: ignore[attr-defined]
+        if window:
+            ctypes.windll.user32.ShowWindow(window, 0)  # type: ignore[attr-defined]
+    except (AttributeError, OSError):
+        # The app may already be built as windowed or started without a console.
+        pass
+
+
 def configure_console_encoding() -> None:
     """Keep Vietnamese CLI output from crashing legacy Windows code pages."""
 
@@ -50,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     configure_console_encoding()
     args = build_parser().parse_args(argv)
     command = args.command or "gui"
+    hide_console_window_for_gui(command)
     config = load_config(args.config)
     configure_logging(config.logs_dir, verbose=args.verbose)
 
