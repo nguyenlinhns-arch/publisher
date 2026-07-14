@@ -91,7 +91,7 @@ def default_fonts_dir() -> Path:
         runtime_root = Path(__file__).resolve().parents[3]
     fonts = runtime_root / "assets" / "fonts"
     required = (
-        fonts / "RobotoCondensed-Bold.ttf",
+        fonts / "Anton-Regular.ttf",
         fonts / "BeVietnamPro-SemiBold.ttf",
     )
     missing = [path.name for path in required if not path.is_file()]
@@ -185,12 +185,12 @@ def _title_font_size(wrapped_title: str) -> int:
 
     longest_line = max((len(line) for line in wrapped_title.split(r"\N")), default=0)
     if longest_line <= 18:
-        return 76
+        return 116
     if longest_line <= 24:
-        return 68
+        return 104
     if longest_line <= 30:
-        return 60
-    return 52
+        return 92
+    return 80
 
 
 def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
@@ -211,9 +211,9 @@ def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
             "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
             "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
             "Alignment, MarginL, MarginR, MarginV, Encoding",
-            "Style: Title,Roboto Condensed,88,&H00FFFFFF,&H00FFFFFF,"
+            "Style: Title,Anton,88,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,55,55,0,1",
-            "Style: Brand,Roboto Condensed,38,&H00FFFFFF,&H00FFFFFF,"
+            "Style: Brand,Anton,56,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
             "",
             "[Events]",
@@ -528,7 +528,7 @@ def render_social_video(
         "".join(
             sha256_file(path)
             for path in (
-                fonts_dir / "RobotoCondensed-Bold.ttf",
+                fonts_dir / "Anton-Regular.ttf",
                 fonts_dir / "BeVietnamPro-SemiBold.ttf",
             )
         ).encode("ascii")
@@ -545,7 +545,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-blue-roboto-condensed-news-sound-v10",
+            "layout": "standalone-blue-anton-news-sound-v12",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,

@@ -34,14 +34,15 @@ The GNU GPL version 3 text and source information are available at:
 MXH Video Editor does not bundle Playwright or browser automation libraries.
 This file is informational and is not legal advice.
 
-## Roboto Condensed, Oswald, Montserrat and Be Vietnam Pro
+## Anton, Roboto Condensed, Oswald, Montserrat and Be Vietnam Pro
 
-The application uses Roboto Condensed Bold for news headlines and the brand
-line. Be Vietnam Pro, Oswald and Montserrat are retained as bundled fallbacks.
-All four font families are available under the SIL Open Font
+The application uses Anton for news headlines and the brand line. Roboto
+Condensed, Be Vietnam Pro, Oswald and Montserrat are retained as bundled
+fallbacks. All five font families are available under the SIL Open Font
 License 1.1. The license text is
 included at `assets/fonts/OFL.txt` in the source and application bundle.
 
+- <https://github.com/google/fonts/tree/main/ofl/anton>
 - <https://github.com/google/fonts/tree/main/ofl/robotocondensed>
 - <https://github.com/googlefonts/OswaldFont>
 - <https://github.com/google/fonts/tree/main/ofl/bevietnampro>

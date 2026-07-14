@@ -47,15 +47,15 @@ def test_hyphen_creates_manual_title_line_break() -> None:
 
 def test_bundled_vietnamese_fonts_exist() -> None:
     fonts = default_fonts_dir()
-    assert (fonts / "RobotoCondensed-Bold.ttf").is_file()
+    assert (fonts / "Anton-Regular.ttf").is_file()
     assert (fonts / "BeVietnamPro-SemiBold.ttf").is_file()
 
 
 def test_news_title_font_size_adapts_to_line_length() -> None:
-    assert _title_font_size(r"TIN MỚI\NHÔM NAY") == 76
-    assert _title_font_size("A" * 22) == 68
-    assert _title_font_size("A" * 28) == 60
-    assert _title_font_size("A" * 34) == 52
+    assert _title_font_size(r"TIN MỚI\NHÔM NAY") == 116
+    assert _title_font_size("A" * 22) == 104
+    assert _title_font_size("A" * 28) == 92
+    assert _title_font_size("A" * 34) == 80
 
 
 def test_default_intro_sound_is_valid() -> None:
