@@ -70,7 +70,7 @@ def subprocess_creation_flags(platform: str | None = None) -> int:
 
 
 def default_frame_path() -> Path:
-    """Return the bundled blue 1080x1920 frame supplied for this project."""
+    """Return the bundled dark news-style 1080x1920 frame."""
 
     if getattr(sys, "frozen", False):
         runtime_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
@@ -220,7 +220,7 @@ def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
             "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, "
             "Effect, Text",
             f"Dialogue: 0,0:00:00.00,{end},Title,,0,0,0,,"
-            rf"{{\an8\pos(540,1040)\fs{title_font_size}}}{wrapped}",
+            rf"{{\an8\pos(540,1100)\fs{title_font_size}}}{wrapped}",
             f"Dialogue: 0,0:00:00.00,{end},Brand,,0,0,0,,"
             r"{\an8\pos(540,1510)}Thầy Linh - Tuyển Thợ Mỏ",
         ]
@@ -545,7 +545,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-blue-anton-news-sound-v12",
+            "layout": "standalone-dark-news-anton-sound-v13",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,

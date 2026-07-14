@@ -189,10 +189,10 @@ class MediaTests(unittest.TestCase):
         self.assertEqual(spec.trim_start_seconds, 6.2)
         self.assertEqual(spec.trim_end_seconds, 4.0)
 
-    def test_default_frame_is_the_supplied_blue_image(self) -> None:
+    def test_default_frame_is_the_approved_dark_news_image(self) -> None:
         self.assertEqual(
             sha256_file(default_frame_path()),
-            "d66882d0e60f73cdde049d6ad997a859ee0d379571bb0dc36e6155df58c6d910",
+            "1ce1ef1ca5f36e25c411f1c3155204a125978a9d2518b9d1fa4f67763f0f97e2",
         )
 
     def test_project_title_is_split_like_the_reference_layout(self) -> None:

@@ -74,7 +74,7 @@ if ($null -eq $BundledFfprobe -or $null -eq $BundledFfmpeg `
     throw "Bản đóng gói thiếu ffmpeg, ffprobe, nền mặc định hoặc font chữ."
 }
 $FrameHash = (Get-FileHash -LiteralPath $BundledFrame.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($FrameHash -ne "d66882d0e60f73cdde049d6ad997a859ee0d379571bb0dc36e6155df58c6d910") {
+if ($FrameHash -ne "1ce1ef1ca5f36e25c411f1c3155204a125978a9d2518b9d1fa4f67763f0f97e2") {
     throw "Khung nền mặc định không đúng tệp đã duyệt."
 }
 $SoundHash = (Get-FileHash -LiteralPath $BundledIntroSound.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
