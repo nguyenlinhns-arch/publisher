@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import unicodedata
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -30,6 +31,23 @@ TRIM_END_SECONDS = 4.0
 class RenderedVideo:
     path: Path
     info: VideoInfo
+
+
+@dataclass(frozen=True, slots=True)
+class BatchVideoItem:
+    source: Path
+    title: str
+
+
+@dataclass(frozen=True, slots=True)
+class BatchRenderOutcome:
+    item: BatchVideoItem
+    rendered: RenderedVideo | None = None
+    error: str | None = None
+
+    @property
+    def succeeded(self) -> bool:
+        return self.rendered is not None and self.error is None
 
 
 def safe_filename(value: str, *, fallback: str = "video_da_sua") -> str:
@@ -84,6 +102,50 @@ def render_video(
     return RenderedVideo(path=destination, info=inspect_video(destination))
 
 
+def build_batch_items(sources: Iterable[Path]) -> tuple[BatchVideoItem, ...]:
+    """Create a stable, de-duplicated batch using each filename as its title."""
+
+    items: list[BatchVideoItem] = []
+    seen: set[str] = set()
+    for source in sources:
+        resolved = source.expanduser().resolve()
+        key = os.path.normcase(str(resolved))
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(BatchVideoItem(source=resolved, title=resolved.stem))
+    return tuple(items)
+
+
+def render_video_batch(
+    config: EditorConfig,
+    items: Sequence[BatchVideoItem],
+    *,
+    frame_path: Path | None = None,
+    on_progress: Callable[[int, int, BatchRenderOutcome], None] | None = None,
+) -> tuple[BatchRenderOutcome, ...]:
+    """Render a batch sequentially and keep going after an individual failure."""
+
+    outcomes: list[BatchRenderOutcome] = []
+    total = len(items)
+    for index, item in enumerate(items, start=1):
+        try:
+            rendered = render_video(
+                config,
+                item.source,
+                item.title,
+                frame_path=frame_path,
+            )
+            outcome = BatchRenderOutcome(item=item, rendered=rendered)
+        except Exception as exc:
+            message = str(exc).strip() or exc.__class__.__name__
+            outcome = BatchRenderOutcome(item=item, error=message)
+        outcomes.append(outcome)
+        if on_progress is not None:
+            on_progress(index, total, outcome)
+    return tuple(outcomes)
+
+
 def list_rendered_videos(config: EditorConfig) -> list[Path]:
     config.output_dir.mkdir(parents=True, exist_ok=True)
     return sorted(
@@ -112,4 +174,3 @@ def open_in_system(path: Path) -> None:
         return
     command = ["open", str(target)] if sys.platform == "darwin" else ["xdg-open", str(target)]
     subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-

@@ -15,10 +15,13 @@ from mxh_publisher.services.media import (
 )
 from mxh_video_editor.config import EditorConfig
 from mxh_video_editor.editor import (
+    BatchVideoItem,
     TRIM_END_SECONDS,
     TRIM_START_SECONDS,
+    build_batch_items,
     delete_rendered_video,
     list_rendered_videos,
+    render_video_batch,
     safe_filename,
 )
 
@@ -74,6 +77,54 @@ def test_default_intro_sound_is_valid() -> None:
 )
 def test_safe_filename(value: str, expected: str) -> None:
     assert safe_filename(value) == expected
+
+
+def test_build_batch_items_deduplicates_and_uses_stems(tmp_path: Path) -> None:
+    first = tmp_path / "Tin ngành than.mp4"
+    second = tmp_path / "Tuyển thợ mỏ.mp4"
+    items = build_batch_items((first, first, second))
+    assert [item.source for item in items] == [first.resolve(), second.resolve()]
+    assert [item.title for item in items] == ["Tin ngành than", "Tuyển thợ mỏ"]
+
+
+def test_batch_continues_after_one_video_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = make_config(tmp_path)
+    items = (
+        BatchVideoItem(tmp_path / "ok-1.mp4", "OK 1"),
+        BatchVideoItem(tmp_path / "bad.mp4", "BAD"),
+        BatchVideoItem(tmp_path / "ok-2.mp4", "OK 2"),
+    )
+    calls: list[str] = []
+    progress: list[tuple[int, int, str, bool]] = []
+
+    def fake_render(*_args: object, **_kwargs: object) -> object:
+        source = _args[1]
+        assert isinstance(source, Path)
+        calls.append(source.name)
+        if source.name == "bad.mp4":
+            raise RuntimeError("video lỗi")
+        return object()
+
+    monkeypatch.setattr("mxh_video_editor.editor.render_video", fake_render)
+    outcomes = render_video_batch(
+        config,
+        items,
+        on_progress=lambda index, total, outcome: progress.append(
+            (index, total, outcome.item.source.name, outcome.succeeded)
+        ),
+    )
+
+    assert calls == ["ok-1.mp4", "bad.mp4", "ok-2.mp4"]
+    assert [outcome.succeeded for outcome in outcomes] == [True, False, True]
+    assert outcomes[1].error == "video lỗi"
+    assert progress == [
+        (1, 3, "ok-1.mp4", True),
+        (2, 3, "bad.mp4", False),
+        (3, 3, "ok-2.mp4", True),
+    ]
 
 
 def test_list_outputs_newest_first(tmp_path: Path) -> None:

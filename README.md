@@ -1,4 +1,4 @@
-# MXH Video Editor v1.1.6
+# MXH Video Editor v1.2.0
 
 Ứng dụng Windows độc lập để cắt và dựng video dọc 9:16. Bản này không có chức
 năng Facebook, TikTok, lịch đăng, token hoặc điều khiển trình duyệt.
@@ -26,13 +26,22 @@ Videos\MXH Video Editor
 Ứng dụng có nút mở video, mở thư mục và xóa video thành phẩm. Lệnh xóa chỉ chấp
 nhận MP4 nằm trực tiếp trong thư mục thành phẩm.
 
+Ứng dụng hỗ trợ xử lý hàng loạt:
+
+- Chọn nhiều video trong một lần.
+- Tự lấy tên file làm tiêu đề ban đầu.
+- Chọn từng dòng để sửa riêng tiêu đề.
+- Xử lý tuần tự để tránh làm máy quá tải.
+- Một video lỗi không làm dừng các video còn lại.
+- Hiển thị tiến độ và trạng thái của từng video.
+
 ## Sử dụng bản Windows
 
 1. Giải nén toàn bộ ZIP.
 2. Chạy `MXHVideoEditor\MXHVideoEditor.exe`.
-3. Chọn video gốc.
-4. Nhập tiêu đề.
-5. Nhấn **SỬA VÀ LƯU VIDEO**.
+3. Nhấn **Chọn nhiều video** và chọn một hoặc nhiều file MP4.
+4. Chọn từng dòng nếu cần sửa riêng tiêu đề.
+5. Nhấn **SỬA TẤT CẢ VIDEO**.
 6. Chọn video trong danh sách để mở hoặc xóa.
 
 Ứng dụng được build ở chế độ Windows GUI nên không mở cửa sổ CMD.
