@@ -36,9 +36,9 @@ This file is informational and is not legal advice.
 
 ## Roboto Condensed, Oswald, Montserrat and Be Vietnam Pro
 
-The application uses Roboto Condensed Bold for news headlines and Be Vietnam
-Pro SemiBold for the brand line. Oswald and Montserrat are retained as bundled
-fallbacks. All four font families are available under the SIL Open Font
+The application uses Roboto Condensed Bold for news headlines and the brand
+line. Be Vietnam Pro, Oswald and Montserrat are retained as bundled fallbacks.
+All four font families are available under the SIL Open Font
 License 1.1. The license text is
 included at `assets/fonts/OFL.txt` in the source and application bundle.
 

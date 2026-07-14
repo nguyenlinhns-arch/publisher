@@ -185,12 +185,12 @@ def _title_font_size(wrapped_title: str) -> int:
 
     longest_line = max((len(line) for line in wrapped_title.split(r"\N")), default=0)
     if longest_line <= 18:
-        return 100
+        return 90
     if longest_line <= 24:
-        return 88
+        return 80
     if longest_line <= 30:
-        return 76
-    return 66
+        return 70
+    return 60
 
 
 def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
@@ -213,7 +213,7 @@ def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
             "Alignment, MarginL, MarginR, MarginV, Encoding",
             "Style: Title,Roboto Condensed,88,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,55,55,0,1",
-            "Style: Brand,Be Vietnam Pro SemiBold,38,&H00FFFFFF,&H00FFFFFF,"
+            "Style: Brand,Roboto Condensed,38,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
             "",
             "[Events]",
@@ -545,7 +545,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-blue-roboto-condensed-news-sound-v8",
+            "layout": "standalone-blue-roboto-condensed-news-sound-v9",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,

@@ -1,6 +1,6 @@
 # Cài và chạy MXH Video Editor trên Windows
 
-1. Tải `MXHVideoEditor-1.1.3-Windows-x64.zip`.
+1. Tải `MXHVideoEditor-1.1.4-Windows-x64.zip`.
 2. Kiểm tra SHA-256 nếu cần.
 3. Giải nén toàn bộ ZIP vào một thư mục mới.
 4. Mở thư mục `MXHVideoEditor` và chạy `MXHVideoEditor.exe`.

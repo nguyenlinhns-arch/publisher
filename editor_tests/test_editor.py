@@ -52,10 +52,10 @@ def test_bundled_vietnamese_fonts_exist() -> None:
 
 
 def test_news_title_font_size_adapts_to_line_length() -> None:
-    assert _title_font_size(r"TIN MỚI\NHÔM NAY") == 100
-    assert _title_font_size("A" * 22) == 88
-    assert _title_font_size("A" * 28) == 76
-    assert _title_font_size("A" * 34) == 66
+    assert _title_font_size(r"TIN MỚI\NHÔM NAY") == 90
+    assert _title_font_size("A" * 22) == 80
+    assert _title_font_size("A" * 28) == 70
+    assert _title_font_size("A" * 34) == 60
 
 
 def test_default_intro_sound_is_valid() -> None:
