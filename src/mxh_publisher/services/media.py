@@ -185,12 +185,12 @@ def _title_font_size(wrapped_title: str) -> int:
 
     longest_line = max((len(line) for line in wrapped_title.split(r"\N")), default=0)
     if longest_line <= 18:
-        return 90
+        return 76
     if longest_line <= 24:
-        return 80
+        return 68
     if longest_line <= 30:
-        return 70
-    return 60
+        return 60
+    return 52
 
 
 def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
@@ -545,7 +545,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-blue-roboto-condensed-news-sound-v9",
+            "layout": "standalone-blue-roboto-condensed-news-sound-v10",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,

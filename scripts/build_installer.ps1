@@ -1,4 +1,4 @@
-param([string]$Version = "1.1.4")
+param([string]$Version = "1.1.5")
 $ErrorActionPreference = "Stop"
 $portable = Join-Path $PSScriptRoot "..\dist\MXHVideoEditor-$Version-Windows-x64"
 if (-not (Test-Path $portable)) { throw "Portable build not found: $portable" }
