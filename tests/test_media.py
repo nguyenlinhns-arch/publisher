@@ -192,7 +192,7 @@ class MediaTests(unittest.TestCase):
     def test_default_frame_is_the_approved_dark_news_image(self) -> None:
         self.assertEqual(
             sha256_file(default_frame_path()),
-            "1ce1ef1ca5f36e25c411f1c3155204a125978a9d2518b9d1fa4f67763f0f97e2",
+            "d7f498fa49c9d8ef04a98e57ca6223279438080bc6894ddac76eb5204f6dfe5b",
         )
 
     def test_project_title_is_split_like_the_reference_layout(self) -> None:

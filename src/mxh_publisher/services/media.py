@@ -213,16 +213,17 @@ def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
             "Alignment, MarginL, MarginR, MarginV, Encoding",
             "Style: Title,Anton,88,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,55,55,0,1",
-            "Style: Brand,Anton,56,&H00FFFFFF,&H00FFFFFF,"
-            "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
+            "Style: Brand,Be Vietnam Pro SemiBold,30,&H00FFFFFF,&H00FFFFFF,"
+            "&H00000000,&H50000000,0,0,0,0,100,100,0,0,1,0,1,7,50,50,0,1",
             "",
             "[Events]",
             "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, "
             "Effect, Text",
             f"Dialogue: 0,0:00:00.00,{end},Title,,0,0,0,,"
-            rf"{{\an8\pos(540,1100)\fs{title_font_size}}}{wrapped}",
+            rf"{{\an8\pos(540,1040)\fs{title_font_size}}}{wrapped}",
             f"Dialogue: 0,0:00:00.00,{end},Brand,,0,0,0,,"
-            r"{\an8\pos(540,1510)}Thầy Linh - Tuyển Thợ Mỏ",
+            r"{\an7\pos(60,70)}{\c&H00007AFF&}●{\c&H00FFFFFF&}"
+            r"  THẦY LINH - TUYỂN THỢ MỎ",
         ]
     )
     path.write_text(content, encoding="utf-8-sig")
@@ -545,7 +546,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-dark-news-anton-sound-v13",
+            "layout": "standalone-dark-news-top-brand-sound-v14",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,

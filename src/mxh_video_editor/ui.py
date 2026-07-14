@@ -55,7 +55,7 @@ class VideoEditorWindow:
         self._active_items: tuple[BatchVideoItem, ...] = ()
         self.title_var.trace_add("write", self._on_title_changed)
 
-        root.title("MXH Video Editor v1.2.1")
+        root.title("MXH Video Editor v1.2.2")
         root.geometry("1080x820")
         root.minsize(900, 700)
         root.protocol("WM_DELETE_WINDOW", self.close)
