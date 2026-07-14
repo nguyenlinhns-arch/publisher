@@ -83,7 +83,7 @@ def default_frame_path() -> Path:
 
 
 def default_fonts_dir() -> Path:
-    """Return the bundled Montserrat fonts used by the news-video template."""
+    """Return the bundled fonts used by the news-video template."""
 
     if getattr(sys, "frozen", False):
         runtime_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
@@ -91,8 +91,8 @@ def default_fonts_dir() -> Path:
         runtime_root = Path(__file__).resolve().parents[3]
     fonts = runtime_root / "assets" / "fonts"
     required = (
-        fonts / "Montserrat-ExtraBold.ttf",
-        fonts / "Montserrat-SemiBold.ttf",
+        fonts / "Oswald-Bold.ttf",
+        fonts / "BeVietnamPro-SemiBold.ttf",
     )
     missing = [path.name for path in required if not path.is_file()]
     if missing:
@@ -185,12 +185,12 @@ def _title_font_size(wrapped_title: str) -> int:
 
     longest_line = max((len(line) for line in wrapped_title.split(r"\N")), default=0)
     if longest_line <= 18:
-        return 68
+        return 128
     if longest_line <= 24:
-        return 60
+        return 112
     if longest_line <= 30:
-        return 54
-    return 48
+        return 96
+    return 82
 
 
 def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
@@ -211,9 +211,9 @@ def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
             "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
             "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
             "Alignment, MarginL, MarginR, MarginV, Encoding",
-            "Style: Title,Montserrat ExtraBold,60,&H00FFFFFF,&H00FFFFFF,"
-            "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,4,1,8,55,55,0,1",
-            "Style: Brand,Montserrat SemiBold,38,&H00FFFFFF,&H00FFFFFF,"
+            "Style: Title,Oswald,96,&H00FFFFFF,&H00FFFFFF,"
+            "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,5,1,8,55,55,0,1",
+            "Style: Brand,Be Vietnam Pro SemiBold,38,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
             "",
             "[Events]",
@@ -527,7 +527,10 @@ def render_social_video(
     font_digest = hashlib.sha256(
         "".join(
             sha256_file(path)
-            for path in sorted(fonts_dir.glob("Montserrat-*.ttf"))
+            for path in (
+                fonts_dir / "Oswald-Bold.ttf",
+                fonts_dir / "BeVietnamPro-SemiBold.ttf",
+            )
         ).encode("ascii")
     ).hexdigest()
     recipe = json.dumps(
@@ -542,7 +545,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-blue-montserrat-news-sound-v4",
+            "layout": "standalone-blue-oswald-news-sound-v6",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,

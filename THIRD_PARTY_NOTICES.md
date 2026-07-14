@@ -34,13 +34,14 @@ The GNU GPL version 3 text and source information are available at:
 MXH Video Editor does not bundle Playwright or browser automation libraries.
 This file is informational and is not legal advice.
 
-## Montserrat and Be Vietnam Pro
+## Oswald, Montserrat and Be Vietnam Pro
 
-The application uses Montserrat ExtraBold and SemiBold for the news-video
-template and retains Be Vietnam Pro as a fallback. Both font families are
-available under the SIL Open Font License 1.1. The license text is
+The application uses Oswald Bold for news headlines and Be Vietnam Pro
+SemiBold for the brand line. Montserrat is retained as a bundled fallback.
+All three font families are available under the SIL Open Font License 1.1. The license text is
 included at `assets/fonts/OFL.txt` in the source and application bundle.
 
+- <https://github.com/googlefonts/OswaldFont>
 - <https://github.com/google/fonts/tree/main/ofl/bevietnampro>
 - <https://github.com/JulietaUla/Montserrat>
 - <https://openfontlicense.org/>
