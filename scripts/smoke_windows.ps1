@@ -64,7 +64,7 @@ $BundledFrame = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
 $BundledIntroSound = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
     -Filter "sound.mp3" -File | Select-Object -First 1
 $BundledTitleFont = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
-    -Filter "Oswald-Bold.ttf" -File | Select-Object -First 1
+    -Filter "RobotoCondensed-Bold.ttf" -File | Select-Object -First 1
 $BundledBrandFont = Get-ChildItem -LiteralPath $IsolatedBundle -Recurse `
     -Filter "BeVietnamPro-SemiBold.ttf" -File | Select-Object -First 1
 if ($null -eq $BundledFfprobe -or $null -eq $BundledFfmpeg `

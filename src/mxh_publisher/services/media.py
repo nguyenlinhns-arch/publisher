@@ -91,7 +91,7 @@ def default_fonts_dir() -> Path:
         runtime_root = Path(__file__).resolve().parents[3]
     fonts = runtime_root / "assets" / "fonts"
     required = (
-        fonts / "Oswald-Bold.ttf",
+        fonts / "RobotoCondensed-Bold.ttf",
         fonts / "BeVietnamPro-SemiBold.ttf",
     )
     missing = [path.name for path in required if not path.is_file()]
@@ -185,12 +185,12 @@ def _title_font_size(wrapped_title: str) -> int:
 
     longest_line = max((len(line) for line in wrapped_title.split(r"\N")), default=0)
     if longest_line <= 18:
-        return 128
+        return 100
     if longest_line <= 24:
-        return 112
+        return 88
     if longest_line <= 30:
-        return 96
-    return 82
+        return 76
+    return 66
 
 
 def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
@@ -211,8 +211,8 @@ def _write_title_ass(path: Path, title: str, duration_seconds: float) -> None:
             "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
             "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
             "Alignment, MarginL, MarginR, MarginV, Encoding",
-            "Style: Title,Oswald,96,&H00FFFFFF,&H00FFFFFF,"
-            "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,5,1,8,55,55,0,1",
+            "Style: Title,Roboto Condensed,88,&H00FFFFFF,&H00FFFFFF,"
+            "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,55,55,0,1",
             "Style: Brand,Be Vietnam Pro SemiBold,38,&H00FFFFFF,&H00FFFFFF,"
             "&H00000000,&H50000000,-1,0,0,0,100,100,0,0,1,3,1,8,40,40,0,1",
             "",
@@ -528,7 +528,7 @@ def render_social_video(
         "".join(
             sha256_file(path)
             for path in (
-                fonts_dir / "Oswald-Bold.ttf",
+                fonts_dir / "RobotoCondensed-Bold.ttf",
                 fonts_dir / "BeVietnamPro-SemiBold.ttf",
             )
         ).encode("ascii")
@@ -545,7 +545,7 @@ def render_social_video(
             "title": " ".join(spec.title.split()),
             "size": "1080x1920",
             "fps": 30,
-            "layout": "standalone-blue-oswald-news-sound-v6",
+            "layout": "standalone-blue-roboto-condensed-news-sound-v8",
             "codec": "h264-aac-v2",
         },
         sort_keys=True,

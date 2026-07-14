@@ -1,8 +1,8 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "1.1.2"
+  #define MyAppVersion "1.1.3"
 #endif
 #ifndef SourceDir
-  #define SourceDir "..\dist\MXHVideoEditor-1.1.2-Windows-x64"
+  #define SourceDir "..\dist\MXHVideoEditor-1.1.3-Windows-x64"
 #endif
 [Setup]
 AppId={{C9BC0D86-4EBA-42C5-AB33-DAB26463A528}
