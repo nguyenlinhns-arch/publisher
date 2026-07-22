@@ -1,0 +1,1 @@
+{"st": "err", "msg": ["timeFrame must be one of the following values: data_1P, data_3P, data_5P, data_10P, data_15P, data_30P, data_45P, data_60P, data_120P, data_180P, data_240P, data_day, data_week, data_month, TRENDM, trendm, trendM, TREND, trend, TRENDT, trendt, trendT, TRENDW"], "code": 1, "errorCode": 500}
