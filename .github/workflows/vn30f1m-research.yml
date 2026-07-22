@@ -1,0 +1,50 @@
+name: VN30F1M isolated research
+
+on:
+  push:
+    branches:
+      - research/vn30f1m-backtest-2026
+    paths:
+      - 'research/vn30f1m/**'
+      - '.github/workflows/vn30f1m-research.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/vn30f1m-backtest-2026
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests pandas numpy openpyxl vnstock
+
+      - name: Probe public data sources
+        run: python research/vn30f1m/probe_data_sources.py
+
+      - name: Commit generated diagnostics
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add research/vn30f1m/output
+          if git diff --cached --quiet; then
+            echo 'No generated changes to commit.'
+          else
+            git commit -m 'Generate VN30F1M data-source diagnostics [skip ci]'
+            git push origin HEAD:research/vn30f1m-backtest-2026
+          fi
