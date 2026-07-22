@@ -36,14 +36,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install requests pandas numpy openpyxl vnstock
 
-      - name: Probe public data sources
-        run: python research/vn30f1m/probe_data_sources.py
+      - name: Fetch complete 2026 minute data
+        run: python research/vn30f1m/fetch_ytd_data.py
 
-      - name: Upload generated diagnostics
+      - name: Upload YTD minute dataset
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vn30f1m-data-diagnostics
-          path: research/vn30f1m/output
+          name: vn30f1m-ytd-minute-data
+          path: research/vn30f1m/ytd_output
           if-no-files-found: error
           retention-days: 7
