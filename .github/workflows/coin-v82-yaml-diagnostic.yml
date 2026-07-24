@@ -1,0 +1,31 @@
+name: Coin V8.2 Workflow YAML Diagnostic
+
+on:
+  push:
+    paths:
+      - "coin-v8/v82_yaml_check_trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Parse workflow YAML
+        run: |
+          mkdir -p coin-v8/status
+          ruby -e 'require "yaml"; p YAML.load_file(".github/workflows/coin-v82-rigorous.yml", aliases: true)' > coin-v8/status/v82_yaml_parse.txt 2>&1 || true
+          python - <<'PY'
+          import json, pathlib
+          text=pathlib.Path('coin-v8/status/v82_yaml_parse.txt').read_text(encoding='utf-8',errors='replace')
+          pathlib.Path('coin-v8/status/v82_yaml_diagnostic.json').write_text(json.dumps({'output':text[:20000]},indent=2),encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coin-v8/status/v82_yaml_parse.txt coin-v8/status/v82_yaml_diagnostic.json
+          git commit -m "Record Coin V8.2 YAML diagnostic [skip ci]" || true
+          git push || true
