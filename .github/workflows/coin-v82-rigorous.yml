@@ -18,14 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
-      - run: |
+
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           python -m pip install pandas pyarrow numpy requests numba scipy
 
@@ -39,8 +44,16 @@ jobs:
           python - <<'PY'
           import json, os
           from datetime import datetime, timezone
-          p={'state':'RUNNING','version':'V8.2','run_id':os.environ['RUN_ID'],'run_attempt':os.environ['RUN_ATTEMPT'],'trigger_sha':os.environ['HEAD_SHA'],'started_at_utc':datetime.now(timezone.utc).isoformat(),'mode':'RESEARCH_ONLY / NO_PAPER / NO_LIVE'}
-          open('coin-v8/status/latest_v82.json','w',encoding='utf-8').write(json.dumps(p,indent=2))
+          payload = {
+              "state": "RUNNING",
+              "version": "V8.2",
+              "run_id": os.environ["RUN_ID"],
+              "run_attempt": os.environ["RUN_ATTEMPT"],
+              "trigger_sha": os.environ["HEAD_SHA"],
+              "started_at_utc": datetime.now(timezone.utc).isoformat(),
+              "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
+          }
+          open("coin-v8/status/latest_v82.json", "w", encoding="utf-8").write(json.dumps(payload, indent=2))
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -48,148 +61,13 @@ jobs:
           git commit -m "Mark Coin V8.2 running [skip ci]" || true
           git push || true
 
-      - name: Reconstruct and rigorously patch runner
+      - name: Build rigorous V8.2 runner
         run: |
           rm -rf coin-v8/results_v82
           mkdir -p coin-v8/results_v82 coin-v8/status
-          python - <<'PY'
-          import base64, hashlib, pathlib, subprocess, sys
-          expected='ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273'
-          parts=[
-            'coin-v8/source/iterative_research.b64.part00','coin-v8/source/iterative_research.b64.part01',
-            'coin-v8/source/fixed/p02_0','coin-v8/source/fixed/p02_1','coin-v8/source/fixed/p02_2',
-            'coin-v8/source/fixed/p03_0','coin-v8/source/fixed/p03_1','coin-v8/source/fixed/p03_2',
-            'coin-v8/source/fixed/p04_0','coin-v8/source/fixed/p04_1','coin-v8/source/fixed/p04_2_0',
-            'coin-v8/source/fixed/p04_2_1','coin-v8/source/fixed/p04_2_2','coin-v8/source/fixed/p04_2_3',
-            'coin-v8/source/iterative_research.b64.part05','coin-v8/source/iterative_research.b64.part06']
-          raw=base64.b64decode(b''.join(pathlib.Path(p).read_bytes() for p in parts),validate=True)
-          actual=hashlib.sha256(raw).hexdigest()
-          if actual!=expected: raise SystemExit(actual)
-          text=raw.decode('utf-8')
+          python coin-v8/v82_patch_runner.py
 
-          # Write V8.2 into an isolated result directory.
-          text=text.replace('RESULT_DIR = ROOT / "results"','RESULT_DIR = ROOT / "results_v82"',1)
-
-          # Normalize integer-valued configuration fields before feature lookup.
-          anchor='def make_signal(x: pd.DataFrame, cfg: dict[str, Any]) -> np.ndarray:\n    side = int(cfg["side"])\n'
-          repl='def make_signal(x: pd.DataFrame, cfg: dict[str, Any]) -> np.ndarray:\n    if "lookback" in cfg:\n        cfg["lookback"] = int(round(float(cfg["lookback"])))\n    side = int(cfg["side"])\n'
-          if anchor not in text: raise SystemExit('make_signal anchor missing')
-          text=text.replace(anchor,repl,1)
-          anchor2='        out[k] = v\n    return out\n\n\ndef ensemble_search'
-          repl2='        if k in {"lookback", "max_hold", "side"}:\n            v = int(round(float(v)))\n        elif isinstance(v, np.generic):\n            v = v.item()\n        out[k] = v\n    return out\n\n\ndef ensemble_search'
-          if anchor2 not in text: raise SystemExit('config_from_row anchor missing')
-          text=text.replace(anchor2,repl2,1)
-
-          # Correct active periods: zero-trade calendar buckets must not count as active.
-          s=text.index('def aggregate_period('); e=text.index('\n\ndef metrics_from_trades',s)
-          corrected='''def aggregate_period(exit_times: pd.DatetimeIndex, returns: np.ndarray, freq: str) -> pd.Series:
-    if len(returns) == 0:
-        return pd.Series(dtype=float)
-    s = pd.Series(np.asarray(returns, float), index=pd.DatetimeIndex(exit_times))
-    grouped = s.groupby(pd.Grouper(freq=freq))
-    counts = grouped.size()
-    compounded = grouped.apply(lambda z: float(np.prod(1.0 + z.to_numpy(float)) - 1.0))
-    return compounded[counts > 0].dropna()
-'''
-          text=text[:s]+corrected+text[e:]
-
-          # Replace holdout-selected ensemble search with a pre-holdout-only selection.
-          s=text.index('def ensemble_search('); e=text.index('\n\ndef main()',s)
-          ensemble='''def ensemble_search(final_rows: pd.DataFrame, trade_map: dict[str, pd.DataFrame], holdout_start: pd.Timestamp, final_end: pd.Timestamp) -> pd.DataFrame:
-    if final_rows.empty:
-        return pd.DataFrame()
-    pre_start = pd.Timestamp("2021-01-01", tz="UTC")
-    viable = final_rows[(final_rows["pre_trades"] >= MIN_PRE_TRADES) & (final_rows["pre_mean"] > 0) & (final_rows["pre_pf"] >= 1.03)].copy()
-    if viable.empty:
-        return pd.DataFrame()
-    top = viable.sort_values(["pre_score", "pre_pf", "pre_trades"], ascending=False).head(20)
-    ids = list(top["config_id"])
-    pre_map: dict[str, pd.Series] = {}
-    oos_map: dict[str, pd.Series] = {}
-    stress_map: dict[str, pd.Series] = {}
-    for cid in ids:
-        t = trade_map.get(cid)
-        if t is None or t.empty:
-            continue
-        pre = t[(t["exit_time"] >= pre_start) & (t["exit_time"] < holdout_start)]
-        oos = t[(t["exit_time"] >= holdout_start) & (t["exit_time"] < final_end)]
-        pre_map[cid] = aggregate_period(pd.DatetimeIndex(pre["exit_time"]), pre["net_return"].to_numpy(float), "1D")
-        oos_map[cid] = aggregate_period(pd.DatetimeIndex(oos["exit_time"]), oos["net_return"].to_numpy(float), "1D")
-        stress_map[cid] = aggregate_period(pd.DatetimeIndex(oos["exit_time"]), (oos["net_return"] - (STRESS_COST - BASE_COST)).to_numpy(float), "1D")
-
-    def port_stats(raw: pd.DataFrame, calendar_start: pd.Timestamp, calendar_end: pd.Timestamp) -> dict[str, float]:
-        if raw.empty:
-            return {}
-        active = raw.notna().any(axis=1)
-        aligned = raw.fillna(0.0)
-        port = aligned.mean(axis=1)
-        pa = port[active]
-        if len(pa) == 0:
-            return {}
-        eq = np.cumprod(1 + port.to_numpy(float))
-        peak = np.maximum.accumulate(eq)
-        std = port.std(ddof=1)
-        cal_days = max(1, (calendar_end.floor("D") - calendar_start.floor("D")).days + 1)
-        return {
-            "active_days": int(active.sum()),
-            "positive_active_day_rate": float(np.mean(pa > 0)),
-            "positive_calendar_day_rate": float(np.sum(port > 0) / cal_days),
-            "total_return": float(eq[-1] - 1),
-            "max_dd": float(np.min(eq / peak - 1)),
-            "daily_sharpe": float(port.mean() / std * math.sqrt(365)) if std > 0 else np.nan,
-        }
-
-    pre_rows = []
-    for size in (2, 3):
-        for combo in itertools.combinations(pre_map.keys(), size):
-            meta = top.set_index("config_id").loc[list(combo)]
-            if meta.groupby(["symbol", "family"]).size().max() > 1:
-                continue
-            stats = port_stats(pd.concat([pre_map[c] for c in combo], axis=1), pre_start, holdout_start)
-            if not stats or stats["active_days"] < 80 or stats["total_return"] <= 0 or stats["max_dd"] < -0.20:
-                continue
-            sr = np.nan_to_num(stats["daily_sharpe"], nan=-1.0)
-            pre_score = 0.60 * stats["positive_active_day_rate"] + 0.15 * stats["positive_calendar_day_rate"] + 0.15 * min(max(sr / 2.0, -1), 1) + 0.10 * min(max(stats["total_return"], -1), 1)
-            pre_rows.append({"ensemble_id":"+".join(combo),"size":size,"members":json.dumps(list(combo)),"pre_ensemble_score":float(pre_score),**{f"pre_{k}":v for k,v in stats.items()}})
-    if not pre_rows:
-        return pd.DataFrame()
-    frozen = pd.DataFrame(pre_rows).sort_values(["pre_ensemble_score","pre_total_return"],ascending=False).head(30)
-    out=[]
-    for _, r in frozen.iterrows():
-        combo=json.loads(r["members"])
-        oos=port_stats(pd.concat([oos_map[c] for c in combo],axis=1),holdout_start,final_end)
-        stress=port_stats(pd.concat([stress_map[c] for c in combo],axis=1),holdout_start,final_end)
-        row=r.to_dict()
-        row.update({f"oos_{k}":v for k,v in oos.items()})
-        row.update({f"stress_{k}":v for k,v in stress.items()})
-        out.append(row)
-    return pd.DataFrame(out).sort_values(["pre_ensemble_score","pre_total_return"],ascending=False)
-'''
-          text=text[:s]+ensemble+text[e:]
-
-          # Strict post-selection validation requires a positive bootstrap lower bound and DSR >= 95%.
-          anchor3='''    if not diag_df.empty:
-        final_df = final_df.merge(diag_df, on="config_id", how="left")
-    final_df.to_csv(RESULT_DIR / "finalists_holdout.csv", index=False)
-'''
-          repl3='''    if not diag_df.empty:
-        final_df = final_df.merge(diag_df, on="config_id", how="left")
-    final_df["validated_pass_strict"] = final_df["validated_pass"].fillna(False) & (final_df.get("bootstrap_mean_lo95", pd.Series(index=final_df.index, dtype=float)) > 0) & (final_df.get("dsr_probability", pd.Series(index=final_df.index, dtype=float)) >= 0.95)
-    final_df.to_csv(RESULT_DIR / "finalists_holdout.csv", index=False)
-'''
-          if anchor3 not in text: raise SystemExit('strict gate anchor missing')
-          text=text.replace(anchor3,repl3,1)
-          text=text.replace('validated = final_df[final_df["validated_pass"] == True]','validated = final_df[final_df["validated_pass_strict"] == True]',1)
-          text=text.replace('"important_note": "Highest observed result is not a guarantee of profit on every day. Final holdout was not used to generate or mutate configurations."','"important_note": "Highest observed result is exploratory. Strict validation also requires bootstrap lower mean > 0 and DSR probability >= 95%. Ensemble members and combinations were frozen using pre-holdout data only."',1)
-          text=text.replace('# COIN V8 — ITERATIVE LONG/SHORT INDICATOR RESEARCH','# COIN V8.2 — RIGOROUS ITERATIVE LONG/SHORT RESEARCH',1)
-
-          target=pathlib.Path('coin-v8/iterative_research_v82.py')
-          target.write_text(text,encoding='utf-8')
-          subprocess.run([sys.executable,'-m','py_compile',str(target)],check=True)
-          pathlib.Path('coin-v8/status/v82_runner_sha256.txt').write_text(hashlib.sha256(target.read_bytes()).hexdigest()+'\n',encoding='utf-8')
-          PY
-
-      - name: Execute V8.2 research
+      - name: Execute V8.2 research and capture log
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -201,7 +79,7 @@ jobs:
           echo "$rc" > coin-v8/status/exit_code_v82.txt
           exit 0
 
-      - name: Record V8.2 result and commit
+      - name: Record result and commit
         env:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -211,9 +89,25 @@ jobs:
           python - <<'PY'
           import json, os
           from datetime import datetime, timezone
-          rc=int(open('coin-v8/status/exit_code_v82.txt').read().strip())
-          p={'state':'COMPLETED' if rc==0 else 'FAILED','version':'V8.2','run_id':os.environ['RUN_ID'],'run_attempt':os.environ['RUN_ATTEMPT'],'trigger_sha':os.environ['HEAD_SHA'],'exit_code':rc,'finished_at_utc':datetime.now(timezone.utc).isoformat(),'methodology':['correct active-period metrics','pre-holdout-only ensemble selection','bootstrap lower-bound strict gate','Deflated Sharpe >=95% strict gate'],'mode':'RESEARCH_ONLY / NO_PAPER / NO_LIVE'}
-          open('coin-v8/status/latest_v82.json','w',encoding='utf-8').write(json.dumps(p,indent=2))
+          rc = int(open("coin-v8/status/exit_code_v82.txt").read().strip())
+          payload = {
+              "state": "COMPLETED" if rc == 0 else "FAILED",
+              "version": "V8.2",
+              "run_id": os.environ["RUN_ID"],
+              "run_attempt": os.environ["RUN_ATTEMPT"],
+              "trigger_sha": os.environ["HEAD_SHA"],
+              "exit_code": rc,
+              "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+              "methodology": [
+                  "correct active-period metrics",
+                  "calendar-day Sharpe and DSR",
+                  "pre-holdout-only ensemble selection",
+                  "bootstrap lower-bound strict gate",
+                  "Deflated Sharpe probability >= 95% strict gate",
+              ],
+              "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
+          }
+          open("coin-v8/status/latest_v82.json", "w", encoding="utf-8").write(json.dumps(payload, indent=2))
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
