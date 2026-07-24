@@ -1,5 +1,6 @@
-run_utc=2026-07-24T15:15:00Z
+run_utc=2026-07-24T15:20:00Z
 scope=top20_saved_trade_ledgers_full_pre_oos_stress
 holdout_start=2025-07-20T00:00:00Z
+robust_end=2026-07-01T00:00:00.005Z
 metric=exclude_zero_trade_periods_from_active_day_week_month_rates
 mode=RESEARCH_ONLY
