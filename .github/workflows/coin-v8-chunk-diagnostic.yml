@@ -20,8 +20,9 @@ jobs:
           mkdir -p coin-v8/status
           python - <<'PY'
           import glob, hashlib, json, pathlib
+          paths = sorted(glob.glob('coin-v8/source/iterative_research.b64.part*')) + sorted(glob.glob('coin-v8/source/fixed/*'))
           rows=[]
-          for p in sorted(glob.glob('coin-v8/source/iterative_research.b64.part*')):
+          for p in paths:
               b=pathlib.Path(p).read_bytes()
               rows.append({'file':p,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()})
           pathlib.Path('coin-v8/status/chunks.json').write_text(json.dumps({'total_bytes':sum(r['bytes'] for r in rows),'parts':rows},indent=2),encoding='utf-8')
