@@ -1,0 +1,5 @@
+run_utc=2026-07-25T00:45:00Z
+source_run_id=30112153560
+selection=all_13_positive_pre_holdout_candidates
+objective=measure_holdout_daily_profit_stress_cost_and_preselected_ensemble
+mode=RESEARCH_ONLY_NO_PAPER_NO_LIVE
