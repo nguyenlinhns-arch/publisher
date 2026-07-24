@@ -1,2 +1,3 @@
-probe_utc=2026-07-25T00:05:00Z
+probe_utc=2026-07-24T17:09:00Z
+attempt=2
 purpose=read_latest_coin_v9_research_workflow_status
