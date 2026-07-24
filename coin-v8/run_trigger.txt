@@ -1,3 +1,4 @@
-run 2026-07-24T14:20:00Z
+run 2026-07-24T14:30:00Z
 objective=maximize_positive_active_day_rate_and_trade_win_rate_subject_to_net_profitability_and_robustness
+fix=normalize_finalist_lookback_to_integer_after_dataframe_roundtrip
 mode=RESEARCH_ONLY_NO_PAPER_NO_LIVE
