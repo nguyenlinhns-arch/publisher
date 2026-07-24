@@ -1,0 +1,117 @@
+{
+  "generated_at_utc": "2026-07-24T15:32:55.398346+00:00",
+  "files": [
+    {
+      "symbol": "BTCUSDT",
+      "kind": "kline",
+      "source": "BTCUSDT_5m.parquet",
+      "rows": 688896,
+      "columns": [
+        "open_time",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "close_time",
+        "quote_volume",
+        "count",
+        "taker_buy_volume",
+        "taker_buy_quote_volume",
+        "ignore"
+      ],
+      "npz": "BTCUSDT_kline.npz",
+      "bytes": 47355768,
+      "sha256": "b840a14004d8071a5ffc2b20635bb76c949bf9a8292bf64cc2b2f931ed52bfa7"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "kind": "metrics",
+      "source": "BTCUSDT_metrics.parquet",
+      "rows": 582883,
+      "columns": [
+        "create_time",
+        "symbol",
+        "sum_open_interest",
+        "sum_open_interest_value",
+        "count_toptrader_long_short_ratio",
+        "sum_toptrader_long_short_ratio",
+        "count_long_short_ratio",
+        "sum_taker_long_short_vol_ratio"
+      ],
+      "npz": "BTCUSDT_metrics.npz",
+      "bytes": 29809964,
+      "sha256": "722f3329124eaa9054b2ecaef8430dcbd338ea461be59e8e1127aa367d1ad693"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "kind": "funding",
+      "source": "BTCUSDT_fundingRate.parquet",
+      "rows": 7119,
+      "columns": [
+        "calc_time",
+        "funding_interval_hours",
+        "last_funding_rate"
+      ],
+      "npz": "BTCUSDT_funding.npz",
+      "bytes": 73973,
+      "sha256": "418757d0101f60ad9b74893b0374ea5404cbc9e04854fcdd8f20206e3a3e4d9d"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "kind": "kline",
+      "source": "ETHUSDT_5m.parquet",
+      "rows": 688896,
+      "columns": [
+        "open_time",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "close_time",
+        "quote_volume",
+        "count",
+        "taker_buy_volume",
+        "taker_buy_quote_volume",
+        "ignore"
+      ],
+      "npz": "ETHUSDT_kline.npz",
+      "bytes": 47758749,
+      "sha256": "a5b7210c9fe9baec0b39765b02f28b09f404d8dd98545674750052438ae9f915"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "kind": "metrics",
+      "source": "ETHUSDT_metrics.parquet",
+      "rows": 487152,
+      "columns": [
+        "create_time",
+        "symbol",
+        "sum_open_interest",
+        "sum_open_interest_value",
+        "count_toptrader_long_short_ratio",
+        "sum_toptrader_long_short_ratio",
+        "count_long_short_ratio",
+        "sum_taker_long_short_vol_ratio"
+      ],
+      "npz": "ETHUSDT_metrics.npz",
+      "bytes": 25499499,
+      "sha256": "744dc6a3197cab3b7b806dd0a81c00dba114f06f5d9959b605bfdc0c421e9f98"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "kind": "funding",
+      "source": "ETHUSDT_fundingRate.parquet",
+      "rows": 7119,
+      "columns": [
+        "calc_time",
+        "funding_interval_hours",
+        "last_funding_rate"
+      ],
+      "npz": "ETHUSDT_funding.npz",
+      "bytes": 73895,
+      "sha256": "b5d56699fe55e76607d7920b65a8c08847ed46e47b56b9c27fcedfd841a29a86"
+    }
+  ]
+}
