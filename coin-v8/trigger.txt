@@ -1,0 +1,4 @@
+Coin V8 iterative research trigger
+UTC: 2026-07-24T13:30:00Z
+Objective: maximize daily positive rate and trade win rate subject to positive expectancy, stress-cost survival, drawdown and locked holdout gates.
+Mode: RESEARCH_ONLY / NO_PAPER / NO_LIVE
