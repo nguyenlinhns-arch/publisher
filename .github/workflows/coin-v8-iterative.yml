@@ -65,9 +65,23 @@ jobs:
         run: |
           mkdir -p coin-v8/status
           python - <<'PY'
-          import base64, glob, hashlib, json, pathlib, subprocess, sys
+          import base64, hashlib, json, pathlib, subprocess, sys
           expected = "ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273"
-          parts = sorted(glob.glob("coin-v8/source/iterative_research.b64.part*"))
+          parts = [
+              "coin-v8/source/iterative_research.b64.part00",
+              "coin-v8/source/iterative_research.b64.part01",
+              "coin-v8/source/fixed/p02_0",
+              "coin-v8/source/fixed/p02_1",
+              "coin-v8/source/fixed/p02_2",
+              "coin-v8/source/fixed/p03_0",
+              "coin-v8/source/fixed/p03_1",
+              "coin-v8/source/fixed/p03_2",
+              "coin-v8/source/fixed/p04_0",
+              "coin-v8/source/fixed/p04_1",
+              "coin-v8/source/fixed/p04_2",
+              "coin-v8/source/iterative_research.b64.part05",
+              "coin-v8/source/iterative_research.b64.part06",
+          ]
           encoded = b"".join(pathlib.Path(p).read_bytes() for p in parts)
           diag = {"parts": parts, "part_count": len(parts), "encoded_bytes": len(encoded), "expected_sha256": expected}
           rc = 1
