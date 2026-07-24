@@ -1,0 +1,4 @@
+run_utc=2026-07-24T14:30:00Z
+objective=maximize_daily_positive_rate_and_trade_win_rate_subject_to_positive_expectancy_cost_stress_drawdown_and_locked_holdout
+trial_budget=7000
+mode=RESEARCH_ONLY_NO_PAPER_NO_LIVE
