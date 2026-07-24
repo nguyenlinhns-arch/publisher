@@ -1,2 +1,3 @@
-run_utc=2026-07-24T16:02:00Z
+run_utc=2026-07-24T16:06:00Z
+attempt=2
 purpose=research_audit_targeted_follow_up_and_local_reproduction
