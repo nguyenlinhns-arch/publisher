@@ -1,8 +1,9 @@
 {
-  "state": "RUNNING",
+  "state": "FAILED",
   "run_id": "30098183069",
   "run_attempt": "1",
   "trigger_sha": "167ba45773e7511c1785d317c7aac98b15366fff",
   "started_at_utc": "2026-07-24T13:45:46.270520+00:00",
-  "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE"
+  "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
+  "failed_at_utc": "2026-07-24T13:46:08.327993+00:00"
 }

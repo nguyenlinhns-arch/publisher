@@ -2,15 +2,25 @@
   "parts": [
     "coin-v8/source/iterative_research.b64.part00",
     "coin-v8/source/iterative_research.b64.part01",
-    "coin-v8/source/iterative_research.b64.part02",
-    "coin-v8/source/iterative_research.b64.part03",
-    "coin-v8/source/iterative_research.b64.part04",
+    "coin-v8/source/fixed/p02_0",
+    "coin-v8/source/fixed/p02_1",
+    "coin-v8/source/fixed/p02_2",
+    "coin-v8/source/fixed/p03_0",
+    "coin-v8/source/fixed/p03_1",
+    "coin-v8/source/fixed/p03_2",
+    "coin-v8/source/fixed/p04_0",
+    "coin-v8/source/fixed/p04_1",
+    "coin-v8/source/fixed/p04_2",
     "coin-v8/source/iterative_research.b64.part05",
     "coin-v8/source/iterative_research.b64.part06"
   ],
-  "part_count": 7,
-  "encoded_bytes": 77211,
+  "part_count": 13,
+  "encoded_bytes": 77364,
   "expected_sha256": "ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273",
-  "decode_ok": false,
-  "exception": "Error('Incorrect padding')"
+  "decoded_bytes": 58022,
+  "actual_sha256": "16fd93c2ddf82b8d84bedb1dba6d8d87bf2526d10f2dfe010713f61cb043bbc8",
+  "decode_ok": true,
+  "compile_returncode": 0,
+  "compile_stdout": "",
+  "compile_stderr": ""
 }
