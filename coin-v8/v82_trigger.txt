@@ -1,5 +1,5 @@
-run_utc=2026-07-24T15:36:00Z
-attempt=3
+run_utc=2026-07-24T15:52:00Z
+attempt=4
 objective=maximize_long_short_trade_win_rate_and_true_positive_active_day_rate_subject_to_positive_net_expectancy_profit_factor_cost_stress_drawdown_locked_holdout_bootstrap_and_deflated_sharpe
 trial_budget=7000
 holdout_start=2025-07-20T00:00:00Z
