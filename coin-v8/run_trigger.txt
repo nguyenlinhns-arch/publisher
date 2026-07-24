@@ -1,0 +1,3 @@
+run 2026-07-24T14:20:00Z
+objective=maximize_positive_active_day_rate_and_trade_win_rate_subject_to_net_profitability_and_robustness
+mode=RESEARCH_ONLY_NO_PAPER_NO_LIVE
