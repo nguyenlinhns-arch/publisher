@@ -1,0 +1,85 @@
+name: Coin V8 Corrected Candidate Rankings
+
+on:
+  push:
+    paths:
+      - "coin-v8/rankings_trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rank:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pandas numpy
+      - name: Build corrected rankings
+        run: |
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          import numpy as np
+          import pandas as pd
+
+          seg=pd.read_csv('coin-v8/results/corrected_top20_segment_metrics.csv')
+          fin=pd.read_csv('coin-v8/results/finalists_holdout.csv')
+          oos=seg[(seg.segment=='oos')&(seg.cost_case=='base')].copy()
+          stress=seg[(seg.segment=='oos')&(seg.cost_case=='stress')].copy()
+          s_cols=['config_id','trades','trade_win_rate','profit_factor','mean_return','total_return','max_drawdown','positive_active_day_rate','positive_active_week_rate','positive_active_month_rate']
+          stress=stress[s_cols].rename(columns={c:f'stress_{c}' for c in s_cols if c!='config_id'})
+          keep=['config_id','family','symbol','timeframe','side','require_htf','htf_200','close_pos','vol_z_min','flow_z_min','crowding_veto','veto_funding','veto_oi','stop_atr','target_atr','max_hold','be_trigger','lookback','buffer_atr','width_rel_min','touch_atr','rsi_lo','rsi_hi','adx_min','trend_local','depth_atr','wick_min','trend_context','htf_adx_max','bb_z_abs','stoch_extreme','adx_max','vwap_abs','rsi_max','range_only','positive_pre_folds','valid_pre_folds','bootstrap_mean_lo95','dsr_probability']
+          x=oos.merge(stress,on='config_id',how='left').merge(fin[keep].drop_duplicates('config_id'),on='config_id',how='left')
+          profitable=x[(x.profit_factor>1)&(x.mean_return>0)&(x.total_return>0)].copy()
+          stress_ok=profitable[(profitable.stress_profit_factor>1)&(profitable.stress_mean_return>0)&(profitable.stress_total_return>0)].copy()
+          sample50=profitable[profitable.trades>=50].copy()
+
+          def records(df, sort_cols, asc, n=10):
+              if df.empty: return []
+              y=df.sort_values(sort_cols,ascending=asc).head(n)
+              return json.loads(y.replace({np.nan:None,np.inf:None,-np.inf:None}).to_json(orient='records'))
+
+          payload={
+              'generated_at_utc':datetime.now(timezone.utc).isoformat(),
+              'scope':'20 saved finalist trade ledgers; locked holdout starts 2025-07-20; base cost 12 bps; stress cost 24 bps.',
+              'important_note':'Rankings are exploratory and selected after historical search. They are not proof of future profitability.',
+              'highest_trade_win_rate_profitable':records(profitable,['trade_win_rate','profit_factor','trades'],[False,False,False]),
+              'highest_positive_active_day_rate_profitable':records(profitable,['positive_active_day_rate','profit_factor','trades'],[False,False,False]),
+              'highest_total_return_profitable':records(profitable,['total_return','profit_factor','trades'],[False,False,False]),
+              'stress_survivors':records(stress_ok,['stress_mean_return','stress_profit_factor','trades'],[False,False,False],20),
+              'sample_50_plus_profitable':records(sample50,['trade_win_rate','profit_factor'],[False,False],20),
+          }
+          open('coin-v8/results/corrected_top20_rankings.json','w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False))
+
+          lines=['# COIN V8 — Corrected Top-20 Rankings','',f"Generated: {payload['generated_at_utc']}",'',payload['scope'],'',payload['important_note'],'']
+          for key,title in [
+              ('highest_trade_win_rate_profitable','Highest trade win rate with positive base-cost expectancy'),
+              ('highest_positive_active_day_rate_profitable','Highest true positive active-day rate with positive base-cost expectancy'),
+              ('highest_total_return_profitable','Highest holdout return with positive base-cost expectancy'),
+              ('stress_survivors','Survives doubled round-trip cost'),
+              ('sample_50_plus_profitable','At least 50 holdout trades and positive base-cost expectancy'),
+          ]:
+              lines += [f'## {title}','']
+              rows=payload[key]
+              if not rows: lines += ['None.','']; continue
+              for i,r in enumerate(rows[:10],1):
+                  lines.append(f"{i}. `{r['config_id']}` — {r.get('symbol')} {r.get('timeframe')} {r.get('family')} {'LONG' if r.get('side')==1 else 'SHORT'}; trades={r.get('trades')}; WR={r.get('trade_win_rate',0):.2%}; PF={r.get('profit_factor',0):.3f}; mean={r.get('mean_return',0):.4%}; total={r.get('total_return',0):.2%}; active-day+={r.get('positive_active_day_rate',0):.2%}; stress PF={r.get('stress_profit_factor',float('nan')):.3f}; stress mean={r.get('stress_mean_return',float('nan')):.4%}.")
+              lines.append('')
+          open('coin-v8/results/CORRECTED_TOP20_RANKINGS.md','w',encoding='utf-8').write('\n'.join(lines))
+          print('\n'.join(lines))
+          PY
+      - name: Commit rankings
+        run: |
+          git pull --rebase || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coin-v8/results/corrected_top20_rankings.json coin-v8/results/CORRECTED_TOP20_RANKINGS.md
+          git commit -m "Add corrected Coin V8 candidate rankings [skip ci]" || true
+          git push || true
