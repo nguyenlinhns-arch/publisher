@@ -1,0 +1,4 @@
+run_utc=2026-07-24T15:12:00Z
+scope=top20_saved_trade_ledgers
+metric=exclude_zero_trade_periods_from_active_day_week_month_rates
+mode=RESEARCH_ONLY
