@@ -1,0 +1,2 @@
+probe_utc=2026-07-25T00:05:00Z
+purpose=read_latest_coin_v9_research_workflow_status
