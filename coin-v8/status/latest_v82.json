@@ -1,9 +1,17 @@
 {
-  "state": "RUNNING",
+  "state": "COMPLETED",
   "version": "V8.2",
   "run_id": "30106292270",
   "run_attempt": "1",
   "trigger_sha": "8bf6e71efccf2fe083f0b4b7e010c4c66f2167eb",
-  "started_at_utc": "2026-07-24T15:41:08.141759+00:00",
+  "exit_code": 0,
+  "finished_at_utc": "2026-07-24T15:58:32.834239+00:00",
+  "methodology": [
+    "correct active-period metrics",
+    "calendar-day Sharpe and DSR",
+    "pre-holdout-only ensemble selection",
+    "bootstrap lower-bound strict gate",
+    "Deflated Sharpe probability >= 95% strict gate"
+  ],
   "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE"
 }
