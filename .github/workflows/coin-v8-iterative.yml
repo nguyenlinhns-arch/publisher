@@ -78,7 +78,10 @@ jobs:
               "coin-v8/source/fixed/p03_2",
               "coin-v8/source/fixed/p04_0",
               "coin-v8/source/fixed/p04_1",
-              "coin-v8/source/fixed/p04_2",
+              "coin-v8/source/fixed/p04_2_0",
+              "coin-v8/source/fixed/p04_2_1",
+              "coin-v8/source/fixed/p04_2_2",
+              "coin-v8/source/fixed/p04_2_3",
               "coin-v8/source/iterative_research.b64.part05",
               "coin-v8/source/iterative_research.b64.part06",
           ]
