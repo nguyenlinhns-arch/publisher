@@ -35,42 +35,57 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pandas pyarrow numpy requests numba scipy
 
-      - name: Reconstruct, compile and fingerprint V9 runner
+      - name: Reconstruct, verify and compile V9 runner
         run: |
           mkdir -p coin-v9/status coin-v9/results
           python - <<'PY'
-          import base64, gzip, hashlib, json, pathlib, subprocess, sys
-          source = pathlib.Path("coin-v9/source/v9_research.py.gz.b64")
-          encoded = source.read_text(encoding="utf-8").strip()
+          import base64, gzip, glob, hashlib, json, pathlib, subprocess, sys
+          parts = sorted(glob.glob("coin-v9/source/chunks/part*"))
+          encoded = "".join(pathlib.Path(p).read_text(encoding="utf-8").strip() for p in parts)
           diag = {
+              "parts": parts,
+              "part_count": len(parts),
               "encoded_chars": len(encoded),
               "encoded_sha256": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+              "expected_encoded_chars": 21844,
+              "expected_encoded_sha256": "7f25180db857ca091452057f930e223ea04480dc7c1acd111c530b2a30755eb9",
+              "expected_source_sha256": "2b04faa1b4e342f1f8fc75d9f7841ee2e2227ec4e3894c95fb45a026c6dc14c6",
           }
-          raw = gzip.decompress(base64.b64decode(encoded, validate=True))
-          actual = hashlib.sha256(raw).hexdigest()
-          target = pathlib.Path("coin-v9/v9_daily_leverage_research.py")
-          target.write_bytes(raw)
-          compile_run = subprocess.run(
-              [sys.executable, "-m", "py_compile", str(target)],
-              text=True,
-              capture_output=True,
-          )
-          diag.update({
-              "source_bytes": len(raw),
-              "source_sha256": actual,
-              "compile_returncode": compile_run.returncode,
-              "compile_stdout": compile_run.stdout,
-              "compile_stderr": compile_run.stderr,
-          })
+          rc = 1
+          try:
+              if len(parts) != 7:
+                  raise ValueError(f"Expected 7 chunks, got {len(parts)}")
+              if len(encoded) != diag["expected_encoded_chars"]:
+                  raise ValueError(f"Encoded length mismatch: {len(encoded)}")
+              if diag["encoded_sha256"] != diag["expected_encoded_sha256"]:
+                  raise ValueError(f"Encoded SHA mismatch: {diag['encoded_sha256']}")
+              raw = gzip.decompress(base64.b64decode(encoded, validate=True))
+              actual = hashlib.sha256(raw).hexdigest()
+              target = pathlib.Path("coin-v9/v9_daily_leverage_research.py")
+              target.write_bytes(raw)
+              compile_run = subprocess.run(
+                  [sys.executable, "-m", "py_compile", str(target)],
+                  text=True,
+                  capture_output=True,
+              )
+              diag.update({
+                  "source_bytes": len(raw),
+                  "source_sha256": actual,
+                  "compile_returncode": compile_run.returncode,
+                  "compile_stdout": compile_run.stdout,
+                  "compile_stderr": compile_run.stderr,
+              })
+              rc = 0 if actual == diag["expected_source_sha256"] and compile_run.returncode == 0 else 1
+          except Exception as exc:
+              diag["exception"] = repr(exc)
           pathlib.Path("coin-v9/status/reconstruction.json").write_text(
               json.dumps(diag, indent=2), encoding="utf-8"
           )
           pathlib.Path("coin-v9/status/v9_runner_sha256.txt").write_text(
-              actual + "\n", encoding="utf-8"
+              str(diag.get("source_sha256", "RECONSTRUCTION_FAILED")) + "\n", encoding="utf-8"
           )
           print(json.dumps(diag, indent=2))
-          if compile_run.returncode != 0:
-              raise SystemExit(compile_run.returncode)
+          raise SystemExit(rc)
           PY
 
       - name: Record running status
