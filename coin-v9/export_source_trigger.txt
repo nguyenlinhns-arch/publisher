@@ -1,0 +1,2 @@
+run_utc=2026-07-25T00:30:00Z
+purpose=audit_v9_selection_and_design_targeted_intraday_daily_profit_search
