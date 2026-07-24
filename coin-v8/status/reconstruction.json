@@ -1,0 +1,16 @@
+{
+  "parts": [
+    "coin-v8/source/iterative_research.b64.part00",
+    "coin-v8/source/iterative_research.b64.part01",
+    "coin-v8/source/iterative_research.b64.part02",
+    "coin-v8/source/iterative_research.b64.part03",
+    "coin-v8/source/iterative_research.b64.part04",
+    "coin-v8/source/iterative_research.b64.part05",
+    "coin-v8/source/iterative_research.b64.part06"
+  ],
+  "part_count": 7,
+  "encoded_bytes": 77211,
+  "expected_sha256": "ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273",
+  "decode_ok": false,
+  "exception": "Error('Incorrect padding')"
+}
