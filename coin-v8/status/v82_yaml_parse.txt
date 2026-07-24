@@ -1,0 +1,10 @@
+/usr/lib/ruby/3.2.0/psych/parser.rb:62:in `_native_parse': (.github/workflows/coin-v82-rigorous.yml): could not find expected ':' while scanning a simple key at line 88 column 5 (Psych::SyntaxError)
+	from /usr/lib/ruby/3.2.0/psych/parser.rb:62:in `parse'
+	from /usr/lib/ruby/3.2.0/psych.rb:455:in `parse_stream'
+	from /usr/lib/ruby/3.2.0/psych.rb:399:in `parse'
+	from /usr/lib/ruby/3.2.0/psych.rb:323:in `safe_load'
+	from /usr/lib/ruby/3.2.0/psych.rb:369:in `load'
+	from /usr/lib/ruby/3.2.0/psych.rb:671:in `block in load_file'
+	from /usr/lib/ruby/3.2.0/psych.rb:670:in `open'
+	from /usr/lib/ruby/3.2.0/psych.rb:670:in `load_file'
+	from -e:1:in `<main>'
