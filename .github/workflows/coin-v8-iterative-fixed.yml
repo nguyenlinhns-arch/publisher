@@ -1,4 +1,4 @@
-name: Coin V8 Iterative Indicator Research Fixed
+name: Coin V8.1 Iterative Indicator Research Corrected
 
 on:
   push:
@@ -36,6 +36,7 @@ jobs:
 
       - name: Reconstruct, verify and patch runner
         run: |
+          rm -rf coin-v8/results
           mkdir -p coin-v8/status coin-v8/results
           python - <<'PY'
           import base64, hashlib, pathlib, subprocess, sys
@@ -68,42 +69,57 @@ jobs:
           target = pathlib.Path("coin-v8/iterative_research.py")
           text = decoded.decode("utf-8")
 
-          # Defensive normalization at the signal boundary. Pandas may promote
-          # integer configuration values to floats after finalist selection.
+          # Pandas may promote integer-valued configuration fields to floats
+          # during finalist selection. Normalize before feature lookup.
           anchor = 'def make_signal(x: pd.DataFrame, cfg: dict[str, Any]) -> np.ndarray:\n    side = int(cfg["side"])\n'
           replacement = 'def make_signal(x: pd.DataFrame, cfg: dict[str, Any]) -> np.ndarray:\n    if "lookback" in cfg:\n        cfg["lookback"] = int(round(float(cfg["lookback"])))\n    side = int(cfg["side"])\n'
           if anchor not in text:
               raise SystemExit("make_signal patch anchor not found")
           text = text.replace(anchor, replacement, 1)
 
-          # Normalize integer-valued fields reconstructed from DataFrame rows.
           anchor2 = '        out[k] = v\n    return out\n\n\ndef ensemble_search'
           replacement2 = '        if k in {"lookback", "max_hold", "side"}:\n            v = int(round(float(v)))\n        elif isinstance(v, np.generic):\n            v = v.item()\n        out[k] = v\n    return out\n\n\ndef ensemble_search'
           if anchor2 not in text:
               raise SystemExit("config_from_row patch anchor not found")
           text = text.replace(anchor2, replacement2, 1)
 
+          # Correct active-day/week/month metrics. The original Grouper.apply
+          # emitted zero-valued empty periods between trades, which mislabeled
+          # calendar coverage as active periods and distorted the search score.
+          start = text.index("def aggregate_period(")
+          end = text.index("\n\ndef metrics_from_trades", start)
+          active_period_func = '''def aggregate_period(exit_times: pd.DatetimeIndex, returns: np.ndarray, freq: str) -> pd.Series:
+    if len(returns) == 0:
+        return pd.Series(dtype=float)
+    s = pd.Series(np.asarray(returns, float), index=pd.DatetimeIndex(exit_times))
+    grouped = s.groupby(pd.Grouper(freq=freq))
+    compounded = grouped.apply(lambda x: float(np.prod(1.0 + x.to_numpy()) - 1.0))
+    counts = grouped.size()
+    return compounded[counts > 0].dropna()
+'''
+          text = text[:start] + active_period_func + text[end:]
+
           target.write_text(text, encoding="utf-8")
           subprocess.run([sys.executable, "-m", "py_compile", str(target)], check=True)
           patched_sha = hashlib.sha256(target.read_bytes()).hexdigest()
-          pathlib.Path("coin-v8/status/patched_runner_sha256.txt").write_text(patched_sha + "\n", encoding="utf-8")
-          print({"original_sha256": actual, "patched_sha256": patched_sha, "parts": len(parts)})
+          pathlib.Path("coin-v8/status/patched_runner_v81_sha256.txt").write_text(patched_sha + "\n", encoding="utf-8")
+          print({"original_sha256": actual, "patched_sha256": patched_sha, "parts": len(parts), "active_period_fix": True})
           PY
 
-      - name: Execute iterative research and capture full log
+      - name: Execute corrected iterative research and capture log
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
           set +e
-          python coin-v8/iterative_research.py 2>&1 | tee coin-v8/status/runtime_fixed.log
+          python coin-v8/iterative_research.py 2>&1 | tee coin-v8/status/runtime_v81.log
           rc=${PIPESTATUS[0]}
-          echo "$rc" > coin-v8/status/exit_code_fixed.txt
+          echo "$rc" > coin-v8/status/exit_code_v81.txt
           python - <<'PY'
           import json, os
           from datetime import datetime, timezone
-          rc = int(open("coin-v8/status/exit_code_fixed.txt").read().strip())
+          rc = int(open("coin-v8/status/exit_code_v81.txt").read().strip())
           payload = {
               "state": "COMPLETED" if rc == 0 else "FAILED",
               "run_id": os.environ["GITHUB_RUN_ID"],
@@ -111,9 +127,10 @@ jobs:
               "trigger_sha": os.environ["GITHUB_SHA"],
               "exit_code": rc,
               "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+              "metric_definition": "positive active day/week/month rate excludes zero-trade periods",
               "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
           }
-          open("coin-v8/status/latest_fixed.json", "w", encoding="utf-8").write(json.dumps(payload, indent=2))
+          open("coin-v8/status/latest_v81.json", "w", encoding="utf-8").write(json.dumps(payload, indent=2))
           PY
           exit 0
 
@@ -122,22 +139,22 @@ jobs:
           git pull --rebase || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add coin-v8/status coin-v8/results
-          git commit -m "Record fixed Coin V8 iterative research run [skip ci]" || true
+          git add -A coin-v8/status coin-v8/results
+          git commit -m "Record corrected Coin V8.1 iterative research run [skip ci]" || true
           git push || true
 
       - name: Upload result artifact
         uses: actions/upload-artifact@v4
         with:
-          name: coin-v8-fixed-results-${{ github.run_id }}
+          name: coin-v8-v81-results-${{ github.run_id }}
           path: |
             coin-v8/results/*
-            coin-v8/status/runtime_fixed.log
-            coin-v8/status/latest_fixed.json
-            coin-v8/status/patched_runner_sha256.txt
+            coin-v8/status/runtime_v81.log
+            coin-v8/status/latest_v81.json
+            coin-v8/status/patched_runner_v81_sha256.txt
           retention-days: 30
           if-no-files-found: warn
 
       - name: Enforce research exit code
         run: |
-          test "$(cat coin-v8/status/exit_code_fixed.txt)" = "0"
+          test "$(cat coin-v8/status/exit_code_v81.txt)" = "0"
