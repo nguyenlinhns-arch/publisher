@@ -1,0 +1,1041 @@
+{
+  "files": [
+    {
+      "name": "REPORT_V9_VI.md",
+      "bytes": 1215,
+      "sha256": "6b5f6df0f56568c3632d590ef38e850974bdfe1e5eb6ffe177dfe09252613769"
+    },
+    {
+      "name": "all_trials_pre_holdout_v9.csv",
+      "bytes": 5596222,
+      "sha256": "1596c36815c6861c03a84cd67106011b54f1e90453dc0f3e7036c606dd6d5847"
+    },
+    {
+      "name": "data_audit_v9.csv",
+      "bytes": 1224,
+      "sha256": "aea436745b0d92b09a3810eeba67114ae0694a6d9b55ed81b9b5ec486435d5a8"
+    },
+    {
+      "name": "ensemble_candidates_v9.csv",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "name": "finalists_holdout_v9.csv",
+      "bytes": 239589,
+      "sha256": "9d72b90080e4be0a4b1a2fa67ca053e6206495642f3a1562184a20fa5e67a466"
+    },
+    {
+      "name": "iteration_log_v9.csv",
+      "bytes": 853,
+      "sha256": "9df49cda7d2b8b0050ad3b2535db4d82d78b8a9d88674922339688ef7bfc37de"
+    },
+    {
+      "name": "leverage_overlay_v9.csv",
+      "bytes": 721032,
+      "sha256": "f8de0face82c5aee2e9cedbf372fd001761fd4b171e912b22a5c1cbb2e3fac2b"
+    },
+    {
+      "name": "ranking_daily_v9.csv",
+      "bytes": 2067,
+      "sha256": "7be2095fd3cf6b35f45e5e734f222cf413766d37ca796d5ba6c7f63fb0e4485a"
+    },
+    {
+      "name": "ranking_frequency_v9.csv",
+      "bytes": 2067,
+      "sha256": "7be2095fd3cf6b35f45e5e734f222cf413766d37ca796d5ba6c7f63fb0e4485a"
+    },
+    {
+      "name": "ranking_high_win_v9.csv",
+      "bytes": 2067,
+      "sha256": "7be2095fd3cf6b35f45e5e734f222cf413766d37ca796d5ba6c7f63fb0e4485a"
+    },
+    {
+      "name": "ranking_profit_v9.csv",
+      "bytes": 2067,
+      "sha256": "7be2095fd3cf6b35f45e5e734f222cf413766d37ca796d5ba6c7f63fb0e4485a"
+    },
+    {
+      "name": "ranking_stress_v9.csv",
+      "bytes": 2067,
+      "sha256": "7be2095fd3cf6b35f45e5e734f222cf413766d37ca796d5ba6c7f63fb0e4485a"
+    },
+    {
+      "name": "research_summary_v9.json",
+      "bytes": 2224,
+      "sha256": "6869ac3250d6bf10c9a4cb0499dda3acbbbb3cccb813d9459b00ade31fa1ae42"
+    },
+    {
+      "name": "trades_00b8fde32214c2.parquet",
+      "bytes": 1371622,
+      "sha256": "236a4df1abf6c7ccdee4e135c231879a74f5ff6701f5de33e7f7a67e734f89b7"
+    },
+    {
+      "name": "trades_0385f3a1b4337f.parquet",
+      "bytes": 850693,
+      "sha256": "a4c3d4763d9d0ba8f589b0141e73a07e492e7ea9796a393ca62c525942b43e59"
+    },
+    {
+      "name": "trades_043543001af4b8.parquet",
+      "bytes": 1839939,
+      "sha256": "cf493567813884e622032daaa19996fa16b6912518e3d1abcb1e94e24db0e3b0"
+    },
+    {
+      "name": "trades_04477993c92b12.parquet",
+      "bytes": 1239703,
+      "sha256": "12e654daf4cfcfefec523b1930f95e45da30b4e3710a589bbdecc96b8030d3a9"
+    },
+    {
+      "name": "trades_04b21e4a6897af.parquet",
+      "bytes": 1043679,
+      "sha256": "7fb959fce2f4d88f28abef928d69d15bcf3c927b0ee1e652c18451971f87d3aa"
+    },
+    {
+      "name": "trades_0545b54a1b9794.parquet",
+      "bytes": 1538062,
+      "sha256": "196219b8d4b62938531fb764e80446a6cb338bc157acb67240a3435052d8a2b4"
+    },
+    {
+      "name": "trades_05ddd43b022f43.parquet",
+      "bytes": 1565682,
+      "sha256": "f776002850c2ac87bb553855dcf46dc7f349d24d9e7eee666b766ae3bb8c572e"
+    },
+    {
+      "name": "trades_0881e05231c3ac.parquet",
+      "bytes": 1118369,
+      "sha256": "f919a1e6c125e62c6a06987e36af3aa500e420b27262198f4d56391454f58ef6"
+    },
+    {
+      "name": "trades_0bdf6fbe95ba1e.parquet",
+      "bytes": 1579074,
+      "sha256": "9fd96a93ab56e5594a0c8d4c3127beb3277291705fe767c303dc1065a2c40463"
+    },
+    {
+      "name": "trades_0d7ee56e5cefdf.parquet",
+      "bytes": 904203,
+      "sha256": "efeeebd16d0f31b8cf8646003cf6e5ab26979a15ed277141d293d9aa6ec61748"
+    },
+    {
+      "name": "trades_0e24588d2fd5b1.parquet",
+      "bytes": 854605,
+      "sha256": "763dec6885457ba4d6d4165a96e718d4059c97334c83246efd3b960ba9d3142a"
+    },
+    {
+      "name": "trades_0e9e9817681c4f.parquet",
+      "bytes": 954040,
+      "sha256": "375d4631136dbb201b8dd7bd403d3e9a6299c4505acc38c5f56ddaeedf9c56e8"
+    },
+    {
+      "name": "trades_1091e22c18e998.parquet",
+      "bytes": 964734,
+      "sha256": "025418551f5f63d181b96b6206d51e37ac1ce566fb2c635cf10391b0f4d52477"
+    },
+    {
+      "name": "trades_14a928866cf75d.parquet",
+      "bytes": 1647473,
+      "sha256": "35d6da76dcf99e3707d90de4069ac5ba170198f71b7690d28189bf1e72e0cd0f"
+    },
+    {
+      "name": "trades_16314ee58a4f6c.parquet",
+      "bytes": 1352523,
+      "sha256": "114916bf734398c86c0558753982a63c9f1b6a07e89592af93e06edfaf65b3d8"
+    },
+    {
+      "name": "trades_1694b935261318.parquet",
+      "bytes": 896521,
+      "sha256": "5c4cde37c1700f365e070c4b860a3575b1bb6f00c1a738dc5177c73a80a72f4e"
+    },
+    {
+      "name": "trades_190b6fff654603.parquet",
+      "bytes": 931612,
+      "sha256": "3c5d67573aa6c4e5d64971be9e9d9ca1895eeafec1d77af799425dc17919c5a9"
+    },
+    {
+      "name": "trades_1aadba09010ca2.parquet",
+      "bytes": 928185,
+      "sha256": "d7ccb5a23c218efa0906ff745432eaab288cbdbc448c06ffb2f4159872f01369"
+    },
+    {
+      "name": "trades_1c89a3e9b17180.parquet",
+      "bytes": 886488,
+      "sha256": "85a803a91ebe7a898fe51315e0c630347a97af05c4ebfcc55260b7cdd8609042"
+    },
+    {
+      "name": "trades_1d563bf0262733.parquet",
+      "bytes": 1351836,
+      "sha256": "b1223d76dad494561300d157093d148f84c21bee9460f89147d32b20d7da0bc1"
+    },
+    {
+      "name": "trades_1d8dc50811d4ac.parquet",
+      "bytes": 793078,
+      "sha256": "e7f1dcb06a6bc6ac044d4742c3b2c6dfe88b97f846245e4d32827dca0a1577ac"
+    },
+    {
+      "name": "trades_21e63e77766669.parquet",
+      "bytes": 1017297,
+      "sha256": "1877a32d2143bd1ae3941828506a22435e9c35ac3ab3ddee301f677cd849d2ea"
+    },
+    {
+      "name": "trades_220e5394176428.parquet",
+      "bytes": 920343,
+      "sha256": "ef1d30fb1e53b9467f38f79f95818926ecfe4ca3d36f0d0b4ef8d0c575754710"
+    },
+    {
+      "name": "trades_23f17e0eb1157c.parquet",
+      "bytes": 974141,
+      "sha256": "b289039047c62f98e223ce78bba7f5e08fa6d6f6ffbd7b4eabf4fb79ef0177b6"
+    },
+    {
+      "name": "trades_2720650862a73e.parquet",
+      "bytes": 2128718,
+      "sha256": "3ddb572561742a2ff2b30c8d372bd0119a54be5d1957fce77d979db249c8b91c"
+    },
+    {
+      "name": "trades_27eb676e2246c8.parquet",
+      "bytes": 1069864,
+      "sha256": "160b7f85912c6127327aebb4ec419fd219ec800b5d61db9b54eccb156c55485e"
+    },
+    {
+      "name": "trades_2866c8399051f1.parquet",
+      "bytes": 1679487,
+      "sha256": "b5ddca289bc075b9abb4c26f11fcd3562eae66b574f33dc916014cd98194f137"
+    },
+    {
+      "name": "trades_299173c024d2ee.parquet",
+      "bytes": 1329723,
+      "sha256": "b4f2a2ae647cf864be8b48644c6014f1236c02cb94351f67a27c4be959a1eb73"
+    },
+    {
+      "name": "trades_2a56b8fe0a742f.parquet",
+      "bytes": 953317,
+      "sha256": "aa591c30563dfeaf279d3453c625479209993e8549b129269e36aca6fb5c038d"
+    },
+    {
+      "name": "trades_2d3fda17015903.parquet",
+      "bytes": 845121,
+      "sha256": "3839d09244a0a0fd8b9e3f5740a8e8b94fae7c1873a91a8c4c891fbdd4c925a4"
+    },
+    {
+      "name": "trades_2d5b82b80991ab.parquet",
+      "bytes": 1551214,
+      "sha256": "2909a5b2a591199ee02208cf8c4639311483a76810eb9217d68d59151b139ecf"
+    },
+    {
+      "name": "trades_2d69242deddaf1.parquet",
+      "bytes": 857168,
+      "sha256": "ff80b49ff2af47bbd4667f81cb44b2dc9cc4b8e91e578622f6a5c33d88c73410"
+    },
+    {
+      "name": "trades_2e61d94042b122.parquet",
+      "bytes": 890084,
+      "sha256": "ad352dcd5229726e4ee00f9acd295933a3e3c639a227455fc555abc6ca356bf6"
+    },
+    {
+      "name": "trades_2f3afe50882417.parquet",
+      "bytes": 1158287,
+      "sha256": "5e7a20f661fe41386ff46e698a06e94819a1a8d4daf364643c73be9533c4f533"
+    },
+    {
+      "name": "trades_2f4a053bff9769.parquet",
+      "bytes": 1935310,
+      "sha256": "f71051909f50083daf2822c39fb13240f40060ec42779461671a90f113d62242"
+    },
+    {
+      "name": "trades_2f8cd28357ffc8.parquet",
+      "bytes": 1089359,
+      "sha256": "3dfda6bdf593b3d390b268e4393e77a2013e8f5cac385e4e2f0b2c911354e9cc"
+    },
+    {
+      "name": "trades_3219b2c2cc75ca.parquet",
+      "bytes": 1014388,
+      "sha256": "522f2ab0b0914ee8b044d1fde64b2577f35bdcbce5f7b0b1452a5ab0e7ab797b"
+    },
+    {
+      "name": "trades_35378041f9c842.parquet",
+      "bytes": 1287566,
+      "sha256": "57cb0a0e4482d8b549f21dd6dc4c622dc8cc9a42487390a51ca36de96a89ae18"
+    },
+    {
+      "name": "trades_3569197aa5a5ff.parquet",
+      "bytes": 845597,
+      "sha256": "8e137f9bebffeb2128904ba38a416f3b2f27f03ffea23b5177a3cae20d1236ba"
+    },
+    {
+      "name": "trades_390b258575d38b.parquet",
+      "bytes": 1861723,
+      "sha256": "a5ad65246cfff63780c733f5dfa8163564345d75e55802f8c43c5d04a2e3d42c"
+    },
+    {
+      "name": "trades_3965a141d562cb.parquet",
+      "bytes": 932152,
+      "sha256": "320eb43b07e0257c230aeee470a8886736f618313e1d262a88d940e926458779"
+    },
+    {
+      "name": "trades_39b7263b3b4c29.parquet",
+      "bytes": 941077,
+      "sha256": "ec3ab6216f57c14045a028e1672a1247c0d0faa6c603cb9ef9df2416c7203320"
+    },
+    {
+      "name": "trades_3a4b8df2140ad3.parquet",
+      "bytes": 1017633,
+      "sha256": "2d286b1e9ddb20924991487e0fb6172858f25f4345f9f2780c42f9c237f713cb"
+    },
+    {
+      "name": "trades_4154c2cb0242d8.parquet",
+      "bytes": 974141,
+      "sha256": "83e3ab8eed3b7b07d98b87161811769a071a62f9f354dfdcf487c1fc239f4c5c"
+    },
+    {
+      "name": "trades_4295f6e6cb24c8.parquet",
+      "bytes": 1003841,
+      "sha256": "05793b46bf92342af50643e19b5609f586423a7f4cd33fafcea9243c7e7e4095"
+    },
+    {
+      "name": "trades_42ee27f7759e4b.parquet",
+      "bytes": 1163332,
+      "sha256": "da403a3b35fac4bc660a70b0e440971816f1104b34119349023c762b02ce38c6"
+    },
+    {
+      "name": "trades_450974ce477a07.parquet",
+      "bytes": 1053259,
+      "sha256": "0b1046a447ac55a75252bdf462343ca804a41609a601a241a59ea934223fdc54"
+    },
+    {
+      "name": "trades_45484a2c71947f.parquet",
+      "bytes": 938281,
+      "sha256": "70a6e4811467b9bfb6401ecc6dee99e270a7afb078dcd5ed3e1c69aa71d94520"
+    },
+    {
+      "name": "trades_4553273813c4bb.parquet",
+      "bytes": 1196893,
+      "sha256": "915b06a00184e7c5381f454950ea30273d63923017894b60aecfdf708a3b6555"
+    },
+    {
+      "name": "trades_47144ea909afdf.parquet",
+      "bytes": 909327,
+      "sha256": "a957dc2d787f3fe08cd151cd67cce5d6a9ee579bd4f0b566915ef4727f1d0700"
+    },
+    {
+      "name": "trades_4752f24c31f8e6.parquet",
+      "bytes": 898617,
+      "sha256": "a1797ff456f9dac4f47b295b0f9994c7a91d45326167c721000634123a839749"
+    },
+    {
+      "name": "trades_4769c370a2326a.parquet",
+      "bytes": 839523,
+      "sha256": "8e4f9d7439812c94860f2a6f5f21d9242844862cfca242c7432e99d9c3509acb"
+    },
+    {
+      "name": "trades_47c2a06dc90f27.parquet",
+      "bytes": 863294,
+      "sha256": "c1ff038ef6f1566512b5b60592570459a3b0d10ed1f6bf1320a18c0e5f041dde"
+    },
+    {
+      "name": "trades_4ab2edc376c739.parquet",
+      "bytes": 937006,
+      "sha256": "11d56a4b30a7121a55a44656eadca2471b440b84257591b9184d71edd23fb49f"
+    },
+    {
+      "name": "trades_4cf05e7fa2bca0.parquet",
+      "bytes": 1717008,
+      "sha256": "dd6df9605a25f16f5d2e7e99171a67d8260be4b8dd54fc624a5f3e908bd6763f"
+    },
+    {
+      "name": "trades_4dc221502eb842.parquet",
+      "bytes": 1183579,
+      "sha256": "3074bdf3cb4d879dadcca7cb530392ced176f80cbd5183d3f48f9b9513265f57"
+    },
+    {
+      "name": "trades_4e76fde01d2dcd.parquet",
+      "bytes": 819782,
+      "sha256": "12bd6f6aaee9579128f406b5a690b7fcbdc2e04aaf6e8372a29cc809557e9cfc"
+    },
+    {
+      "name": "trades_51dd50ed4426cd.parquet",
+      "bytes": 966550,
+      "sha256": "a1ce29a523cba5e265aeeced1acf22ac585f53d579ca03ce1f7c37c26e87bcd3"
+    },
+    {
+      "name": "trades_551cb064873066.parquet",
+      "bytes": 1450728,
+      "sha256": "5aec5d7cc988f10eed0b3b32aca8fd47aa793f42b392a51fa95d9b88c35d640f"
+    },
+    {
+      "name": "trades_55395b9eed46b2.parquet",
+      "bytes": 1401570,
+      "sha256": "96e76a411627708840b483ec4e1b33161ef74323e7426e5344a4fbc9f0fbb092"
+    },
+    {
+      "name": "trades_562d9686807740.parquet",
+      "bytes": 1008966,
+      "sha256": "7ed5f70bfecfcfab6eb597c93a9507da465e25dab8ff5e7f22fef0dea9bbb5fd"
+    },
+    {
+      "name": "trades_56deccf97c89ce.parquet",
+      "bytes": 1115788,
+      "sha256": "21929a762bc502413d80490b4e6a35e492cf3288f40d6e4f39c5e35390242525"
+    },
+    {
+      "name": "trades_5701c15e70bd3d.parquet",
+      "bytes": 1004333,
+      "sha256": "9b09d1fded7caabee60cb518336284fdb848928e2ad3725419a6248bf8e0cadb"
+    },
+    {
+      "name": "trades_5b909914427cfa.parquet",
+      "bytes": 1339630,
+      "sha256": "e6df99708e307422734f4dbc20628a4a4266bf64ff94799b8aa19ac5d0ffc7a2"
+    },
+    {
+      "name": "trades_5c978dc51733fa.parquet",
+      "bytes": 1437633,
+      "sha256": "8e68bfd896b60ae80ac94bc50888b663cdaa2df517d36e02724a6903bf441ab4"
+    },
+    {
+      "name": "trades_5d39412437c4b3.parquet",
+      "bytes": 1133617,
+      "sha256": "ef59ab7b41a82f32cf006810fc0f130e64b46c1a1f3fab3c0d60356731673752"
+    },
+    {
+      "name": "trades_6264a1ff8556cb.parquet",
+      "bytes": 1817932,
+      "sha256": "f6ce627d65e8118c35a8911d74d6ae1826030df746c51bdb9555f2fd395ce019"
+    },
+    {
+      "name": "trades_63e7efa157bb1d.parquet",
+      "bytes": 1023701,
+      "sha256": "ce79afc03e9b2e4a1ba0ba4b0129f12636e55a1bcb3fe9d86be7aeb8e81993fd"
+    },
+    {
+      "name": "trades_647c72f5706471.parquet",
+      "bytes": 876306,
+      "sha256": "5c562120d878b6c6891489b6e3d5bc135ad51e620d3ef4b1efba5f35225f5a65"
+    },
+    {
+      "name": "trades_67746aa98eba3c.parquet",
+      "bytes": 2243314,
+      "sha256": "39f38d711a7e22edb9f747783c954aeb38f042749054680cea262ab79401bfdc"
+    },
+    {
+      "name": "trades_68885fb7d8a99c.parquet",
+      "bytes": 2064983,
+      "sha256": "512a8f608e98131b40af90fc55cb12a99b690dbe1c1c015cc83d3feaa927a578"
+    },
+    {
+      "name": "trades_69a40fd20ce761.parquet",
+      "bytes": 1468174,
+      "sha256": "4fa1741a532ea07e84651d9fa0c86ef5b44c85f16d57e94096dc1d5e87aa1ad8"
+    },
+    {
+      "name": "trades_6b308a7cde7d41.parquet",
+      "bytes": 1009238,
+      "sha256": "965b080a4caec97c7f9a204b765151203278d5818dafe2e89ae85796279bb025"
+    },
+    {
+      "name": "trades_6b93070b1b2b19.parquet",
+      "bytes": 1529350,
+      "sha256": "f9ac8b69784eb1d4d341d5fdc965786dbc6b1431dbdbd17c764463a3e0b0b4ec"
+    },
+    {
+      "name": "trades_6c4a43588e6ff6.parquet",
+      "bytes": 1352523,
+      "sha256": "a96bd26a8368e78a7bc3709e841f0ed6075782ed27ad8c30a89c3da2e6d36b88"
+    },
+    {
+      "name": "trades_6cc05f59c94855.parquet",
+      "bytes": 860239,
+      "sha256": "046ba1367c1c284de29fb496e8efe82a0c96d55368c567237c867c9877baa697"
+    },
+    {
+      "name": "trades_6e61db21d92648.parquet",
+      "bytes": 1464924,
+      "sha256": "7acbf369d7fd128670e20a9424f9df2a1dfff4dbcbc8e0de8595f51c9e258a4a"
+    },
+    {
+      "name": "trades_708d6b1b5be4d2.parquet",
+      "bytes": 974141,
+      "sha256": "f18bf68ab7fecac5bb7d34383a78816797eb977636179ffe77e0885baaea3274"
+    },
+    {
+      "name": "trades_715ea5134bef71.parquet",
+      "bytes": 1383924,
+      "sha256": "41ffed4179b86ec1add9276074f9814738560324f29870ad7039e821ac2e7b2a"
+    },
+    {
+      "name": "trades_72b0bfa478990b.parquet",
+      "bytes": 1083233,
+      "sha256": "3513487a3764416c48d0dac3b6d846bbd9f664c94f25322cdccb67a9a30ffc8e"
+    },
+    {
+      "name": "trades_7610f8e50dbbe3.parquet",
+      "bytes": 1303928,
+      "sha256": "d9bc3f307ec94ab44897ea744deb10762d0c823e39ae624a3a09ea6a8fcb7015"
+    },
+    {
+      "name": "trades_76e9b7685c8626.parquet",
+      "bytes": 1107712,
+      "sha256": "8a140ed007a8d29b31f814d8af5f0725fc82e8e5b036dbccd854d6444a52ac3d"
+    },
+    {
+      "name": "trades_77cec5dd651c11.parquet",
+      "bytes": 1190292,
+      "sha256": "233607cb3fe41fcd14c22f4b3685ab7a24f7a2a6259eca66f0b54bdfd9237ab5"
+    },
+    {
+      "name": "trades_791d3705df342a.parquet",
+      "bytes": 983280,
+      "sha256": "124643d4e0dd406789ff0aa02d16140b124af68f76d7db9990ce047a610a327a"
+    },
+    {
+      "name": "trades_7a83d2d9511a79.parquet",
+      "bytes": 1339831,
+      "sha256": "e5a8bd3207bd37c1184887be31a93fd978a2ed5aa22424afecca88c2806620e4"
+    },
+    {
+      "name": "trades_7bfb64af74aacc.parquet",
+      "bytes": 1023701,
+      "sha256": "cb02f7b8833e6e8f6ef8466c4bc7a7ee0efb2e5134089a20b6f3d619d2337678"
+    },
+    {
+      "name": "trades_7c9e2a79bef325.parquet",
+      "bytes": 1301543,
+      "sha256": "655a50d8ce8266b07fe7a928f3d373689c3545b70090f860fe8238e8359c3e73"
+    },
+    {
+      "name": "trades_805ad944b02f15.parquet",
+      "bytes": 1067101,
+      "sha256": "c6e502130a20e073e1191dcb1a680a2a6a1676405fb2074528316ca82d50204b"
+    },
+    {
+      "name": "trades_809b01eb205ed8.parquet",
+      "bytes": 1599023,
+      "sha256": "cb0886503d171cc3bc9ecee1e54340c3855a8d43234753d99caf3957f50e0089"
+    },
+    {
+      "name": "trades_81a7168938b61e.parquet",
+      "bytes": 1081291,
+      "sha256": "f4745a061e44b608fb32fd8cb0d3bbe3ebbb580042848f90e47801a56114fb13"
+    },
+    {
+      "name": "trades_82a4c290adbc62.parquet",
+      "bytes": 807755,
+      "sha256": "1804d27d8a462165a8cbb4e15b14d281149d3ea9176d11c107c20a6ff99fc07c"
+    },
+    {
+      "name": "trades_85948a41192b55.parquet",
+      "bytes": 1037658,
+      "sha256": "d3ba9d5c40576870001e9b4ec165a28c93e45508e259e9a0a8675e661a2397bc"
+    },
+    {
+      "name": "trades_867d26d220e26e.parquet",
+      "bytes": 1059224,
+      "sha256": "41cd54e35427c037ee63832fb618429ac13febdeb99fbc0acf68e5d3a0de46bb"
+    },
+    {
+      "name": "trades_86c24df208de3d.parquet",
+      "bytes": 883641,
+      "sha256": "4c5abd9d4d5ebc29694c51f46a1a4dd0dac2fccb62968d9da64313d1faa99518"
+    },
+    {
+      "name": "trades_87ea22d5f3d24f.parquet",
+      "bytes": 1358283,
+      "sha256": "64adf353a8de2ac954318ec73a9c3d280bc2e44c88ff6e503cd3727b211720c4"
+    },
+    {
+      "name": "trades_897f92cb4f7302.parquet",
+      "bytes": 1177103,
+      "sha256": "e69c5e2ed965cf9025096299327607bea23fe61a75be109a25c896a7b253c739"
+    },
+    {
+      "name": "trades_89eaac5ef5aacb.parquet",
+      "bytes": 1090831,
+      "sha256": "7f635002f13a573abbbe81a841d496bf3036b53f12536065424fccada6e4d39f"
+    },
+    {
+      "name": "trades_8bedfc1d455934.parquet",
+      "bytes": 1446651,
+      "sha256": "3c8b52fdd56fb1f8058628b7e50ff86b5df160700e7a5f46d30e19288a919a1b"
+    },
+    {
+      "name": "trades_8c0588b3ebb242.parquet",
+      "bytes": 1132783,
+      "sha256": "aa151595471c08b26f4b629e43e267ebdecc9110014fb990ea941e0a033a64f5"
+    },
+    {
+      "name": "trades_9104008a0786b4.parquet",
+      "bytes": 1219715,
+      "sha256": "8c2c616de853be599393be5916582d3e92013571eaac9049052b827fe8b0080b"
+    },
+    {
+      "name": "trades_9181560e914b77.parquet",
+      "bytes": 1386459,
+      "sha256": "b05627ea1ef17d004b66a17f9e235ddbdfc4c8be205ac4da10aa62664ea43876"
+    },
+    {
+      "name": "trades_9297312ba58ab2.parquet",
+      "bytes": 2017407,
+      "sha256": "52f8a14abd1a12e088fdf1b5978d01417f720e67d58c4139b85fd86b725b5add"
+    },
+    {
+      "name": "trades_9380a933874ab9.parquet",
+      "bytes": 917542,
+      "sha256": "8654e5ef55a036c7004f67c3fef2eaa08d06edcd001c5f551cf906e6efc80ae7"
+    },
+    {
+      "name": "trades_94bd68768a54ad.parquet",
+      "bytes": 1181955,
+      "sha256": "94c1b23c909342f86a8b573efba36d071ecfc584872c276e3e0cb0d014073598"
+    },
+    {
+      "name": "trades_95292209e1513c.parquet",
+      "bytes": 1100666,
+      "sha256": "9ccb977c0b47629f33901dbecc49397063885a1d471f638372416edf615167a8"
+    },
+    {
+      "name": "trades_9662c12234dfed.parquet",
+      "bytes": 922703,
+      "sha256": "05064c49982ce7151eb690723f8663846618fe27a5e8d6d53bf77938b9baeefe"
+    },
+    {
+      "name": "trades_96ecd25afb5e78.parquet",
+      "bytes": 1031427,
+      "sha256": "8a741e647d940e06b16131a23173709a5af9204c501aa96c61514cd68c8d799a"
+    },
+    {
+      "name": "trades_970e958d5793eb.parquet",
+      "bytes": 1088838,
+      "sha256": "95698b2df0a2aebe717546f5bb6663a04066ed1a5b931add897c2041500b88a3"
+    },
+    {
+      "name": "trades_9c83babf8aebd6.parquet",
+      "bytes": 1611418,
+      "sha256": "81df2cbdf3a4f7c73b30129383735090f34b53ee33e4f1721d3dfc524b7b2cf1"
+    },
+    {
+      "name": "trades_9d2d49d96e7ac6.parquet",
+      "bytes": 1190154,
+      "sha256": "317d2408849f39789aa82bc9769c417c46e7f09d5df41e1d6e33e5a0f5dca457"
+    },
+    {
+      "name": "trades_9eb4fafe413faf.parquet",
+      "bytes": 1080477,
+      "sha256": "0bb2020e0abdc4ebf2261eca00db41dc10b9d4e9d9f6dd377fc9fb57aa18cf6e"
+    },
+    {
+      "name": "trades_a2deffa0653875.parquet",
+      "bytes": 994409,
+      "sha256": "ddeb15cad25dfe74078386b2094a14570019d8e2a2977d93934bce71d334ed60"
+    },
+    {
+      "name": "trades_a348a13fd03831.parquet",
+      "bytes": 857917,
+      "sha256": "9ae7ef698ff9a5a6d4e3f13dfe68bd784bbae43df0262d1dfe126988411929d2"
+    },
+    {
+      "name": "trades_a372c439c58a33.parquet",
+      "bytes": 890084,
+      "sha256": "687ac3d032b547de9eda4c5b401c5e6cb97be04651b1e51b53b0c527a0d46787"
+    },
+    {
+      "name": "trades_a5385eb2f7b372.parquet",
+      "bytes": 1663532,
+      "sha256": "02dea01d5f124a188fb783f7d85218f0d8abb2acafac024f912dff63df784532"
+    },
+    {
+      "name": "trades_a54bb11364c6fd.parquet",
+      "bytes": 1373401,
+      "sha256": "7cade4d5db2b7c4e1714ce2240eabef9acf90626b42b0f4154e19b2f945983e3"
+    },
+    {
+      "name": "trades_a6531e4b9a756b.parquet",
+      "bytes": 1034645,
+      "sha256": "88069b196df0c6838f97f6aa39fa4fdd14fa3dd437f010532ef377046b53bcc8"
+    },
+    {
+      "name": "trades_a823f545d51bcb.parquet",
+      "bytes": 1304353,
+      "sha256": "fef8669a52c4a389c7791498f92c450d60ae1a83887d3227ca0fa61cd61e7bfb"
+    },
+    {
+      "name": "trades_a8bc2a585f27f9.parquet",
+      "bytes": 1242249,
+      "sha256": "85efc2045b3a34acdbe472a1c87f4bb9d9d4c11335e1cb03296845642f0dc006"
+    },
+    {
+      "name": "trades_aa97215e21aaca.parquet",
+      "bytes": 832496,
+      "sha256": "4dd3b05b38d9d6c87eebb146744caf95ebf6d3db0d3c4c465cabf6dd2e1c2e5f"
+    },
+    {
+      "name": "trades_abace35ff04cb9.parquet",
+      "bytes": 862272,
+      "sha256": "bd5af5a4cc86dca8ed46b0cddd8f39896be908527446e3e1064adfc5cd9786ac"
+    },
+    {
+      "name": "trades_acd61eb735d6b7.parquet",
+      "bytes": 918553,
+      "sha256": "c3f275f03a5c7c35865066345807b75f4b9275b3a539b969d821bbcf530a3915"
+    },
+    {
+      "name": "trades_ae98821e4fc3f8.parquet",
+      "bytes": 946952,
+      "sha256": "aeaa6c29daf8e8bd7f11f10ded4c53560432c10766cb0ad4c150728b9e9eb650"
+    },
+    {
+      "name": "trades_afd7a2d6c75995.parquet",
+      "bytes": 970345,
+      "sha256": "3b89b327ce73741eac318672c774eb274780c41f9aae771b89e241751437a8fe"
+    },
+    {
+      "name": "trades_aff6a81d4d009e.parquet",
+      "bytes": 979549,
+      "sha256": "1f6ba3cd1bff3f868a2500a965681d65ae536e6a2bb319ed80252e47d4edfa98"
+    },
+    {
+      "name": "trades_b218bb4bac70e6.parquet",
+      "bytes": 911528,
+      "sha256": "ffecdcd5d1a52dbc2e7489cc8488949e8595e91bbcc9964981cc3064ae43586a"
+    },
+    {
+      "name": "trades_b221dc95e3347c.parquet",
+      "bytes": 1454789,
+      "sha256": "17ea1b371d0acae4012f55db47ce77b26222c1f0c56f4a1850b8fc849ccbbfef"
+    },
+    {
+      "name": "trades_b45b9eacc91234.parquet",
+      "bytes": 1665710,
+      "sha256": "87b635bedd377f55fd2f54815e45141e6e702808906acbcaf7d0a89905d2c7f9"
+    },
+    {
+      "name": "trades_b8c5fb9b99d6f8.parquet",
+      "bytes": 945497,
+      "sha256": "42d895fa64b48778319113b59e4db0b34c5f8b281a19f41e0948af25f2066051"
+    },
+    {
+      "name": "trades_b9b58e67e0c1ec.parquet",
+      "bytes": 1340253,
+      "sha256": "20b14e9558b999c84562ec1e2ceb45733c5994ff764bc149aebc6c8851a04338"
+    },
+    {
+      "name": "trades_bb9bdf185c6062.parquet",
+      "bytes": 1117760,
+      "sha256": "d4079e94cd960c0d2499aaafdb4c848dd0a9547d8402742c0942610b9af34022"
+    },
+    {
+      "name": "trades_bc29f4aacd5a38.parquet",
+      "bytes": 1671632,
+      "sha256": "d5778612fab7bee9584e9c4b06ae3dbb5d9f133084c8a926032dc9ae086a2bd7"
+    },
+    {
+      "name": "trades_bd6c287a977c29.parquet",
+      "bytes": 923390,
+      "sha256": "3ac4c18b0ac96773c8061593e715d76835163849493a0ca3d4a65771d606932d"
+    },
+    {
+      "name": "trades_bfadca1f796492.parquet",
+      "bytes": 1483198,
+      "sha256": "554e7c6ebd687bc06377dcb9e89486cfee072917181d8529c6123424f5db76fe"
+    },
+    {
+      "name": "trades_c038ff043509ad.parquet",
+      "bytes": 884078,
+      "sha256": "ef0541df71a386cce613292f3f507bb5604847b3b1f1403b4a62824e0033d2ee"
+    },
+    {
+      "name": "trades_c2af8ef2eb3dca.parquet",
+      "bytes": 950876,
+      "sha256": "75f6091ad847c3b8604e53838a4bde44af370140273c3f1387c87e4ff58617e5"
+    },
+    {
+      "name": "trades_c571a807336085.parquet",
+      "bytes": 945497,
+      "sha256": "c413eb628f0da900ee0331ef03748b01e1aa1d7782103eb4730f3940e5afd880"
+    },
+    {
+      "name": "trades_c5d304be7df024.parquet",
+      "bytes": 1158790,
+      "sha256": "9f13f8ea4ca6a7a3afdf5178262a9d0e53995037fb4e0251046c64acc4c87631"
+    },
+    {
+      "name": "trades_c6be160a720b4c.parquet",
+      "bytes": 1258153,
+      "sha256": "f4cdb83f0277efd6c1e35756d2d19bcd831b1fc3a9ca9575fdd2522425cc4b99"
+    },
+    {
+      "name": "trades_cbcd522f7e8de9.parquet",
+      "bytes": 790325,
+      "sha256": "828b31ab3add28e22a734a8e139514371de5d634dcc8261510170057c156c87c"
+    },
+    {
+      "name": "trades_cd428a9748992b.parquet",
+      "bytes": 888330,
+      "sha256": "17465dfc9c37354a7400e340e659e2b94cd72a7f375617ba6a2043192b17e8f9"
+    },
+    {
+      "name": "trades_cd42b9c27123e9.parquet",
+      "bytes": 1650231,
+      "sha256": "163d717eff4b4990e864f1acebed101106ac3daccf159eea2c49e0cfb32a6849"
+    },
+    {
+      "name": "trades_cf2af2099a0097.parquet",
+      "bytes": 858295,
+      "sha256": "925970ad9a45b3e7e449b37ed3e8c55291ba624e18f0782bf33aa30a9dff6c2b"
+    },
+    {
+      "name": "trades_d1f25f788f8af0.parquet",
+      "bytes": 1045173,
+      "sha256": "572f667c39cd0e4c95b3394438d95679eb798bedb8dd23390ca4d18d6b500c5e"
+    },
+    {
+      "name": "trades_d2bd86198c0228.parquet",
+      "bytes": 1717008,
+      "sha256": "376916c567f26017a4cecc0658a1b90f49bfa1638cbc24ddce73d2c2937b1d75"
+    },
+    {
+      "name": "trades_d3872777476de3.parquet",
+      "bytes": 907180,
+      "sha256": "a17d6473c845888d8c5a689e60dade5eb50db91367fd3d7d44b66bce9024e3db"
+    },
+    {
+      "name": "trades_d7c44e8222d3e6.parquet",
+      "bytes": 1545197,
+      "sha256": "e4a7ee819efaa91205a71430ac8a84fb118068fefe0e6fe6a855c075122c604b"
+    },
+    {
+      "name": "trades_d9f483b4455f51.parquet",
+      "bytes": 892490,
+      "sha256": "94861fc0973fabdbbc60581643221afddeb0cabe2b602b61016f94640eef82dc"
+    },
+    {
+      "name": "trades_da77a3e79793d6.parquet",
+      "bytes": 913777,
+      "sha256": "72289e815a8c8e27d4a6c3c355a3f9c5c46520cde558cccd424deaeb52d4626a"
+    },
+    {
+      "name": "trades_db1c9f3fb5ad62.parquet",
+      "bytes": 1216039,
+      "sha256": "f4ccb0578d2990658e78b24cb68eaa328066fbbf97dcf3df6c5e29ed60a45803"
+    },
+    {
+      "name": "trades_dbde8fd8c4b457.parquet",
+      "bytes": 1397390,
+      "sha256": "a77d444f75deb389b97a725ce88bc4a3cda1b3fca0819322636ac3cdcd49a9b3"
+    },
+    {
+      "name": "trades_e09ab2fd939d58.parquet",
+      "bytes": 1083233,
+      "sha256": "945a9633b68b6dc6fe20ba26e9d177efa2f212cbcd009c7fba4f936bc101f2fb"
+    },
+    {
+      "name": "trades_e0d5faa9e5a21d.parquet",
+      "bytes": 891582,
+      "sha256": "b7c562d09de7faa7d1a83c667940d4ff95cbeaeb36234d497a1ad558cab46009"
+    },
+    {
+      "name": "trades_e11c565960a415.parquet",
+      "bytes": 1454789,
+      "sha256": "5b479edb72af4bab6829e6ae2e562ea88359d315e9d171deb888495b3a2ae152"
+    },
+    {
+      "name": "trades_e3ab66f7686f71.parquet",
+      "bytes": 1105476,
+      "sha256": "e4efcb9b8ef72a50fd1f33f2046cfb0e0accd1b0ffa84beaa22338e7b004a968"
+    },
+    {
+      "name": "trades_e3d2517dbda5cf.parquet",
+      "bytes": 1100330,
+      "sha256": "21a2d9be17ba23e686796927aed7fef2f8eee7b5465414732c1557810516e3c8"
+    },
+    {
+      "name": "trades_e4189717efae07.parquet",
+      "bytes": 889316,
+      "sha256": "46f03444a69f470fe42c55aa24f81d23da762dfcfbeb9e1f258414da06f0a36b"
+    },
+    {
+      "name": "trades_e43c9c6fac0393.parquet",
+      "bytes": 903392,
+      "sha256": "70149e96012e2363532d86154c7fdadb7a4da39901631a01061505223cdbfbeb"
+    },
+    {
+      "name": "trades_e5c9d3064a8146.parquet",
+      "bytes": 1446755,
+      "sha256": "e2526f6df9c57c7cd1a2846168bab8f625dcc6c825812a5048b584fda85ccced"
+    },
+    {
+      "name": "trades_e62c8a0b9c0d5d.parquet",
+      "bytes": 852743,
+      "sha256": "fb1b8a67abe0d858691851d140002929317d72257c5c9c283a5d776af1caa11e"
+    },
+    {
+      "name": "trades_e77d77a2b417cc.parquet",
+      "bytes": 1154321,
+      "sha256": "ce635ba7ad2dbe368f7e34a557f09010f6aa41f71936892fd9fe5aa52e9fc070"
+    },
+    {
+      "name": "trades_e7d27510329b34.parquet",
+      "bytes": 1469343,
+      "sha256": "b5b85f67ace7eafbaf7ab13e25ddb4c9a7f2bfdc07bc6c80fc7517d93ded2e39"
+    },
+    {
+      "name": "trades_e94d9450db5abe.parquet",
+      "bytes": 1095406,
+      "sha256": "b3e725c6fa31185c46b0995c8cd8cb7161ed756cfaaa1d0c169d0fe6175f5a4e"
+    },
+    {
+      "name": "trades_ebfd2203061883.parquet",
+      "bytes": 1664082,
+      "sha256": "76963c413810e86400649534222c24c9c773dc871205129d523ee3f22dfed102"
+    },
+    {
+      "name": "trades_ef14141cac7be0.parquet",
+      "bytes": 892091,
+      "sha256": "f2f9bc858f05651e48f315c153406590d3bc9ab3aebcec7f8d53a49c24f2080e"
+    },
+    {
+      "name": "trades_efa376856323e3.parquet",
+      "bytes": 1643488,
+      "sha256": "6d10b4698d1ffe9e7626a5401f47b4b7c9b7dd029974bd1a8c531b034e20132d"
+    },
+    {
+      "name": "trades_f19769dd436d6b.parquet",
+      "bytes": 1070228,
+      "sha256": "d3b2ba2ee55d43b2f9371789531e7907a6cded0ef429ba374570a9cdc7287647"
+    },
+    {
+      "name": "trades_f1f2962829a925.parquet",
+      "bytes": 983181,
+      "sha256": "7a11a3bd542c08cff64c3b35b57d8fd6a2581cc40b253e663a3bbc0481e8bac0"
+    },
+    {
+      "name": "trades_f264597d8ab547.parquet",
+      "bytes": 1058465,
+      "sha256": "8aa694c097013f366f4029f75b47b4b03bed1c3edbada34b9a0a472401567256"
+    },
+    {
+      "name": "trades_f350b361a50f44.parquet",
+      "bytes": 903411,
+      "sha256": "5a74471efe77209f4e0a50a5c043f61ce3e04ef955364625d1dd1765bf96e5b4"
+    },
+    {
+      "name": "trades_f486f75eb17b89.parquet",
+      "bytes": 1076155,
+      "sha256": "63966fbb4c7858d533b76c89ab1ba659f4b4ed5989b0d40432ed194be24b10f6"
+    },
+    {
+      "name": "trades_f48e3cb1c17acf.parquet",
+      "bytes": 1469256,
+      "sha256": "363d7a57c6e53669005214a7570d8970b4245941eea4c6b8e691d801e2c4cc20"
+    },
+    {
+      "name": "trades_f5c926457d457e.parquet",
+      "bytes": 979146,
+      "sha256": "a012f90ef592385d97f1e2f51e246fce0fbba31bfef9b5c0c9555f309466770f"
+    },
+    {
+      "name": "trades_f7f55db9092ee7.parquet",
+      "bytes": 1415092,
+      "sha256": "9451cf2578820459ff48ad6588ca7353e3d1ba4df56a66e6fa5bc5062db6ded3"
+    },
+    {
+      "name": "trades_f82b2232a74842.parquet",
+      "bytes": 791137,
+      "sha256": "73089131427e892e951e01359136db6e8595339ba51e3c291b4daa75e880f6ec"
+    },
+    {
+      "name": "trades_f95e531934d204.parquet",
+      "bytes": 1413792,
+      "sha256": "861cf1de3d724966c1c509d9f6359fb446ac984e51eeba9947b44f79bc110b35"
+    },
+    {
+      "name": "trades_f9cef4ecab2490.parquet",
+      "bytes": 1023701,
+      "sha256": "a8832c2382dd5bcce28c9da5745995f8082d229ec8f1714a352cdbe54e11abc4"
+    },
+    {
+      "name": "trades_fcea4b6ae03d95.parquet",
+      "bytes": 906527,
+      "sha256": "32ddb76963bbcdaa50a922e6bbfabc00d904ef72143863456f7ebee6c28b0c91"
+    },
+    {
+      "name": "trades_ff6bd3163f2812.parquet",
+      "bytes": 1451540,
+      "sha256": "d3f57316ce5b92b550c8c3455f667ef09046c2b8dc519a8388922b1bac077b19"
+    },
+    {
+      "name": "trades_fffae86dcbb935.parquet",
+      "bytes": 1082267,
+      "sha256": "8f7e408d1e1e7b7755b1ed50b3316ec64b76e73697597b78986332192869c29b"
+    }
+  ],
+  "summary": {
+    "generated_at_utc": "2026-07-24T18:11:10.671755+00:00",
+    "source": "BTCUSDT/ETHUSDT Binance public mirror data previously collected by Coin project",
+    "requested_start": "2020-01-01 00:00:00+00:00",
+    "common_price_end": "2026-07-20 00:00:00+00:00",
+    "holdout_start": "2025-07-20 00:00:00+00:00",
+    "robust_end": "2026-07-01 00:00:00.005000+00:00",
+    "trial_budget": 12000,
+    "trials_executed": 12000,
+    "minimum_requested_trials_met": true,
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT"
+    ],
+    "execution_timeframes": [
+      "5m",
+      "15m"
+    ],
+    "families": [
+      "TREND_STATE_SCALP",
+      "FLOW_STATE_SCALP",
+      "RSI_ROC_STATE_SCALP",
+      "EMA_RSI_SCALP",
+      "MACD_ZERO_CROSS",
+      "VWAP_FLOW_SCALP",
+      "BOLLINGER_FADE",
+      "DONCHIAN_MICRO_BREAK",
+      "STOCH_EMA_REVERSAL",
+      "TREND_PULLBACK",
+      "MOMENTUM_CONTINUATION",
+      "SQUEEZE_BREAKOUT",
+      "SWEEP_RECLAIM",
+      "RANGE_REVERSION",
+      "VWAP_RECLAIM"
+    ],
+    "base_cost_bps": 11.999999999999998,
+    "stress_cost_bps": 23.999999999999996,
+    "starting_capital_vnd": 10000000.0,
+    "leverage_settings_tested": [
+      10,
+      20,
+      30,
+      40,
+      50,
+      60,
+      70,
+      80
+    ],
+    "target_trades_per_calendar_day": 4.0,
+    "finalists": 180,
+    "validated_winners": 0,
+    "strict_validated_winners": 0,
+    "daily4_validated_winners": 0,
+    "champion_high_win": null,
+    "champion_daily": null,
+    "champion_frequency": null,
+    "champion_profit": null,
+    "champion_stress": null,
+    "preselected_ensemble_champion": null,
+    "best_safe_leverage_overlay": null,
+    "best_daily4_leverage_overlay": null,
+    "methodology_notes": [
+      "At least 10,000 unique signal configurations evaluated before holdout ranking.",
+      "Final holdout was not used to mutate signal configurations.",
+      "Ensemble membership was selected using pre-holdout performance only.",
+      "Leverage is an execution/risk overlay; it does not increase the underlying signal win rate.",
+      "Position size is stop-risk based and capped by isolated-margin allocation and leverage setting.",
+      "80x is blocked whenever the stop is not safely inside a conservative approximate liquidation buffer.",
+      "No production, paper or testnet orders were sent."
+    ],
+    "runtime_seconds": 3430.2605741024017
+  }
+}

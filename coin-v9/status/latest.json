@@ -1,0 +1,12 @@
+{
+  "state": "COMPLETED",
+  "version": "V9",
+  "run_id": "30112153560",
+  "run_attempt": "1",
+  "trigger_sha": "47e694e49dbb5f5247bd6199227da538c7e25b9e",
+  "exit_code": 0,
+  "trials_executed": 12000,
+  "minimum_required_trials_met": true,
+  "finished_at_utc": "2026-07-24T18:11:22.639448+00:00",
+  "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE"
+}

@@ -1,0 +1,22 @@
+{
+  "parts": [
+    "coin-v9/source/chunks/part00",
+    "coin-v9/source/chunks/part01",
+    "coin-v9/source/chunks/part02",
+    "coin-v9/source/chunks/part03",
+    "coin-v9/source/chunks/part04",
+    "coin-v9/source/chunks/part05",
+    "coin-v9/source/chunks/part06"
+  ],
+  "part_count": 7,
+  "encoded_chars": 21844,
+  "encoded_sha256": "7f25180db857ca091452057f930e223ea04480dc7c1acd111c530b2a30755eb9",
+  "expected_encoded_chars": 21844,
+  "expected_encoded_sha256": "7f25180db857ca091452057f930e223ea04480dc7c1acd111c530b2a30755eb9",
+  "expected_source_sha256": "2b04faa1b4e342f1f8fc75d9f7841ee2e2227ec4e3894c95fb45a026c6dc14c6",
+  "source_bytes": 62022,
+  "source_sha256": "2b04faa1b4e342f1f8fc75d9f7841ee2e2227ec4e3894c95fb45a026c6dc14c6",
+  "compile_returncode": 0,
+  "compile_stdout": "",
+  "compile_stderr": ""
+}

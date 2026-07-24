@@ -1,0 +1,15 @@
+[2026-07-24T17:14:00.411888+00:00] Downloading BTCUSDT_5m.parquet
+[2026-07-24T17:14:01.785276+00:00] Downloading BTCUSDT_metrics.parquet
+[2026-07-24T17:14:02.963708+00:00] Downloading BTCUSDT_fundingRate.parquet
+[2026-07-24T17:14:03.745199+00:00] Downloading ETHUSDT_5m.parquet
+[2026-07-24T17:14:04.963160+00:00] Downloading ETHUSDT_metrics.parquet
+[2026-07-24T17:14:06.170421+00:00] Downloading ETHUSDT_fundingRate.parquet
+[2026-07-24T17:14:15.941901+00:00] Preparing BTCUSDT 5m
+[2026-07-24T17:26:21.198702+00:00] Finished BTCUSDT 5m: 3000 pre trials; 45 finalists; cumulative 3000
+[2026-07-24T17:26:21.199847+00:00] Preparing BTCUSDT 15m
+[2026-07-24T17:37:15.835093+00:00] Finished BTCUSDT 15m: 3000 pre trials; 45 finalists; cumulative 6000
+[2026-07-24T17:37:16.488303+00:00] Preparing ETHUSDT 5m
+[2026-07-24T17:49:09.457281+00:00] Finished ETHUSDT 5m: 3000 pre trials; 45 finalists; cumulative 9000
+[2026-07-24T17:49:09.462209+00:00] Preparing ETHUSDT 15m
+[2026-07-24T17:59:57.253515+00:00] Finished ETHUSDT 15m: 3000 pre trials; 45 finalists; cumulative 12000
+[2026-07-24T18:11:22.378244+00:00] V9 complete in 57.4 min; trials=12000; zip=/home/runner/work/publisher/publisher/coin-v9/COIN_V9_DAILY_LEVERAGE_RESULTS.zip
