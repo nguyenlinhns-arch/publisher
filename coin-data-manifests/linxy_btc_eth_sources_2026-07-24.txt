@@ -1,0 +1,9 @@
+# COIN V7 data source manifest
+# Public research data mirror. No credentials.
+
+https://huggingface.co/datasets/linxy/USDT-M_Perpetual_Futures/resolve/main/BTCUSDT/BTCUSDT_5m.parquet?download=true
+https://huggingface.co/datasets/linxy/USDT-M_Perpetual_Futures/resolve/main/ETHUSDT/ETHUSDT_5m.parquet?download=true
+https://huggingface.co/datasets/linxy/USDT-M_Perpetual_Futures/resolve/main/BTCUSDT/BTCUSDT_metrics.parquet?download=true
+https://huggingface.co/datasets/linxy/USDT-M_Perpetual_Futures/resolve/main/ETHUSDT/ETHUSDT_metrics.parquet?download=true
+https://huggingface.co/datasets/linxy/USDT-M_Perpetual_Futures/resolve/main/BTCUSDT/BTCUSDT_fundingRate.parquet?download=true
+https://huggingface.co/datasets/linxy/USDT-M_Perpetual_Futures/resolve/main/ETHUSDT/ETHUSDT_fundingRate.parquet?download=true
