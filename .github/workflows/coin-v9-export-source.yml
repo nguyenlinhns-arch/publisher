@@ -1,0 +1,56 @@
+name: Coin V9 Export Auditable Source
+
+on:
+  push:
+    paths:
+      - "coin-v9/export_source_trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct and export exact V9 source
+        run: |
+          mkdir -p coin-v9/audit coin-v9/status
+          python - <<'PY'
+          import base64, gzip, glob, hashlib, json, pathlib, subprocess, sys
+          parts = sorted(glob.glob('coin-v9/source/chunks/part*'))
+          encoded = ''.join(pathlib.Path(p).read_text(encoding='utf-8').strip() for p in parts)
+          expected_encoded_chars = 21844
+          expected_encoded_sha = '7f25180db857ca091452057f930e223ea04480dc7c1acd111c530b2a30755eb9'
+          expected_source_sha = '2b04faa1b4e342f1f8fc75d9f7841ee2e2227ec4e3894c95fb45a026c6dc14c6'
+          if len(parts) != 7:
+              raise SystemExit(f'Expected 7 chunks, got {len(parts)}')
+          if len(encoded) != expected_encoded_chars:
+              raise SystemExit(f'Encoded length mismatch: {len(encoded)}')
+          if hashlib.sha256(encoded.encode()).hexdigest() != expected_encoded_sha:
+              raise SystemExit('Encoded SHA mismatch')
+          raw = gzip.decompress(base64.b64decode(encoded, validate=True))
+          actual = hashlib.sha256(raw).hexdigest()
+          if actual != expected_source_sha:
+              raise SystemExit(f'Source SHA mismatch: {actual}')
+          target = pathlib.Path('coin-v9/audit/v9_research_original.py')
+          target.write_bytes(raw)
+          subprocess.run([sys.executable, '-m', 'py_compile', str(target)], check=True)
+          pathlib.Path('coin-v9/audit/v9_research_original.sha256').write_text(actual + '\n', encoding='utf-8')
+          pathlib.Path('coin-v9/status/export_source.json').write_text(json.dumps({
+              'state':'COMPLETED','part_count':len(parts),'encoded_chars':len(encoded),'source_bytes':len(raw),'sha256':actual
+          }, indent=2), encoding='utf-8')
+          print({'source_bytes': len(raw), 'sha256': actual})
+          PY
+      - name: Commit audit source
+        run: |
+          git pull --rebase || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coin-v9/audit/v9_research_original.py coin-v9/audit/v9_research_original.sha256 coin-v9/status/export_source.json
+          git commit -m "Export auditable Coin V9 research source [skip ci]" || true
+          git push || true
