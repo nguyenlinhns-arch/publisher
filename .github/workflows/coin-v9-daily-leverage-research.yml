@@ -1,0 +1,150 @@
+name: Coin V9 Daily Leverage Research
+
+on:
+  push:
+    paths:
+      - "coin-v9/trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: coin-v9-daily-leverage-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pandas pyarrow numpy requests numba scipy
+
+      - name: Reconstruct and verify V9 runner
+        run: |
+          mkdir -p coin-v9/status coin-v9/results
+          python - <<'PY'
+          import base64, gzip, hashlib, pathlib, subprocess, sys
+          source = pathlib.Path("coin-v9/source/v9_research.py.gz.b64")
+          encoded = source.read_text(encoding="utf-8").strip()
+          raw = gzip.decompress(base64.b64decode(encoded, validate=True))
+          expected = "2b04faa1b4e342f1f8fc75d9f7841ee2e2227ec4e3894c95fb45a026c6dc14c6"
+          actual = hashlib.sha256(raw).hexdigest()
+          if actual != expected:
+              raise SystemExit(f"V9 source SHA mismatch: {actual}")
+          target = pathlib.Path("coin-v9/v9_daily_leverage_research.py")
+          target.write_bytes(raw)
+          subprocess.run([sys.executable, "-m", "py_compile", str(target)], check=True)
+          pathlib.Path("coin-v9/status/v9_runner_sha256.txt").write_text(actual + "\n", encoding="utf-8")
+          print({"source_bytes": len(raw), "sha256": actual})
+          PY
+
+      - name: Record running status
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          payload = {
+              "state": "RUNNING",
+              "version": "V9",
+              "run_id": os.environ["RUN_ID"],
+              "run_attempt": os.environ["RUN_ATTEMPT"],
+              "trigger_sha": os.environ["HEAD_SHA"],
+              "started_at_utc": datetime.now(timezone.utc).isoformat(),
+              "trial_budget": 12000,
+              "minimum_required_trials": 10000,
+              "capital_vnd": 10000000,
+              "leverage_grid": [10,20,30,40,50,60,70,80],
+              "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
+          }
+          open("coin-v9/status/latest.json", "w", encoding="utf-8").write(json.dumps(payload, indent=2))
+          PY
+
+      - name: Execute at least 10000 strategy trials and leverage overlays
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set +e
+          python coin-v9/v9_daily_leverage_research.py 2>&1 | tee coin-v9/status/runtime.log
+          rc=${PIPESTATUS[0]}
+          echo "$rc" > coin-v9/status/exit_code.txt
+          exit 0
+
+      - name: Validate outputs and record completion
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          from datetime import datetime, timezone
+          rc = int(pathlib.Path("coin-v9/status/exit_code.txt").read_text().strip())
+          summary_path = pathlib.Path("coin-v9/results/research_summary_v9.json")
+          summary = json.loads(summary_path.read_text(encoding="utf-8")) if summary_path.exists() else {}
+          trials = int(summary.get("trials_executed", 0))
+          minimum_met = trials >= 10000
+          state = "COMPLETED" if rc == 0 and minimum_met else "FAILED"
+          payload = {
+              "state": state,
+              "version": "V9",
+              "run_id": os.environ["RUN_ID"],
+              "run_attempt": os.environ["RUN_ATTEMPT"],
+              "trigger_sha": os.environ["HEAD_SHA"],
+              "exit_code": rc,
+              "trials_executed": trials,
+              "minimum_required_trials_met": minimum_met,
+              "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+              "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
+          }
+          pathlib.Path("coin-v9/status/latest.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+          if state != "COMPLETED":
+              raise SystemExit(f"V9 validation failed: {payload}")
+          PY
+
+      - name: Upload full V9 research artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coin-v9-daily-leverage-results-${{ github.run_id }}
+          path: |
+            coin-v9/results/**
+            coin-v9/COIN_V9_DAILY_LEVERAGE_RESULTS.zip
+            coin-v9/COIN_V9_DAILY_LEVERAGE_RESULTS.zip.sha256
+            coin-v9/status/runtime.log
+            coin-v9/status/latest.json
+            coin-v9/status/v9_runner_sha256.txt
+          retention-days: 30
+          compression-level: 6
+          if-no-files-found: error
+
+      - name: Commit compact results and status
+        run: |
+          git pull --rebase || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coin-v9/status/latest.json coin-v9/status/v9_runner_sha256.txt
+          git add coin-v9/results/REPORT_V9_VI.md coin-v9/results/research_summary_v9.json coin-v9/results/manifest_v9.json
+          git add coin-v9/results/ranking_*_v9.csv coin-v9/results/ensemble_candidates_v9.csv coin-v9/results/iteration_log_v9.csv coin-v9/results/data_audit_v9.csv || true
+          git commit -m "Update Coin V9 daily leverage research results [skip ci]" || true
+          git push || true
