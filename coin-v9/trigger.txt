@@ -1,0 +1,10 @@
+run_utc=2026-07-24T17:05:00Z
+objective=maximize_daily_positive_rate_and_trade_win_rate_with_minimum_four_trades_per_calendar_day
+minimum_signal_trials=10000
+trial_budget=12000
+capital_vnd=10000000
+leverage_grid=10,20,30,40,50,60,70,80
+risk_model=isolated_margin_stop_risk_based_position_sizing
+cost_base_bps=12
+cost_stress_bps=24
+mode=RESEARCH_ONLY_NO_PAPER_NO_LIVE
