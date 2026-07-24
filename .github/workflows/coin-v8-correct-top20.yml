@@ -34,6 +34,7 @@ jobs:
           import pandas as pd
 
           HOLDOUT=pd.Timestamp('2025-07-20T00:00:00Z')
+          ROBUST_END=pd.Timestamp('2026-07-01T00:00:00.005Z')
           BASE_EXTRA_STRESS=0.0012
           rows=[]; schemas={}
 
@@ -79,7 +80,8 @@ jobs:
                   rows.append({'config_id':cid,'segment':'error','cost_case':'base','error':f'columns={list(df.columns)}'})
                   continue
               x=pd.DataFrame({'time':pd.to_datetime(df[tcol],utc=True,errors='coerce'),'ret':pd.to_numeric(df[rcol],errors='coerce')}).dropna().sort_values('time')
-              segments={'full':x,'pre':x[x.time<HOLDOUT],'oos':x[x.time>=HOLDOUT]}
+              x_robust=x[x.time<ROBUST_END]
+              segments={'full_robust':x_robust,'pre':x_robust[x_robust.time<HOLDOUT],'oos':x_robust[(x_robust.time>=HOLDOUT)&(x_robust.time<ROBUST_END)],'tail_unfunded':x[x.time>=ROBUST_END]}
               for segment,y in segments.items():
                   rows.append(evaluate(cid,segment,'base',y))
                   if segment=='oos': rows.append(evaluate(cid,segment,'stress',y))
@@ -89,8 +91,9 @@ jobs:
           payload={
               'generated_at_utc':datetime.now(timezone.utc).isoformat(),
               'holdout_start':HOLDOUT.isoformat(),
+              'robust_end':ROBUST_END.isoformat(),
               'stress_extra_round_trip_cost':BASE_EXTRA_STRESS,
-              'definition':'Active day/week/month rates exclude periods containing zero trades.',
+              'definition':'Active day/week/month rates exclude periods containing zero trades. Robust rankings stop at the funding-complete endpoint.',
               'rows':rows,'schemas':schemas,
           }
           open('coin-v8/results/corrected_top20_segment_metrics.json','w',encoding='utf-8').write(json.dumps(payload,indent=2,default=str))
@@ -102,5 +105,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add coin-v8/results/corrected_top20_segment_metrics.*
-          git commit -m "Add corrected Coin V8 holdout active-period audit [skip ci]" || true
+          git commit -m "Add funding-aligned corrected Coin V8 active-period audit [skip ci]" || true
           git push || true
