@@ -1,6 +1,6 @@
 Coin V8 iterative research trigger
-UTC: 2026-07-24T14:15:00Z
+UTC: 2026-07-24T13:50:00Z
 Objective: maximize daily positive rate and trade win rate subject to positive expectancy, stress-cost survival, drawdown and locked holdout gates.
 Search: up to 7,000 trials; iterative mutation; locked final holdout; stop after two non-improving rounds.
-Integrity: validated base64 reconstruction, SHA-256 and Python compile diagnostics.
+Integrity: 13 ordered source segments, decoded SHA-256 ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273.
 Mode: RESEARCH_ONLY / NO_PAPER / NO_LIVE
