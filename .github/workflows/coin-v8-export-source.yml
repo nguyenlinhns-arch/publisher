@@ -18,10 +18,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: Reconstruct and export source
+        env:
+          RUN_ID: ${{ github.run_id }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          mkdir -p coin-v8/audit
+          mkdir -p coin-v8/audit coin-v8/status
           python - <<'PY'
-          import base64, hashlib, pathlib
+          import base64, hashlib, json, os, pathlib
+          from datetime import datetime, timezone
           expected='ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273'
           parts=[
             'coin-v8/source/iterative_research.b64.part00','coin-v8/source/iterative_research.b64.part01',
@@ -35,6 +39,8 @@ jobs:
           if actual!=expected: raise SystemExit(actual)
           pathlib.Path('coin-v8/audit/iterative_research_original.py').write_bytes(raw)
           pathlib.Path('coin-v8/audit/iterative_research_original.sha256').write_text(actual+'\n',encoding='utf-8')
+          status={'state':'COMPLETED','run_id':os.environ['RUN_ID'],'trigger_sha':os.environ['HEAD_SHA'],'completed_at_utc':datetime.now(timezone.utc).isoformat(),'artifact':f"coin-v8-auditable-source-{os.environ['RUN_ID']}",'sha256':actual}
+          pathlib.Path('coin-v8/status/source_export.json').write_text(json.dumps(status,indent=2),encoding='utf-8')
           PY
           python -m py_compile coin-v8/audit/iterative_research_original.py
       - name: Upload source artifact
@@ -45,11 +51,11 @@ jobs:
             coin-v8/audit/iterative_research_original.py
             coin-v8/audit/iterative_research_original.sha256
           retention-days: 30
-      - name: Commit source audit copy
+      - name: Commit source audit copy and status
         run: |
           git pull --rebase || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add coin-v8/audit/iterative_research_original.py coin-v8/audit/iterative_research_original.sha256
+          git add coin-v8/audit/iterative_research_original.py coin-v8/audit/iterative_research_original.sha256 coin-v8/status/source_export.json
           git commit -m "Export auditable Coin V8 research source [skip ci]" || true
           git push || true
