@@ -1,5 +1,5 @@
 {
-  "total_bytes": 113211,
+  "total_bytes": 117211,
   "parts": [
     {
       "file": "coin-v8/source/iterative_research.b64.part00",
@@ -80,6 +80,26 @@
       "file": "coin-v8/source/fixed/p04_2",
       "bytes": 4000,
       "sha256": "75a5209e6fe6295da7e049cdef5bbd625756808c8773cd248b3e14e39024a028"
+    },
+    {
+      "file": "coin-v8/source/fixed/p04_2_0",
+      "bytes": 1000,
+      "sha256": "5c1a233681b4d7e177109a5720ef17173a8f6f1a89a46c21c8ec2da7d47d0911"
+    },
+    {
+      "file": "coin-v8/source/fixed/p04_2_1",
+      "bytes": 1000,
+      "sha256": "b4827fae0c6020c2e53ffb93dd1f98067dd2d713ed91c4237e2c9d2f7f733ca9"
+    },
+    {
+      "file": "coin-v8/source/fixed/p04_2_2",
+      "bytes": 1000,
+      "sha256": "f9349c5bbcfc9bd278c976f8120156cb36e7150315d7cde03ab76b628e2efd83"
+    },
+    {
+      "file": "coin-v8/source/fixed/p04_2_3",
+      "bytes": 1000,
+      "sha256": "ad21f1706efbe026f2bfaf9e7cf12086444ca72a6557515640d67f5d31763215"
     }
   ]
 }
