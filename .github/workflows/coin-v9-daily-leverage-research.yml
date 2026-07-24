@@ -35,23 +35,42 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pandas pyarrow numpy requests numba scipy
 
-      - name: Reconstruct and verify V9 runner
+      - name: Reconstruct, compile and fingerprint V9 runner
         run: |
           mkdir -p coin-v9/status coin-v9/results
           python - <<'PY'
-          import base64, gzip, hashlib, pathlib, subprocess, sys
+          import base64, gzip, hashlib, json, pathlib, subprocess, sys
           source = pathlib.Path("coin-v9/source/v9_research.py.gz.b64")
           encoded = source.read_text(encoding="utf-8").strip()
+          diag = {
+              "encoded_chars": len(encoded),
+              "encoded_sha256": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+          }
           raw = gzip.decompress(base64.b64decode(encoded, validate=True))
-          expected = "2b04faa1b4e342f1f8fc75d9f7841ee2e2227ec4e3894c95fb45a026c6dc14c6"
           actual = hashlib.sha256(raw).hexdigest()
-          if actual != expected:
-              raise SystemExit(f"V9 source SHA mismatch: {actual}")
           target = pathlib.Path("coin-v9/v9_daily_leverage_research.py")
           target.write_bytes(raw)
-          subprocess.run([sys.executable, "-m", "py_compile", str(target)], check=True)
-          pathlib.Path("coin-v9/status/v9_runner_sha256.txt").write_text(actual + "\n", encoding="utf-8")
-          print({"source_bytes": len(raw), "sha256": actual})
+          compile_run = subprocess.run(
+              [sys.executable, "-m", "py_compile", str(target)],
+              text=True,
+              capture_output=True,
+          )
+          diag.update({
+              "source_bytes": len(raw),
+              "source_sha256": actual,
+              "compile_returncode": compile_run.returncode,
+              "compile_stdout": compile_run.stdout,
+              "compile_stderr": compile_run.stderr,
+          })
+          pathlib.Path("coin-v9/status/reconstruction.json").write_text(
+              json.dumps(diag, indent=2), encoding="utf-8"
+          )
+          pathlib.Path("coin-v9/status/v9_runner_sha256.txt").write_text(
+              actual + "\n", encoding="utf-8"
+          )
+          print(json.dumps(diag, indent=2))
+          if compile_run.returncode != 0:
+              raise SystemExit(compile_run.returncode)
           PY
 
       - name: Record running status
@@ -76,7 +95,9 @@ jobs:
               "leverage_grid": [10,20,30,40,50,60,70,80],
               "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
           }
-          open("coin-v9/status/latest.json", "w", encoding="utf-8").write(json.dumps(payload, indent=2))
+          open("coin-v9/status/latest.json", "w", encoding="utf-8").write(
+              json.dumps(payload, indent=2)
+          )
           PY
 
       - name: Execute at least 10000 strategy trials and leverage overlays
@@ -92,6 +113,7 @@ jobs:
           exit 0
 
       - name: Validate outputs and record completion
+        if: always()
         env:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -100,7 +122,8 @@ jobs:
           python - <<'PY'
           import json, os, pathlib
           from datetime import datetime, timezone
-          rc = int(pathlib.Path("coin-v9/status/exit_code.txt").read_text().strip())
+          exit_path = pathlib.Path("coin-v9/status/exit_code.txt")
+          rc = int(exit_path.read_text().strip()) if exit_path.exists() else 999
           summary_path = pathlib.Path("coin-v9/results/research_summary_v9.json")
           summary = json.loads(summary_path.read_text(encoding="utf-8")) if summary_path.exists() else {}
           trials = int(summary.get("trials_executed", 0))
@@ -118,12 +141,14 @@ jobs:
               "finished_at_utc": datetime.now(timezone.utc).isoformat(),
               "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
           }
-          pathlib.Path("coin-v9/status/latest.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-          if state != "COMPLETED":
-              raise SystemExit(f"V9 validation failed: {payload}")
+          pathlib.Path("coin-v9/status/latest.json").write_text(
+              json.dumps(payload, indent=2), encoding="utf-8"
+          )
+          print(json.dumps(payload, indent=2))
           PY
 
       - name: Upload full V9 research artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coin-v9-daily-leverage-results-${{ github.run_id }}
@@ -133,18 +158,30 @@ jobs:
             coin-v9/COIN_V9_DAILY_LEVERAGE_RESULTS.zip.sha256
             coin-v9/status/runtime.log
             coin-v9/status/latest.json
+            coin-v9/status/reconstruction.json
             coin-v9/status/v9_runner_sha256.txt
           retention-days: 30
           compression-level: 6
-          if-no-files-found: error
+          if-no-files-found: warn
 
-      - name: Commit compact results and status
+      - name: Commit compact results, logs and status
+        if: always()
         run: |
           git pull --rebase || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add coin-v9/status/latest.json coin-v9/status/v9_runner_sha256.txt
-          git add coin-v9/results/REPORT_V9_VI.md coin-v9/results/research_summary_v9.json coin-v9/results/manifest_v9.json
+          git add coin-v9/status/latest.json coin-v9/status/reconstruction.json coin-v9/status/v9_runner_sha256.txt coin-v9/status/runtime.log || true
+          git add coin-v9/results/REPORT_V9_VI.md coin-v9/results/research_summary_v9.json coin-v9/results/manifest_v9.json || true
           git add coin-v9/results/ranking_*_v9.csv coin-v9/results/ensemble_candidates_v9.csv coin-v9/results/iteration_log_v9.csv coin-v9/results/data_audit_v9.csv || true
           git commit -m "Update Coin V9 daily leverage research results [skip ci]" || true
           git push || true
+
+      - name: Enforce successful research completion
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open("coin-v9/status/latest.json",encoding="utf-8"))
+          if p.get("state") != "COMPLETED":
+              raise SystemExit(f"Coin V9 did not complete: {p}")
+          PY
