@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: coin-v8-iterative-research
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   research:
@@ -21,6 +21,34 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record auditable running status
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p coin-v8/status
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          payload = {
+              "state": "RUNNING",
+              "run_id": os.environ["RUN_ID"],
+              "run_attempt": os.environ["RUN_ATTEMPT"],
+              "trigger_sha": os.environ["HEAD_SHA"],
+              "started_at_utc": datetime.now(timezone.utc).isoformat(),
+              "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE",
+          }
+          open("coin-v8/status/latest.json", "w", encoding="utf-8").write(json.dumps(payload, indent=2))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coin-v8/status/latest.json
+          git commit -m "Mark Coin V8 research run ${RUN_ID} running [skip ci]" || true
+          git push
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -55,10 +83,58 @@ jobs:
           compression-level: 6
           if-no-files-found: error
 
-      - name: Commit compact results
+      - name: Commit compact results and success status
+        if: success()
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          p = "coin-v8/status/latest.json"
+          try:
+              payload = json.load(open(p, encoding="utf-8"))
+          except Exception:
+              payload = {}
+          payload.update({
+              "state": "COMPLETED",
+              "run_id": os.environ["RUN_ID"],
+              "run_attempt": os.environ["RUN_ATTEMPT"],
+              "completed_at_utc": datetime.now(timezone.utc).isoformat(),
+          })
+          open(p, "w", encoding="utf-8").write(json.dumps(payload, indent=2))
+          PY
+          git add coin-v8/results coin-v8/status/latest.json
+          git commit -m "Update Coin V8 iterative research results [skip ci]" || true
+          git push
+
+      - name: Record failure status
+        if: failure()
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          git pull --rebase || true
+          mkdir -p coin-v8/status
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          p = "coin-v8/status/latest.json"
+          try:
+              payload = json.load(open(p, encoding="utf-8"))
+          except Exception:
+              payload = {}
+          payload.update({
+              "state": "FAILED",
+              "run_id": os.environ["RUN_ID"],
+              "run_attempt": os.environ["RUN_ATTEMPT"],
+              "failed_at_utc": datetime.now(timezone.utc).isoformat(),
+          })
+          open(p, "w", encoding="utf-8").write(json.dumps(payload, indent=2))
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add coin-v8/results
-          git commit -m "Update Coin V8 iterative research results [skip ci]" || exit 0
-          git push
+          git add coin-v8/status/latest.json
+          git commit -m "Mark Coin V8 research run ${RUN_ID} failed [skip ci]" || true
+          git push || true
