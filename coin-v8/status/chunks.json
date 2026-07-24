@@ -1,0 +1,40 @@
+{
+  "total_bytes": 77211,
+  "parts": [
+    {
+      "file": "coin-v8/source/iterative_research.b64.part00",
+      "bytes": 12000,
+      "sha256": "a64706f88c4f855a44d18371ad3d65212d149659fc9c0e8f329e9f87c771f893"
+    },
+    {
+      "file": "coin-v8/source/iterative_research.b64.part01",
+      "bytes": 12000,
+      "sha256": "d7f2d7782dec029a331f58844e299f7d56d86d7defea44f16735ba36820ee819"
+    },
+    {
+      "file": "coin-v8/source/iterative_research.b64.part02",
+      "bytes": 12000,
+      "sha256": "a8e76df877fb7f6b1a8e17bd5a9ca45d81721c19416cc02a5385ef1ec93adc2e"
+    },
+    {
+      "file": "coin-v8/source/iterative_research.b64.part03",
+      "bytes": 11847,
+      "sha256": "e628359ecfda6d8fd8755ec1b9901a86c4dd7beaf4819c8f43a59e5998e38490"
+    },
+    {
+      "file": "coin-v8/source/iterative_research.b64.part04",
+      "bytes": 12000,
+      "sha256": "fbd71b730c3fae2444817012ac67c599049247702a2a3a57f26658c05c5eb50c"
+    },
+    {
+      "file": "coin-v8/source/iterative_research.b64.part05",
+      "bytes": 12000,
+      "sha256": "9c14ceaa1098353455bdb2414851ff70fd6abd27e12c9fb032fffe53052b0494"
+    },
+    {
+      "file": "coin-v8/source/iterative_research.b64.part06",
+      "bytes": 5364,
+      "sha256": "c2bd0076f08b5c3b8ab3be69c36d102947460805cbd9acc9cc92b1d8a95a60b9"
+    }
+  ]
+}
