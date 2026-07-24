@@ -1,0 +1,72 @@
+name: Coin V7 BTC ETH Research
+
+on:
+  push:
+    paths:
+      - "coin-v7/trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: coin-v7-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pandas pyarrow numpy requests tabulate
+
+      - name: Reconstruct and verify research runner
+        run: |
+          cat coin-v7/source/run_research.b64.part* | base64 --decode > coin-v7/run_research.py
+          python -m py_compile coin-v7/run_research.py
+          test "$(sha256sum coin-v7/run_research.py | cut -d' ' -f1)" = "b02578f638514f40e2d50f5e4c9d11680d520e68a19b838435dcb103fffbca93"
+
+      - name: Acquire public market data and run baseline tournament
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: python coin-v7/run_research.py
+
+      - name: Upload raw market data artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coin-v7-market-data-${{ github.run_id }}
+          path: coin-v7/output/raw/*.parquet
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Upload research result artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coin-v7-results-${{ github.run_id }}
+          path: coin-v7/results/*
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Commit compact research results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coin-v7/results
+          git commit -m "Update Coin V7 research results [skip ci]" || exit 0
+          git push
