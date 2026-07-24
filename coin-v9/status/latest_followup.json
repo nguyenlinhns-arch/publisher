@@ -1,0 +1,9 @@
+{
+  "state": "COMPLETED",
+  "run_id": "30133295862",
+  "run_attempt": "1",
+  "trigger_sha": "a9fcecc20f7ee952e1f8de67c419a1631f49b73b",
+  "exit_code": 0,
+  "finished_at_utc": "2026-07-24T23:50:14.352787+00:00",
+  "mode": "RESEARCH_ONLY / NO_PAPER / NO_LIVE"
+}
