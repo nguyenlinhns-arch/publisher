@@ -1,0 +1,8 @@
+run_utc=2026-07-24T15:25:00Z
+objective=maximize_long_short_trade_win_rate_and_true_positive_active_day_rate_subject_to_positive_net_expectancy_profit_factor_cost_stress_drawdown_locked_holdout_bootstrap_and_deflated_sharpe
+trial_budget=7000
+holdout_start=2025-07-20T00:00:00Z
+robust_end=2026-07-01T00:00:00.005Z
+ensemble_selection=pre_holdout_only
+strict_validation=bootstrap_lower_mean_gt_0_and_dsr_probability_gte_0.95
+mode=RESEARCH_ONLY_NO_PAPER_NO_LIVE
