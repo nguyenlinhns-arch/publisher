@@ -1,0 +1,47 @@
+name: Coin V8 Export Auditable Source
+
+on:
+  push:
+    paths:
+      - "coin-v8/export_source_trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct and export source
+        run: |
+          mkdir -p coin-v8/audit
+          python - <<'PY'
+          import base64, hashlib, pathlib
+          expected='ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273'
+          parts=[
+            'coin-v8/source/iterative_research.b64.part00','coin-v8/source/iterative_research.b64.part01',
+            'coin-v8/source/fixed/p02_0','coin-v8/source/fixed/p02_1','coin-v8/source/fixed/p02_2',
+            'coin-v8/source/fixed/p03_0','coin-v8/source/fixed/p03_1','coin-v8/source/fixed/p03_2',
+            'coin-v8/source/fixed/p04_0','coin-v8/source/fixed/p04_1','coin-v8/source/fixed/p04_2_0',
+            'coin-v8/source/fixed/p04_2_1','coin-v8/source/fixed/p04_2_2','coin-v8/source/fixed/p04_2_3',
+            'coin-v8/source/iterative_research.b64.part05','coin-v8/source/iterative_research.b64.part06']
+          raw=base64.b64decode(b''.join(pathlib.Path(p).read_bytes() for p in parts),validate=True)
+          actual=hashlib.sha256(raw).hexdigest()
+          if actual!=expected: raise SystemExit(actual)
+          pathlib.Path('coin-v8/audit/iterative_research_original.py').write_bytes(raw)
+          pathlib.Path('coin-v8/audit/iterative_research_original.sha256').write_text(actual+'\n',encoding='utf-8')
+          PY
+          python -m py_compile coin-v8/audit/iterative_research_original.py
+      - name: Commit source audit copy
+        run: |
+          git pull --rebase || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coin-v8/audit/iterative_research_original.py coin-v8/audit/iterative_research_original.sha256
+          git commit -m "Export auditable Coin V8 research source [skip ci]" || true
+          git push || true
