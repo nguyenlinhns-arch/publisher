@@ -1,0 +1,6 @@
+Coin V7 research run requested by Thầy Linh
+Requested UTC date: 2026-07-24
+Data range: 2020-01-01 to latest available
+Symbols: BTCUSDT, ETHUSDT
+Base timeframe: 5m; causal resample: 15m, 30m, 60m
+Mode: RESEARCH_ONLY / NO_LIVE
