@@ -37,6 +37,14 @@ jobs:
           pathlib.Path('coin-v8/audit/iterative_research_original.sha256').write_text(actual+'\n',encoding='utf-8')
           PY
           python -m py_compile coin-v8/audit/iterative_research_original.py
+      - name: Upload source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coin-v8-auditable-source-${{ github.run_id }}
+          path: |
+            coin-v8/audit/iterative_research_original.py
+            coin-v8/audit/iterative_research_original.sha256
+          retention-days: 30
       - name: Commit source audit copy
         run: |
           git pull --rebase || true
