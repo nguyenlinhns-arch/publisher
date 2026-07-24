@@ -1,16 +1,26 @@
 {
-  "probed_at_utc": "2026-07-24T17:07:24.817804+00:00",
+  "probed_at_utc": "2026-07-24T17:14:17.733897+00:00",
   "latest": {
-    "conclusion": "failure",
-    "createdAt": "2026-07-24T17:04:33Z",
-    "databaseId": 30111574291,
-    "displayTitle": "Retry Coin V9 daily leverage research with fail-auditable workflow",
-    "headSha": "5f0b0fc765065efca9b16634f9fa07f3691dd4a0",
-    "status": "completed",
-    "updatedAt": "2026-07-24T17:05:04Z",
-    "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30111574291"
+    "conclusion": "",
+    "createdAt": "2026-07-24T17:13:27Z",
+    "databaseId": 30112153560,
+    "displayTitle": "Run Coin V9 from verified source chunks",
+    "headSha": "47e694e49dbb5f5247bd6199227da538c7e25b9e",
+    "status": "in_progress",
+    "updatedAt": "2026-07-24T17:13:30Z",
+    "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30112153560"
   },
   "runs": [
+    {
+      "conclusion": "",
+      "createdAt": "2026-07-24T17:13:27Z",
+      "databaseId": 30112153560,
+      "displayTitle": "Run Coin V9 from verified source chunks",
+      "headSha": "47e694e49dbb5f5247bd6199227da538c7e25b9e",
+      "status": "in_progress",
+      "updatedAt": "2026-07-24T17:13:30Z",
+      "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30112153560"
+    },
     {
       "conclusion": "failure",
       "createdAt": "2026-07-24T17:04:33Z",
