@@ -59,11 +59,20 @@ jobs:
           encoded = b"".join(pathlib.Path(p).read_bytes() for p in parts)
           decoded = base64.b64decode(encoded, validate=True)
           actual = hashlib.sha256(decoded).hexdigest()
-          print({"encoded_bytes": len(encoded), "decoded_bytes": len(decoded), "sha256": actual})
+          print({"encoded_bytes": len(encoded), "decoded_bytes": len(decoded), "source_sha256": actual})
           if actual != expected:
               raise SystemExit(f"SHA mismatch: {actual}")
           target = pathlib.Path("coin-v8/iterative_research.py")
           target.write_bytes(decoded)
+          source = target.read_text(encoding="utf-8")
+          old = "cfg['lookback']"
+          occurrences = source.count(old)
+          if occurrences != 5:
+              raise SystemExit(f"Unexpected lookback patch count: {occurrences}")
+          source = source.replace(old, "int(cfg['lookback'])")
+          target.write_text(source, encoding="utf-8")
+          patched_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+          print({"deterministic_runtime_patch": "cast finalist lookback to int", "occurrences": occurrences, "patched_sha256": patched_sha})
           subprocess.run([sys.executable, "-m", "py_compile", str(target)], check=True)
           PY
 
