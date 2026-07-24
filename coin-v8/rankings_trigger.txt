@@ -1,3 +1,5 @@
-run_utc=2026-07-24T15:18:00Z
-scope=corrected_top20_oos_base_and_stress
+run_utc=2026-07-24T15:27:00Z
+scope=corrected_top20_oos_base_and_stress_through_funding_complete_endpoint
+holdout_start=2025-07-20T00:00:00Z
+robust_end=2026-07-01T00:00:00.005Z
 mode=RESEARCH_ONLY
