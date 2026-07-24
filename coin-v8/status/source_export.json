@@ -1,0 +1,8 @@
+{
+  "state": "COMPLETED",
+  "run_id": "30106565736",
+  "trigger_sha": "77989ba0fe5e410cf743c76bd45a95aacc303d32",
+  "completed_at_utc": "2026-07-24T15:44:24.818982+00:00",
+  "artifact": "coin-v8-auditable-source-30106565736",
+  "sha256": "ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273"
+}
