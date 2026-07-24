@@ -1,0 +1,96 @@
+name: Coin V8 Corrected Active Period Audit
+
+on:
+  push:
+    paths:
+      - "coin-v8/correct_top20_trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: coin-v8-correct-top20
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pandas pyarrow numpy
+      - name: Recompute true active-period metrics
+        run: |
+          python - <<'PY'
+          import glob, json, os
+          from datetime import datetime, timezone
+          import numpy as np
+          import pandas as pd
+
+          rows=[]
+          schemas={}
+          for path in sorted(glob.glob('coin-v8/results/trades_*.parquet')):
+              df=pd.read_parquet(path)
+              cid=os.path.basename(path).replace('trades_','').replace('.parquet','')
+              schemas[cid]=list(df.columns)
+              lower={str(c).lower():c for c in df.columns}
+              time_candidates=['exit_time','exit_timestamp','exit_dt','exit_datetime']
+              ret_candidates=['net_return','return','ret','net_ret','pnl_return']
+              tcol=next((lower[x] for x in time_candidates if x in lower),None)
+              rcol=next((lower[x] for x in ret_candidates if x in lower),None)
+              if tcol is None:
+                  tcol=next((c for c in df.columns if 'exit' in str(c).lower() and ('time' in str(c).lower() or 'date' in str(c).lower())),None)
+              if rcol is None:
+                  rcol=next((c for c in df.columns if 'return' in str(c).lower() or str(c).lower() in {'ret','pnl'}),None)
+              if tcol is None or rcol is None:
+                  rows.append({'config_id':cid,'error':f'columns={list(df.columns)}'})
+                  continue
+              ts=pd.to_datetime(df[tcol],utc=True,errors='coerce')
+              ret=pd.to_numeric(df[rcol],errors='coerce')
+              x=pd.DataFrame({'time':ts,'ret':ret}).dropna().sort_values('time')
+              def agg(freq):
+                  g=x.set_index('time')['ret'].groupby(pd.Grouper(freq=freq))
+                  counts=g.size()
+                  comp=g.apply(lambda z: float(np.prod(1+z.to_numpy(float))-1))
+                  return comp[counts>0].dropna()
+              d=agg('1D'); w=agg('W-SUN'); m=agg('ME')
+              equity=np.cumprod(1+np.clip(x['ret'].to_numpy(float),-0.999,None))
+              peak=np.maximum.accumulate(equity) if len(equity) else np.array([])
+              dd=float(np.min(equity/peak-1)) if len(equity) else np.nan
+              gains=x.loc[x.ret>0,'ret'].sum(); losses=-x.loc[x.ret<0,'ret'].sum()
+              pf=float(gains/losses) if losses>0 else (float('inf') if gains>0 else np.nan)
+              rows.append({
+                  'config_id':cid,'trades':len(x),'trade_win_rate':float((x.ret>0).mean()) if len(x) else np.nan,
+                  'profit_factor':pf,'mean_return':float(x.ret.mean()) if len(x) else np.nan,
+                  'total_return':float(np.prod(1+x.ret.to_numpy(float))-1) if len(x) else np.nan,'max_drawdown':dd,
+                  'active_days':len(d),'positive_active_day_rate':float((d>0).mean()) if len(d) else np.nan,
+                  'calendar_days_covered':int((x.time.max().floor('D')-x.time.min().floor('D')).days+1) if len(x) else 0,
+                  'positive_calendar_day_rate':float((d>0).sum()/((x.time.max().floor('D')-x.time.min().floor('D')).days+1)) if len(x) else np.nan,
+                  'active_weeks':len(w),'positive_active_week_rate':float((w>0).mean()) if len(w) else np.nan,
+                  'active_months':len(m),'positive_active_month_rate':float((m>0).mean()) if len(m) else np.nan,
+                  'first_exit':x.time.min().isoformat() if len(x) else None,'last_exit':x.time.max().isoformat() if len(x) else None,
+              })
+          out=pd.DataFrame(rows)
+          out.to_csv('coin-v8/results/corrected_top20_active_periods.csv',index=False)
+          payload={
+              'generated_at_utc':datetime.now(timezone.utc).isoformat(),
+              'definition':'Active periods contain at least one trade; zero-trade calendar periods are excluded from active-period win rates.',
+              'rows':rows,'schemas':schemas,
+          }
+          open('coin-v8/results/corrected_top20_active_periods.json','w',encoding='utf-8').write(json.dumps(payload,indent=2,default=str))
+          print(out.sort_values(['positive_active_day_rate','trade_win_rate','total_return'],ascending=False).to_string(index=False))
+          PY
+      - name: Commit audit
+        run: |
+          git pull --rebase || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coin-v8/results/corrected_top20_active_periods.*
+          git commit -m "Add corrected Coin V8 active-period audit [skip ci]" || true
+          git push || true
