@@ -1,0 +1,25 @@
+{
+  "probed_at_utc": "2026-07-24T17:01:46.921950+00:00",
+  "latest": {
+    "conclusion": "failure",
+    "createdAt": "2026-07-24T16:59:32Z",
+    "databaseId": 30111222105,
+    "displayTitle": "Coin V9 Daily Leverage Research",
+    "headSha": "6bb211cffc088587bbb2f4835cf3df8d4284547a",
+    "status": "completed",
+    "updatedAt": "2026-07-24T17:00:00Z",
+    "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30111222105"
+  },
+  "runs": [
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-24T16:59:32Z",
+      "databaseId": 30111222105,
+      "displayTitle": "Coin V9 Daily Leverage Research",
+      "headSha": "6bb211cffc088587bbb2f4835cf3df8d4284547a",
+      "status": "completed",
+      "updatedAt": "2026-07-24T17:00:00Z",
+      "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30111222105"
+    }
+  ]
+}
