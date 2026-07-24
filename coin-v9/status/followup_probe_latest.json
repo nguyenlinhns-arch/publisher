@@ -1,0 +1,25 @@
+{
+  "probed_at_utc": "2026-07-24T23:16:47.947637+00:00",
+  "latest": {
+    "conclusion": "",
+    "createdAt": "2026-07-24T23:15:18Z",
+    "databaseId": 30133295862,
+    "displayTitle": "Trigger Coin V9 positive-candidate follow-up",
+    "headSha": "a9fcecc20f7ee952e1f8de67c419a1631f49b73b",
+    "status": "in_progress",
+    "updatedAt": "2026-07-24T23:15:21Z",
+    "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30133295862"
+  },
+  "runs": [
+    {
+      "conclusion": "",
+      "createdAt": "2026-07-24T23:15:18Z",
+      "databaseId": 30133295862,
+      "displayTitle": "Trigger Coin V9 positive-candidate follow-up",
+      "headSha": "a9fcecc20f7ee952e1f8de67c419a1631f49b73b",
+      "status": "in_progress",
+      "updatedAt": "2026-07-24T23:15:21Z",
+      "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30133295862"
+    }
+  ]
+}
