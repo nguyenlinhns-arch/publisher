@@ -63,9 +63,28 @@ jobs:
 
       - name: Reconstruct and verify iterative runner
         run: |
-          cat coin-v8/source/iterative_research.b64.part* | base64 --decode > coin-v8/iterative_research.py
-          python -m py_compile coin-v8/iterative_research.py
-          test "$(sha256sum coin-v8/iterative_research.py | cut -d' ' -f1)" = "ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273"
+          mkdir -p coin-v8/status
+          python - <<'PY'
+          import base64, glob, hashlib, json, pathlib, subprocess, sys
+          expected = "ec5b1979369135917866bb732eaca0f856b964545691db9952026d84f5c45273"
+          parts = sorted(glob.glob("coin-v8/source/iterative_research.b64.part*"))
+          encoded = b"".join(pathlib.Path(p).read_bytes() for p in parts)
+          diag = {"parts": parts, "part_count": len(parts), "encoded_bytes": len(encoded), "expected_sha256": expected}
+          rc = 1
+          try:
+              decoded = base64.b64decode(encoded, validate=True)
+              actual = hashlib.sha256(decoded).hexdigest()
+              diag.update({"decoded_bytes": len(decoded), "actual_sha256": actual, "decode_ok": True})
+              pathlib.Path("coin-v8/iterative_research.py").write_bytes(decoded)
+              compile_run = subprocess.run([sys.executable, "-m", "py_compile", "coin-v8/iterative_research.py"], text=True, capture_output=True)
+              diag.update({"compile_returncode": compile_run.returncode, "compile_stdout": compile_run.stdout, "compile_stderr": compile_run.stderr})
+              rc = 0 if actual == expected and compile_run.returncode == 0 else 1
+          except Exception as exc:
+              diag.update({"decode_ok": False, "exception": repr(exc)})
+          pathlib.Path("coin-v8/status/reconstruction.json").write_text(json.dumps(diag, indent=2), encoding="utf-8")
+          print(json.dumps(diag, indent=2))
+          raise SystemExit(rc)
+          PY
 
       - name: Run iterative indicator research
         env:
@@ -97,15 +116,10 @@ jobs:
               payload = json.load(open(p, encoding="utf-8"))
           except Exception:
               payload = {}
-          payload.update({
-              "state": "COMPLETED",
-              "run_id": os.environ["RUN_ID"],
-              "run_attempt": os.environ["RUN_ATTEMPT"],
-              "completed_at_utc": datetime.now(timezone.utc).isoformat(),
-          })
+          payload.update({"state": "COMPLETED", "run_id": os.environ["RUN_ID"], "run_attempt": os.environ["RUN_ATTEMPT"], "completed_at_utc": datetime.now(timezone.utc).isoformat()})
           open(p, "w", encoding="utf-8").write(json.dumps(payload, indent=2))
           PY
-          git add coin-v8/results coin-v8/status/latest.json
+          git add coin-v8/results coin-v8/status
           git commit -m "Update Coin V8 iterative research results [skip ci]" || true
           git push
 
@@ -125,16 +139,11 @@ jobs:
               payload = json.load(open(p, encoding="utf-8"))
           except Exception:
               payload = {}
-          payload.update({
-              "state": "FAILED",
-              "run_id": os.environ["RUN_ID"],
-              "run_attempt": os.environ["RUN_ATTEMPT"],
-              "failed_at_utc": datetime.now(timezone.utc).isoformat(),
-          })
+          payload.update({"state": "FAILED", "run_id": os.environ["RUN_ID"], "run_attempt": os.environ["RUN_ATTEMPT"], "failed_at_utc": datetime.now(timezone.utc).isoformat()})
           open(p, "w", encoding="utf-8").write(json.dumps(payload, indent=2))
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add coin-v8/status/latest.json
+          git add coin-v8/status
           git commit -m "Mark Coin V8 research run ${RUN_ID} failed [skip ci]" || true
           git push || true
