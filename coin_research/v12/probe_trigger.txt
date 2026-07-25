@@ -1,2 +1,2 @@
-probe_utc=2026-07-25T09:02:00Z
-purpose=check rerun after Binance Vision engine upload
+probe_utc=2026-07-25T09:10:00Z
+purpose=check Python-decoded Coin V12 archive run
