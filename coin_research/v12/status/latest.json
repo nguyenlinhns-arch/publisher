@@ -1,16 +1,36 @@
 {
-  "probed_at_utc": "2026-07-25T08:44:21.062733+00:00",
+  "probed_at_utc": "2026-07-25T08:47:48.506552+00:00",
   "latest": {
     "conclusion": "failure",
-    "createdAt": "2026-07-25T08:43:28Z",
-    "databaseId": 30151604819,
-    "displayTitle": "Rerun Coin V12 with Binance Vision engine",
-    "headSha": "088459eb5d42c7aa364db4edd76de0c9a421f25e",
+    "createdAt": "2026-07-25T08:46:56Z",
+    "databaseId": 30151705328,
+    "displayTitle": "Run Coin V12 with Python decoder",
+    "headSha": "667eb8bcd1543a35ee9938e8c92b6b6410d148d7",
     "status": "completed",
-    "updatedAt": "2026-07-25T08:43:54Z",
-    "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151604819"
+    "updatedAt": "2026-07-25T08:47:28Z",
+    "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151705328"
   },
   "runs": [
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-25T08:46:56Z",
+      "databaseId": 30151705328,
+      "displayTitle": "Run Coin V12 with Python decoder",
+      "headSha": "667eb8bcd1543a35ee9938e8c92b6b6410d148d7",
+      "status": "completed",
+      "updatedAt": "2026-07-25T08:47:28Z",
+      "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151705328"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-25T08:46:32Z",
+      "databaseId": 30151694064,
+      "displayTitle": "Decode Coin V12 engine with Python base64 and gzip",
+      "headSha": "1c23f9db4c1ce8f662706cd00cff769dacbb15d1",
+      "status": "completed",
+      "updatedAt": "2026-07-25T08:46:53Z",
+      "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151694064"
+    },
     {
       "conclusion": "failure",
       "createdAt": "2026-07-25T08:43:28Z",

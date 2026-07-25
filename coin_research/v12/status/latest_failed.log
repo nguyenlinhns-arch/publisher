@@ -1,18 +1,27 @@
-backtest	Decode and validate engine	﻿2026-07-25T08:43:51.0549212Z ##[group]Run base64 -d coin_research/v12/backtest.py.gz.b64 | gzip -d > coin_research/v12/backtest.py
-backtest	Decode and validate engine	2026-07-25T08:43:51.0550101Z ^[[36;1mbase64 -d coin_research/v12/backtest.py.gz.b64 | gzip -d > coin_research/v12/backtest.py^[[0m
-backtest	Decode and validate engine	2026-07-25T08:43:51.0550730Z ^[[36;1mpython -m py_compile coin_research/v12/backtest.py^[[0m
-backtest	Decode and validate engine	2026-07-25T08:43:51.0598348Z shell: /usr/bin/bash -e {0}
-backtest	Decode and validate engine	2026-07-25T08:43:51.0598689Z env:
-backtest	Decode and validate engine	2026-07-25T08:43:51.0599041Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
-backtest	Decode and validate engine	2026-07-25T08:43:51.0599654Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
-backtest	Decode and validate engine	2026-07-25T08:43:51.0600255Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
-backtest	Decode and validate engine	2026-07-25T08:43:51.0600784Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
-backtest	Decode and validate engine	2026-07-25T08:43:51.0601318Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
-backtest	Decode and validate engine	2026-07-25T08:43:51.0601862Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
-backtest	Decode and validate engine	2026-07-25T08:43:51.0602331Z ##[endgroup]
-backtest	Decode and validate engine	2026-07-25T08:43:51.0694804Z base64: invalid input
-backtest	Decode and validate engine	2026-07-25T08:43:51.0696568Z 
-backtest	Decode and validate engine	2026-07-25T08:43:51.0696905Z gzip: stdin: invalid compressed data--crc error
-backtest	Decode and validate engine	2026-07-25T08:43:51.0697603Z 
-backtest	Decode and validate engine	2026-07-25T08:43:51.0697931Z gzip: stdin: invalid compressed data--length error
-backtest	Decode and validate engine	2026-07-25T08:43:51.0716058Z ##[error]Process completed with exit code 1.
+backtest	Decode and validate engine	﻿2026-07-25T08:47:26.2004689Z ##[group]Run python - <<'PY'
+backtest	Decode and validate engine	2026-07-25T08:47:26.2005038Z ^[[36;1mpython - <<'PY'^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2005273Z ^[[36;1mimport base64, gzip^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2005525Z ^[[36;1mfrom pathlib import Path^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2005857Z ^[[36;1msource = Path('coin_research/v12/backtest.py.gz.b64')^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2006193Z ^[[36;1mtarget = Path('coin_research/v12/backtest.py')^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2006602Z ^[[36;1mpayload = base64.b64decode(source.read_text(encoding='utf-8').strip(), validate=True)^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2007010Z ^[[36;1mtarget.write_bytes(gzip.decompress(payload))^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2007774Z ^[[36;1mprint('decoded_bytes', target.stat().st_size)^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2008099Z ^[[36;1mPY^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2008402Z ^[[36;1mpython -m py_compile coin_research/v12/backtest.py^[[0m
+backtest	Decode and validate engine	2026-07-25T08:47:26.2033600Z shell: /usr/bin/bash -e {0}
+backtest	Decode and validate engine	2026-07-25T08:47:26.2033921Z env:
+backtest	Decode and validate engine	2026-07-25T08:47:26.2034251Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Decode and validate engine	2026-07-25T08:47:26.2034674Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+backtest	Decode and validate engine	2026-07-25T08:47:26.2035057Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Decode and validate engine	2026-07-25T08:47:26.2035394Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Decode and validate engine	2026-07-25T08:47:26.2035774Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Decode and validate engine	2026-07-25T08:47:26.2036101Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+backtest	Decode and validate engine	2026-07-25T08:47:26.2036376Z ##[endgroup]
+backtest	Decode and validate engine	2026-07-25T08:47:26.3357325Z Traceback (most recent call last):
+backtest	Decode and validate engine	2026-07-25T08:47:26.3361910Z   File "<stdin>", line 5, in <module>
+backtest	Decode and validate engine	2026-07-25T08:47:26.3362507Z   File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/base64.py", line 88, in b64decode
+backtest	Decode and validate engine	2026-07-25T08:47:26.4171385Z     return binascii.a2b_base64(s, strict_mode=validate)
+backtest	Decode and validate engine	2026-07-25T08:47:26.4171803Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backtest	Decode and validate engine	2026-07-25T08:47:26.4172230Z binascii.Error: Excess padding not allowed
+backtest	Decode and validate engine	2026-07-25T08:47:26.4210520Z ##[error]Process completed with exit code 1.
