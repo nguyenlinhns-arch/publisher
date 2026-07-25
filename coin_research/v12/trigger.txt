@@ -1,0 +1,2 @@
+trigger_utc=2026-07-25T08:30:00Z
+purpose=run locked 15-coin multi-asset development tournament and 2024-2026 test
