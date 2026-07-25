@@ -1,1 +1,2 @@
-probe_utc=2026-07-25T08:32:00Z
+probe_utc=2026-07-25T08:38:00Z
+purpose=capture latest failed Coin V12 log
