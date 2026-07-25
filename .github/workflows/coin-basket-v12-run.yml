@@ -35,7 +35,15 @@ jobs:
 
       - name: Decode and validate engine
         run: |
-          base64 -d coin_research/v12/backtest.py.gz.b64 | gzip -d > coin_research/v12/backtest.py
+          python - <<'PY'
+          import base64, gzip
+          from pathlib import Path
+          source = Path('coin_research/v12/backtest.py.gz.b64')
+          target = Path('coin_research/v12/backtest.py')
+          payload = base64.b64decode(source.read_text(encoding='utf-8').strip(), validate=True)
+          target.write_bytes(gzip.decompress(payload))
+          print('decoded_bytes', target.stat().st_size)
+          PY
           python -m py_compile coin_research/v12/backtest.py
 
       - name: Run development tournament and locked test
