@@ -1,18 +1,18 @@
-backtest	Decode and validate engine	﻿2026-07-25T08:40:51.2326343Z ##[group]Run base64 -d coin_research/v12/backtest.py.gz.b64 | gzip -d > coin_research/v12/backtest.py
-backtest	Decode and validate engine	2026-07-25T08:40:51.2327502Z ^[[36;1mbase64 -d coin_research/v12/backtest.py.gz.b64 | gzip -d > coin_research/v12/backtest.py^[[0m
-backtest	Decode and validate engine	2026-07-25T08:40:51.2328029Z ^[[36;1mpython -m py_compile coin_research/v12/backtest.py^[[0m
-backtest	Decode and validate engine	2026-07-25T08:40:51.2375478Z shell: /usr/bin/bash -e {0}
-backtest	Decode and validate engine	2026-07-25T08:40:51.2375723Z env:
-backtest	Decode and validate engine	2026-07-25T08:40:51.2375988Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
-backtest	Decode and validate engine	2026-07-25T08:40:51.2376441Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
-backtest	Decode and validate engine	2026-07-25T08:40:51.2377171Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
-backtest	Decode and validate engine	2026-07-25T08:40:51.2377558Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
-backtest	Decode and validate engine	2026-07-25T08:40:51.2377940Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
-backtest	Decode and validate engine	2026-07-25T08:40:51.2378323Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
-backtest	Decode and validate engine	2026-07-25T08:40:51.2378682Z ##[endgroup]
-backtest	Decode and validate engine	2026-07-25T08:40:51.2467200Z base64: invalid input
-backtest	Decode and validate engine	2026-07-25T08:40:51.2469363Z 
-backtest	Decode and validate engine	2026-07-25T08:40:51.2469785Z gzip: stdin: invalid compressed data--crc error
-backtest	Decode and validate engine	2026-07-25T08:40:51.2470052Z 
-backtest	Decode and validate engine	2026-07-25T08:40:51.2470197Z gzip: stdin: invalid compressed data--length error
-backtest	Decode and validate engine	2026-07-25T08:40:51.2484158Z ##[error]Process completed with exit code 1.
+backtest	Decode and validate engine	﻿2026-07-25T08:43:51.0549212Z ##[group]Run base64 -d coin_research/v12/backtest.py.gz.b64 | gzip -d > coin_research/v12/backtest.py
+backtest	Decode and validate engine	2026-07-25T08:43:51.0550101Z ^[[36;1mbase64 -d coin_research/v12/backtest.py.gz.b64 | gzip -d > coin_research/v12/backtest.py^[[0m
+backtest	Decode and validate engine	2026-07-25T08:43:51.0550730Z ^[[36;1mpython -m py_compile coin_research/v12/backtest.py^[[0m
+backtest	Decode and validate engine	2026-07-25T08:43:51.0598348Z shell: /usr/bin/bash -e {0}
+backtest	Decode and validate engine	2026-07-25T08:43:51.0598689Z env:
+backtest	Decode and validate engine	2026-07-25T08:43:51.0599041Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Decode and validate engine	2026-07-25T08:43:51.0599654Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+backtest	Decode and validate engine	2026-07-25T08:43:51.0600255Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Decode and validate engine	2026-07-25T08:43:51.0600784Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Decode and validate engine	2026-07-25T08:43:51.0601318Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Decode and validate engine	2026-07-25T08:43:51.0601862Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+backtest	Decode and validate engine	2026-07-25T08:43:51.0602331Z ##[endgroup]
+backtest	Decode and validate engine	2026-07-25T08:43:51.0694804Z base64: invalid input
+backtest	Decode and validate engine	2026-07-25T08:43:51.0696568Z 
+backtest	Decode and validate engine	2026-07-25T08:43:51.0696905Z gzip: stdin: invalid compressed data--crc error
+backtest	Decode and validate engine	2026-07-25T08:43:51.0697603Z 
+backtest	Decode and validate engine	2026-07-25T08:43:51.0697931Z gzip: stdin: invalid compressed data--length error
+backtest	Decode and validate engine	2026-07-25T08:43:51.0716058Z ##[error]Process completed with exit code 1.
