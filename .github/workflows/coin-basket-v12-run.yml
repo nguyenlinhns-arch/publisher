@@ -39,14 +39,25 @@ jobs:
           python -m py_compile coin_research/v12/backtest.py
 
       - name: Run development tournament and locked test
+        id: backtest
+        continue-on-error: true
         run: |
+          mkdir -p coin_research/v12/status
           rm -rf coin_research/v12/results
-          python coin_research/v12/backtest.py --output coin_research/v12/results
+          set +e
+          python coin_research/v12/backtest.py --output coin_research/v12/results > coin_research/v12/status/backtest.log 2>&1
+          CODE=$?
+          echo "exit_code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "$CODE" > coin_research/v12/status/backtest_exit_code.txt
+          cat coin_research/v12/status/backtest.log
+          exit 0
 
       - name: Remove raw market cache
+        if: steps.backtest.outputs.exit_code == '0'
         run: rm -rf coin_research/v12/results/cache
 
       - name: Upload result package
+        if: steps.backtest.outputs.exit_code == '0'
         uses: actions/upload-artifact@v4
         with:
           name: COIN_V12_MULTI_ASSET_RESULTS
@@ -61,10 +72,14 @@ jobs:
             coin_research/v12/results/current_signals.csv
           retention-days: 90
 
-      - name: Commit results to isolated research branch
+      - name: Commit result or diagnostic log to research branch
         run: |
           git config user.name 'coin-research-bot'
           git config user.email 'coin-research-bot@users.noreply.github.com'
-          git add coin_research/v12/results coin_research/v12/backtest.py
-          git commit -m 'Add Coin V12 multi-asset backtest results [skip ci]' || exit 0
+          git add coin_research/v12/results coin_research/v12/status coin_research/v12/backtest.py || true
+          git commit -m 'Record Coin V12 backtest result or diagnostics [skip ci]' || exit 0
           git push origin HEAD:research/coin-basket-v12
+
+      - name: Mark workflow failed when engine failed
+        if: steps.backtest.outputs.exit_code != '0'
+        run: exit 1
