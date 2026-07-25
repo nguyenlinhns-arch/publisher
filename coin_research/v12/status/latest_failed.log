@@ -1,0 +1,27 @@
+backtest	Run development tournament and locked test	﻿2026-07-25T08:25:21.2401186Z ##[group]Run rm -rf coin_research/v12/results
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2401555Z ^[[36;1mrm -rf coin_research/v12/results^[[0m
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2401946Z ^[[36;1mpython coin_research/v12/backtest.py --output coin_research/v12/results^[[0m
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2428140Z shell: /usr/bin/bash -e {0}
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2428402Z env:
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2428662Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2429070Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2429460Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2429810Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2430163Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2430511Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+backtest	Run development tournament and locked test	2026-07-25T08:25:21.2430804Z ##[endgroup]
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.0531706Z download BTCUSDT
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3578089Z Traceback (most recent call last):
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3586714Z   File "/home/runner/work/publisher/publisher/coin_research/v12/backtest.py", line 227, in <module>
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3587871Z     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,default=Path('coin_research/v12/results'));a=p.parse_args();main(a.output)
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3588681Z                                                                                                                                 ^^^^^^^^^^^^^^
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3589356Z   File "/home/runner/work/publisher/publisher/coin_research/v12/backtest.py", line 179, in main
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3590142Z     else:print('download',sym,flush=True);d=getbars(sym,s);d.to_csv(bp,index=False,compression='gzip') if len(d) else None
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3590747Z                                             ^^^^^^^^^^^^^^
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3591292Z   File "/home/runner/work/publisher/publisher/coin_research/v12/backtest.py", line 20, in getbars
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3592619Z     x=s.get('https://fapi.binance.com/fapi/v1/klines',params={'symbol':sym,'interval':'1h','startTime':cur,'endTime':end-1,'limit':1500},timeout=30); x.raise_for_status(); b=x.json()
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3593536Z                                                                                                                                                       ^^^^^^^^^^^^^^^^^^^^
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3594339Z   File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/requests/models.py", line 1167, in raise_for_status
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3595017Z     raise HTTPError(http_error_msg, response=self)
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.3596004Z requests.exceptions.HTTPError: 451 Client Error:  for url: https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1h&startTime=1609459200000&endTime=1784937599999&limit=1500
+backtest	Run development tournament and locked test	2026-07-25T08:25:22.4105153Z ##[error]Process completed with exit code 1.
