@@ -1,16 +1,46 @@
 {
-  "probed_at_utc": "2026-07-25T08:31:52.097428+00:00",
+  "probed_at_utc": "2026-07-25T08:41:30.113215+00:00",
   "latest": {
     "conclusion": "failure",
-    "createdAt": "2026-07-25T08:24:59Z",
-    "databaseId": 30151060631,
-    "displayTitle": "Trigger Coin V12 multi-asset backtest",
-    "headSha": "d257e7728d802f0a162f72e2d39ef1118a6d8ec8",
+    "createdAt": "2026-07-25T08:40:25Z",
+    "databaseId": 30151516024,
+    "displayTitle": "Run Coin V12 from Binance Vision archives",
+    "headSha": "b4416e2614a7f6dcf12ed0601e152875e41dd83a",
     "status": "completed",
-    "updatedAt": "2026-07-25T08:25:24Z",
-    "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151060631"
+    "updatedAt": "2026-07-25T08:40:55Z",
+    "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151516024"
   },
   "runs": [
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-25T08:40:25Z",
+      "databaseId": 30151516024,
+      "displayTitle": "Run Coin V12 from Binance Vision archives",
+      "headSha": "b4416e2614a7f6dcf12ed0601e152875e41dd83a",
+      "status": "completed",
+      "updatedAt": "2026-07-25T08:40:55Z",
+      "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151516024"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-25T08:33:32Z",
+      "databaseId": 30151317129,
+      "displayTitle": "Rerun Coin V12 with persistent diagnostics",
+      "headSha": "c93f153f18473466e196a06510d03e2e55920960",
+      "status": "completed",
+      "updatedAt": "2026-07-25T08:33:58Z",
+      "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151317129"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-25T08:33:11Z",
+      "databaseId": 30151307294,
+      "displayTitle": "Persist Coin V12 diagnostic logs before failing workflow",
+      "headSha": "ad0f681c0909bc4eb6bf2409b0ec0335c6f546cb",
+      "status": "completed",
+      "updatedAt": "2026-07-25T08:33:36Z",
+      "url": "https://github.com/nguyenlinhns-arch/publisher/actions/runs/30151307294"
+    },
     {
       "conclusion": "failure",
       "createdAt": "2026-07-25T08:24:59Z",
