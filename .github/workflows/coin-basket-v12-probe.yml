@@ -1,0 +1,43 @@
+name: Coin Basket V12 Status Probe
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - coin_research/v12/probe_trigger.txt
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read Coin V12 workflow state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p coin_research/v12/status
+          gh run list --workflow "Coin Basket V12 Backtest Runner" --limit 10 --json databaseId,status,conclusion,createdAt,updatedAt,headSha,url,displayTitle > coin_research/v12/status/workflow_runs.json
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          rows=json.load(open('coin_research/v12/status/workflow_runs.json',encoding='utf-8'))
+          payload={'probed_at_utc':datetime.now(timezone.utc).isoformat(),'latest':rows[0] if rows else None,'runs':rows}
+          open('coin_research/v12/status/latest.json','w',encoding='utf-8').write(json.dumps(payload,indent=2))
+          print(json.dumps(payload,indent=2))
+          PY
+      - name: Commit probe result
+        run: |
+          git pull --rebase || true
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add coin_research/v12/status
+          git commit -m 'Update Coin V12 workflow probe [skip ci]' || true
+          git push || true
