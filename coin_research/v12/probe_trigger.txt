@@ -1,2 +1,2 @@
-probe_utc=2026-07-25T08:52:00Z
-purpose=check Binance Vision Coin V12 run
+probe_utc=2026-07-25T09:02:00Z
+purpose=check rerun after Binance Vision engine upload
