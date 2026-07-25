@@ -1,2 +1,2 @@
-probe_utc=2026-07-25T08:38:00Z
-purpose=capture latest failed Coin V12 log
+probe_utc=2026-07-25T08:52:00Z
+purpose=check Binance Vision Coin V12 run
