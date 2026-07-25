@@ -1,2 +1,2 @@
-trigger_utc=2026-07-25T08:50:00Z
-purpose=run Coin V12 from Binance Vision official static archives
+trigger_utc=2026-07-25T09:00:00Z
+purpose=rerun Coin V12 after archive engine upload
