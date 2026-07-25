@@ -27,14 +27,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
 
       - name: Install research dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy pandas requests matplotlib openpyxl
 
-      - name: Decode engine
+      - name: Decode and validate engine
         run: |
           base64 -d coin_research/v12/backtest.py.gz.b64 | gzip -d > coin_research/v12/backtest.py
           python -m py_compile coin_research/v12/backtest.py
@@ -46,14 +45,6 @@ jobs:
 
       - name: Remove raw cache before publishing
         run: rm -rf coin_research/v12/results/cache
-
-      - name: Commit reproducible results to research branch
-        run: |
-          git config user.name 'coin-research-bot'
-          git config user.email 'coin-research-bot@users.noreply.github.com'
-          git add coin_research/v12/results coin_research/v12/backtest.py
-          git commit -m 'Add Coin V12 multi-asset backtest results' || exit 0
-          git push origin research/coin-basket-v12
 
       - name: Upload result package
         uses: actions/upload-artifact@v4
@@ -69,3 +60,12 @@ jobs:
             coin_research/v12/results/test_trades.csv
             coin_research/v12/results/current_signals.csv
           retention-days: 90
+
+      - name: Commit reproducible results to research branch
+        continue-on-error: true
+        run: |
+          git config user.name 'coin-research-bot'
+          git config user.email 'coin-research-bot@users.noreply.github.com'
+          git add coin_research/v12/results coin_research/v12/backtest.py
+          git commit -m 'Add Coin V12 multi-asset backtest results' || exit 0
+          git push origin research/coin-basket-v12
