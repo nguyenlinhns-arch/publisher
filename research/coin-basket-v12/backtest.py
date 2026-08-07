@@ -12,16 +12,13 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 PARAGRAPHS = [
     "Năm 1929, khi Wall Street hoảng loạn, Jesse Livermore kiếm khoảng một trăm triệu đô la.",
-    "Trước đó, ông cũng từng thắng lớn trong khủng hoảng năm 1907. Ông hiểu xu hướng... và biết chờ đợi.",
-    "Nhưng vài năm sau, gần như tất cả lại biến mất.",
-    "Đó là phần tôi thấy đắt nhất trong Chết Vì Chứng Khoán: một người cực giỏi vẫn có thể thua... khi kỷ luật biến mất.",
-    "Nghe rất xa. Nhưng nhìn Việt Nam năm 2022. VN-Index từ một nghìn năm trăm ba mươi sáu điểm xuống còn tám trăm bảy mươi ba điểm; áp lực ký quỹ và bán giải chấp xuất hiện dày đặc.",
-    "Bối cảnh khác... bài học lại rất giống nhau.",
-    "Chờ giá xác nhận.",
-    "Chỉ gia tăng khi vị thế đang thắng.",
-    "Và quyết định mức lỗ trước khi bấm mua.",
-    "Tôi không đọc cuốn này để học cách thắng một cú sập. Tôi đọc để nhớ rằng thị trường không cần mình đúng... mình cần sống sót đủ lâu.",
-    "Nếu bạn muốn hiểu tâm lý và kỷ luật giao dịch, đây là cuốn đáng đọc. Link tiếp thị ở bio hoặc bình luận ghim.",
+    "Trước đó, ông cũng từng thắng lớn trong khủng hoảng năm 1907. Ông hiểu xu hướng, biết chờ đợi.",
+    "Nhưng rồi gần như tất cả lại biến mất.",
+    "Đó là phần đắt nhất trong Chết Vì Chứng Khoán: giỏi vẫn có thể thua khi kỷ luật biến mất.",
+    "Nhìn Việt Nam năm 2022. VN-Index từ một nghìn năm trăm ba mươi sáu điểm xuống tám trăm bảy mươi ba điểm; call margin, bán giải chấp xuất hiện dày đặc.",
+    "Bối cảnh khác, bài học giống nhau: chờ giá xác nhận; chỉ gia tăng khi vị thế đang thắng; xác định mức lỗ trước khi mua.",
+    "Tôi đọc cuốn này không để học cách thắng một cú sập, mà để nhớ rằng thị trường không cần mình đúng; mình cần sống sót đủ lâu.",
+    "Nếu muốn hiểu tâm lý và kỷ luật giao dịch, đây là cuốn đáng đọc.",
 ]
 TEXT = "\n\n".join(PARAGRAPHS)
 
@@ -37,16 +34,6 @@ def duration(path: Path) -> float:
         "-of", "default=noprint_wrappers=1:nokey=1", str(path)
     ], text=True)
     return float(out.strip())
-
-
-def atempo_chain(x: float) -> str:
-    parts=[]
-    while x > 2.0:
-        parts.append(2.0); x /= 2.0
-    while x < 0.5:
-        parts.append(0.5); x /= 0.5
-    parts.append(x)
-    return ",".join(f"atempo={p:.6f}" for p in parts)
 
 
 def make_chunk(text: str, idx: int) -> Path:
@@ -80,15 +67,12 @@ def main():
     concat.write_text("".join(f"file '{p.as_posix()}'\n" for p in chunks), encoding="utf-8")
     raw = OUT / "NamMinh_raw_full.mp3"
     run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat), "-c:a", "libmp3lame", "-b:a", "192k", str(raw)])
+    print("RAW_DURATION", duration(raw), flush=True)
 
-    raw_dur = duration(raw)
-    print("RAW_DURATION", raw_dur, flush=True)
-    # Target the 54.23s storytelling video while keeping natural pauses at the end.
-    target = 53.2
-    tempo = max(0.90, min(1.12, raw_dur / target))
+    # Preserve the requested TTS delivery: Nam Minh, rate -4%, pitch -8Hz.
+    # Only tonal/dynamics processing is applied after synthesis.
     af = (
-        atempo_chain(tempo)
-        + ",highpass=f=70"
+        "highpass=f=70"
         + ",lowpass=f=11500"
         + ",equalizer=f=130:t=q:w=1:g=2.4"
         + ",equalizer=f=280:t=q:w=1.2:g=-0.8"
