@@ -1,1 +1,1 @@
-Bản đồ từ khóa nội bộ của dự án. Không liên kết từ giao diện website.
+<!-- internal project note; not linked -->
