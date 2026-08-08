@@ -2,32 +2,58 @@
 
 Website: https://hoclaixequangninh.vn/
 Ngôn ngữ: vi-VN
-Chủ đề chính: thông tin và tư vấn tuyển sinh học lái xe tại Quảng Ninh.
+Chủ đề chính: thông tin và tư vấn tuyển sinh, cẩm nang học và sát hạch lái xe tại Quảng Ninh.
 
 ## Vai trò của website
 hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt động đào tạo, học và sát hạch được thực hiện theo chương trình, kế hoạch và quy định của Trường Cao đẳng Than - Khoáng sản Việt Nam và cơ quan có thẩm quyền.
 
-## Nội dung chính
+## Trang chuyển đổi chính
 - Trang chủ: https://hoclaixequangninh.vn/
-- Đăng ký tư vấn: https://hoclaixequangninh.vn/dang-ky-hoc-lai-xe-quang-ninh.html
+- Đăng ký: https://hoclaixequangninh.vn/dang-ky-hoc-lai-xe-quang-ninh.html
 - Hạng B: https://hoclaixequangninh.vn/hoc-bang-b-quang-ninh.html
 - Hạng C1: https://hoclaixequangninh.vn/hoc-c1-quang-ninh.html
 - Hạng A1: https://hoclaixequangninh.vn/hoc-a1-quang-ninh.html
-- Lịch sát hạch: https://hoclaixequangninh.vn/lich-sat-hach/
-- Học phí, thời gian học, DAT: https://hoclaixequangninh.vn/quy-dinh-hoc-phi-thoi-gian-dat.html
+- Học phí, thời gian, DAT: https://hoclaixequangninh.vn/quy-dinh-hoc-phi-thoi-gian-dat.html
 - Hồ sơ: https://hoclaixequangninh.vn/ho-so-hoc-lai-xe-quang-ninh.html
+- Lịch sát hạch: https://hoclaixequangninh.vn/lich-sat-hach/
+
+## Cẩm nang theo hành trình người học
+- Cẩm nang tổng: https://hoclaixequangninh.vn/hoc-ly-thuyet.html
+- Học lái xe cần chuẩn bị gì: https://hoclaixequangninh.vn/hoc-lai-xe-can-chuan-bi-gi.html
+- B số tự động hay B số cơ khí: https://hoclaixequangninh.vn/b-so-tu-dong-hay-b-so-co-khi.html
+- C1 phù hợp với ai: https://hoclaixequangninh.vn/hoc-c1-phu-hop-voi-ai.html
+- Buổi học lái xe đầu tiên: https://hoclaixequangninh.vn/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
+- Chỉnh ghế, gương, vô-lăng: https://hoclaixequangninh.vn/cach-chinh-ghe-guong-vo-lang-khi-hoc-lai-xe.html
+- Phối hợp côn, ga, phanh: https://hoclaixequangninh.vn/cach-phoi-hop-con-ga-phanh-cho-nguoi-moi.html
+- Học xe số tự động cho người mới: https://hoclaixequangninh.vn/cach-lai-xe-so-tu-dong-cho-nguoi-moi.html
+- Lỗi thường gặp khi học sa hình: https://hoclaixequangninh.vn/loi-thuong-gap-khi-hoc-sa-hinh.html
+- Kế hoạch ôn sát hạch 7 ngày: https://hoclaixequangninh.vn/ke-hoach-on-thi-sat-hach-7-ngay.html
+- Mẹo học 600 câu: https://hoclaixequangninh.vn/meo-hoc-600-cau-ly-thuyet-lai-xe.html
+- Mẹo nhớ biển báo: https://hoclaixequangninh.vn/meo-nho-bien-bao-giao-thong.html
+- Mẹo căn bánh xe: https://hoclaixequangninh.vn/meo-can-banh-xe-sa-hinh.html
+- Mẹo ghép xe dọc: https://hoclaixequangninh.vn/meo-ghep-xe-doc.html
+- Mẹo ghép xe ngang: https://hoclaixequangninh.vn/meo-ghep-xe-ngang.html
+- Mẹo ngang dốc: https://hoclaixequangninh.vn/meo-dung-khoi-hanh-ngang-doc.html
+- Mẹo thực hành hạng B: https://hoclaixequangninh.vn/meo-hoc-thuc-hanh-lai-xe-b.html
+- Mẹo trước ngày thi: https://hoclaixequangninh.vn/meo-truoc-ngay-thi-sat-hach.html
+
+## Khu vực
 - Quang Hanh/Cẩm Phả: https://hoclaixequangninh.vn/trung-tam-quang-hanh.html
 - Uông Bí: https://hoclaixequangninh.vn/hoc-lai-xe-uong-bi.html
 - Móng Cái: https://hoclaixequangninh.vn/hoc-lai-xe-mong-cai.html
+- Hạ Long: https://hoclaixequangninh.vn/hoc-lai-xe-ha-long.html
+
+## Liên hệ và minh bạch
 - Liên hệ: https://hoclaixequangninh.vn/lien-he.html
 - Chính sách bảo mật: https://hoclaixequangninh.vn/chinh-sach-bao-mat.html
-- Điều khoản sử dụng: https://hoclaixequangninh.vn/dieu-khoan-su-dung.html
+- Điều khoản: https://hoclaixequangninh.vn/dieu-khoan-su-dung.html
+- Điện thoại/Zalo: 0398696879
 
-## Khu vực
-Quang Hanh/Cẩm Phả, Uông Bí, Móng Cái, Hạ Long và các khu vực khác tại Quảng Ninh.
-
-## Liên hệ
-Điện thoại/Zalo: 0398696879
+## Thông tin học phí đang hiển thị
+- B số tự động: 20.900.000đ; thời gian học 42 ngày.
+- B số cơ khí: 20.900.000đ; thời gian học 46 ngày.
+- C1: 25.500.000đ; thời gian học 72 ngày.
+Thông tin cần được xác nhận lại tại thời điểm nộp hồ sơ nếu có thông báo điều chỉnh mới.
 
 ## Nguyên tắc nội dung
-Thông tin học phí, lệ phí, lịch học, DAT và lịch sát hạch có thể thay đổi theo thông báo chính thức đang áp dụng. Người học cần xác nhận thông tin mới nhất trước khi đăng ký hoặc thanh toán. Website không cam kết đỗ, không quảng bá bao đậu và không cam kết cấp bằng chắc chắn.
+Website ưu tiên nội dung nguyên bản, dễ đọc, theo nhu cầu thực tế của người muốn học và người đang học. Không cam kết đỗ, không quảng bá bao đậu, không cam kết cấp bằng chắc chắn. Mẹo thực hành chỉ hỗ trợ hiểu nguyên tắc; thao tác cụ thể cần theo giáo viên và đúng xe đang học.
