@@ -1,7 +1,7 @@
 name: Deploy hoclaixequangninh.vn
 on:
   push:
-    branches: [hoclaixequangninh]
+    branches: [gh-pages]
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,12 +20,10 @@ jobs:
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
+      - name: Checkout gh-pages site
         uses: actions/checkout@v6
-      - name: Enable and configure Pages
+      - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Upload site
         uses: actions/upload-pages-artifact@v4
         with:
@@ -54,9 +52,5 @@ jobs:
             const body = `Result: ${result}\nURL: ${url}\nCommit: ${context.sha}\nRun: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const {data: issues} = await github.rest.issues.listForRepo({owner: context.repo.owner, repo: context.repo.repo, state: 'all', per_page: 100});
             const found = issues.find(i => i.title === title);
-            if (found) {
-              await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: found.number, body, state: 'closed'});
-            } else {
-              const created = await github.rest.issues.create({owner: context.repo.owner, repo: context.repo.repo, title, body});
-              await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: created.data.number, state: 'closed'});
-            }
+            if (found) await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: found.number, body, state: 'closed'});
+            else { const created = await github.rest.issues.create({owner: context.repo.owner, repo: context.repo.repo, title, body}); await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: created.data.number, state: 'closed'}); }
