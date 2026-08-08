@@ -2,9 +2,14 @@
 
 Website: https://hoclaixequangninh.vn/
 Ngôn ngữ: vi-VN
-Chủ đề chính: thông tin tuyển sinh, đào tạo và sát hạch lái xe tại Quảng Ninh liên quan Trường Cao đẳng Than - Khoáng sản Việt Nam.
+Chủ đề chính: thông tin và tư vấn tuyển sinh học lái xe tại Quảng Ninh.
+
+## Vai trò của website
+hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt động đào tạo, học và sát hạch được thực hiện theo chương trình, kế hoạch và quy định của Trường Cao đẳng Than - Khoáng sản Việt Nam và cơ quan có thẩm quyền.
 
 ## Nội dung chính
+- Trang chủ: https://hoclaixequangninh.vn/
+- Đăng ký tư vấn: https://hoclaixequangninh.vn/dang-ky-hoc-lai-xe-quang-ninh.html
 - Hạng B: https://hoclaixequangninh.vn/hoc-bang-b-quang-ninh.html
 - Hạng C1: https://hoclaixequangninh.vn/hoc-c1-quang-ninh.html
 - Hạng A1: https://hoclaixequangninh.vn/hoc-a1-quang-ninh.html
@@ -14,11 +19,15 @@ Chủ đề chính: thông tin tuyển sinh, đào tạo và sát hạch lái xe
 - Quang Hanh/Cẩm Phả: https://hoclaixequangninh.vn/trung-tam-quang-hanh.html
 - Uông Bí: https://hoclaixequangninh.vn/hoc-lai-xe-uong-bi.html
 - Móng Cái: https://hoclaixequangninh.vn/hoc-lai-xe-mong-cai.html
-- Giới thiệu: https://hoclaixequangninh.vn/gioi-thieu.html
+- Liên hệ: https://hoclaixequangninh.vn/lien-he.html
 - Chính sách bảo mật: https://hoclaixequangninh.vn/chinh-sach-bao-mat.html
+- Điều khoản sử dụng: https://hoclaixequangninh.vn/dieu-khoan-su-dung.html
+
+## Khu vực
+Quang Hanh/Cẩm Phả, Uông Bí, Móng Cái, Hạ Long và các khu vực khác tại Quảng Ninh.
 
 ## Liên hệ
 Điện thoại/Zalo: 0398696879
 
-## Lưu ý
-Thông tin học phí, lệ phí, lịch học và lịch sát hạch cần đối chiếu theo thông báo chính thức đang áp dụng của cơ sở đào tạo hoặc cơ quan có thẩm quyền. Website không quảng bá cam kết đỗ, bao đậu hoặc cấp bằng chắc chắn.
+## Nguyên tắc nội dung
+Thông tin học phí, lệ phí, lịch học, DAT và lịch sát hạch có thể thay đổi theo thông báo chính thức đang áp dụng. Người học cần xác nhận thông tin mới nhất trước khi đăng ký hoặc thanh toán. Website không cam kết đỗ, không quảng bá bao đậu và không cam kết cấp bằng chắc chắn.
