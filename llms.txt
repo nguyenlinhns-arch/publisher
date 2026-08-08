@@ -11,8 +11,13 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt đ�
 - Trang chủ: https://hoclaixequangninh.vn/
 - Đăng ký: https://hoclaixequangninh.vn/dang-ky-hoc-lai-xe-quang-ninh.html
 - Hạng B: https://hoclaixequangninh.vn/hoc-bang-b-quang-ninh.html
+- B số tự động: https://hoclaixequangninh.vn/hoc-lai-xe-so-tu-dong-quang-ninh.html
+- B số cơ khí: https://hoclaixequangninh.vn/hoc-lai-xe-so-co-khi-quang-ninh.html
 - Hạng C1: https://hoclaixequangninh.vn/hoc-c1-quang-ninh.html
 - Hạng A1: https://hoclaixequangninh.vn/hoc-a1-quang-ninh.html
+- Học phí: https://hoclaixequangninh.vn/hoc-phi-hoc-lai-xe-quang-ninh.html
+- Thời gian học: https://hoclaixequangninh.vn/hoc-lai-xe-quang-ninh-bao-lau.html
+- Quy định B và C1: https://hoclaixequangninh.vn/quy-dinh-hang-b-c1-2026.html
 - Học phí, thời gian, DAT: https://hoclaixequangninh.vn/quy-dinh-hoc-phi-thoi-gian-dat.html
 - Hồ sơ: https://hoclaixequangninh.vn/ho-so-hoc-lai-xe-quang-ninh.html
 - Lịch sát hạch: https://hoclaixequangninh.vn/lich-sat-hach/
@@ -22,8 +27,13 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt đ�
 - Học lái xe cần chuẩn bị gì: https://hoclaixequangninh.vn/hoc-lai-xe-can-chuan-bi-gi.html
 - B số tự động hay B số cơ khí: https://hoclaixequangninh.vn/b-so-tu-dong-hay-b-so-co-khi.html
 - C1 phù hợp với ai: https://hoclaixequangninh.vn/hoc-c1-phu-hop-voi-ai.html
+- DAT là gì: https://hoclaixequangninh.vn/dat-hoc-lai-xe-la-gi.html
 - Buổi học lái xe đầu tiên: https://hoclaixequangninh.vn/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
 - Chỉnh ghế, gương, vô-lăng: https://hoclaixequangninh.vn/cach-chinh-ghe-guong-vo-lang-khi-hoc-lai-xe.html
+- Quan sát gương: https://hoclaixequangninh.vn/cach-quan-sat-guong-khi-hoc-lai-xe.html
+- Giữ làn: https://hoclaixequangninh.vn/cach-giu-lan-khi-hoc-lai-xe.html
+- Đánh vô-lăng: https://hoclaixequangninh.vn/cach-danh-vo-lang-khi-hoc-lai-xe.html
+- Lùi xe cho người mới: https://hoclaixequangninh.vn/cach-lui-xe-cho-nguoi-moi.html
 - Phối hợp côn, ga, phanh: https://hoclaixequangninh.vn/cach-phoi-hop-con-ga-phanh-cho-nguoi-moi.html
 - Học xe số tự động cho người mới: https://hoclaixequangninh.vn/cach-lai-xe-so-tu-dong-cho-nguoi-moi.html
 - Lỗi thường gặp khi học sa hình: https://hoclaixequangninh.vn/loi-thuong-gap-khi-hoc-sa-hinh.html
@@ -54,6 +64,11 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt đ�
 - B số cơ khí: 20.900.000đ; thời gian học 46 ngày.
 - C1: 25.500.000đ; thời gian học 72 ngày.
 Thông tin cần được xác nhận lại tại thời điểm nộp hồ sơ nếu có thông báo điều chỉnh mới.
+
+## Quy định chính đang giải thích
+- Hạng B và C1 có thời hạn 10 năm theo quy định hiện hành.
+- Người được cấp hạng B số tự động không được lái ô tô số cơ khí.
+- Hạng C1 mở rộng phạm vi xe tải trên 3,5 tấn đến 7,5 tấn và bao gồm phạm vi xe hạng B.
 
 ## Nguyên tắc nội dung
 Website ưu tiên nội dung nguyên bản, dễ đọc, theo nhu cầu thực tế của người muốn học và người đang học. Không cam kết đỗ, không quảng bá bao đậu, không cam kết cấp bằng chắc chắn. Mẹo thực hành chỉ hỗ trợ hiểu nguyên tắc; thao tác cụ thể cần theo giáo viên và đúng xe đang học.
