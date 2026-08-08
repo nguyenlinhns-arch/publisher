@@ -24,7 +24,11 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt đ�
 
 ## Cẩm nang theo hành trình người học
 - Cẩm nang tổng: https://hoclaixequangninh.vn/hoc-ly-thuyet.html
+- Học lái xe gần tôi / nên học ở đâu: https://hoclaixequangninh.vn/hoc-lai-xe-gan-toi-quang-ninh.html
+- Học lái xe cho người đi làm: https://hoclaixequangninh.vn/hoc-lai-xe-cho-nguoi-di-lam.html
+- Kinh nghiệm học lái xe lần đầu: https://hoclaixequangninh.vn/kinh-nghiem-hoc-lai-xe-lan-dau.html
 - Học lái xe cần chuẩn bị gì: https://hoclaixequangninh.vn/hoc-lai-xe-can-chuan-bi-gi.html
+- Học xong bao lâu thì thi: https://hoclaixequangninh.vn/hoc-lai-xe-bao-lau-thi.html
 - B số tự động hay B số cơ khí: https://hoclaixequangninh.vn/b-so-tu-dong-hay-b-so-co-khi.html
 - C1 phù hợp với ai: https://hoclaixequangninh.vn/hoc-c1-phu-hop-voi-ai.html
 - DAT là gì: https://hoclaixequangninh.vn/dat-hoc-lai-xe-la-gi.html
@@ -36,7 +40,9 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt đ�
 - Lùi xe cho người mới: https://hoclaixequangninh.vn/cach-lui-xe-cho-nguoi-moi.html
 - Phối hợp côn, ga, phanh: https://hoclaixequangninh.vn/cach-phoi-hop-con-ga-phanh-cho-nguoi-moi.html
 - Học xe số tự động cho người mới: https://hoclaixequangninh.vn/cach-lai-xe-so-tu-dong-cho-nguoi-moi.html
+- Mẹo lái xe đường trường: https://hoclaixequangninh.vn/meo-lai-xe-duong-truong-cho-nguoi-moi.html
 - Lỗi thường gặp khi học sa hình: https://hoclaixequangninh.vn/loi-thuong-gap-khi-hoc-sa-hinh.html
+- Lỗi dễ mất điểm khi thi sa hình: https://hoclaixequangninh.vn/loi-de-mat-diem-khi-thi-sa-hinh.html
 - Kế hoạch ôn sát hạch 7 ngày: https://hoclaixequangninh.vn/ke-hoach-on-thi-sat-hach-7-ngay.html
 - Mẹo học 600 câu: https://hoclaixequangninh.vn/meo-hoc-600-cau-ly-thuyet-lai-xe.html
 - Mẹo nhớ biển báo: https://hoclaixequangninh.vn/meo-nho-bien-bao-giao-thong.html
@@ -64,11 +70,6 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt đ�
 - B số cơ khí: 20.900.000đ; thời gian học 46 ngày.
 - C1: 25.500.000đ; thời gian học 72 ngày.
 Thông tin cần được xác nhận lại tại thời điểm nộp hồ sơ nếu có thông báo điều chỉnh mới.
-
-## Quy định chính đang giải thích
-- Hạng B và C1 có thời hạn 10 năm theo quy định hiện hành.
-- Người được cấp hạng B số tự động không được lái ô tô số cơ khí.
-- Hạng C1 mở rộng phạm vi xe tải trên 3,5 tấn đến 7,5 tấn và bao gồm phạm vi xe hạng B.
 
 ## Nguyên tắc nội dung
 Website ưu tiên nội dung nguyên bản, dễ đọc, theo nhu cầu thực tế của người muốn học và người đang học. Không cam kết đỗ, không quảng bá bao đậu, không cam kết cấp bằng chắc chắn. Mẹo thực hành chỉ hỗ trợ hiểu nguyên tắc; thao tác cụ thể cần theo giáo viên và đúng xe đang học.
