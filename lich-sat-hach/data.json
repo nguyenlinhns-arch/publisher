@@ -1,0 +1,17 @@
+{
+  "last_checked": "2026-08-08T10:55:00+07:00",
+  "update_frequency": "weekly",
+  "verified_schedules": [],
+  "centers": [
+    {"id":"quang-hanh","name":"Quang Hanh · Cẩm Phả","status":"updating","message":"Chưa có lịch sát hạch mới được công khai và xác minh trong lần rà gần nhất."},
+    {"id":"uong-bi","name":"Uông Bí","status":"updating","message":"Chưa có lịch sát hạch mới được công khai và xác minh trong lần rà gần nhất."},
+    {"id":"mong-cai","name":"Móng Cái","status":"updating","message":"Chưa có lịch sát hạch mới được công khai và xác minh trong lần rà gần nhất."}
+  ],
+  "official_sources": [
+    {"name":"Trường Cao đẳng Than - Khoáng sản Việt Nam","domain":"caodangtkv.edu.vn"},
+    {"name":"Cổng thông tin tỉnh Quảng Ninh","domain":"quangninh.gov.vn"},
+    {"name":"Sở Xây dựng Quảng Ninh","domain":"quangninh.gov.vn"},
+    {"name":"Công an/CSGT Quảng Ninh","domain":"quangninh.gov.vn"},
+    {"name":"Cục Đường bộ Việt Nam","domain":"drvn.gov.vn"}
+  ]
+}
