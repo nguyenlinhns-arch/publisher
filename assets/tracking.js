@@ -1,19 +1,17 @@
 (function(){
   'use strict';
-  const CONFIG={
+  const CONFIG=Object.assign({
     FORM_ENDPOINT:'',
     GA4_MEASUREMENT_ID:'',
     GOOGLE_ADS_ID:'',
     GOOGLE_ADS_CONVERSION_LABEL:''
-  };
+  },window.HLX_CONFIG||{});
   const STORAGE_KEY='hlxqn_attribution_v1';
   const ATTR_KEYS=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid'];
 
   function safeStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
   function safeRead(k){try{return localStorage.getItem(k)}catch(e){return null}}
-  function uuid(){
-    try{return crypto.randomUUID()}catch(e){return 'lead-'+Date.now()+'-'+Math.random().toString(36).slice(2,10)}
-  }
+  function uuid(){try{return crypto.randomUUID()}catch(e){return 'lead-'+Date.now()+'-'+Math.random().toString(36).slice(2,10)}}
   function readAttribution(){
     let stored={};
     try{stored=JSON.parse(safeRead(STORAGE_KEY)||'{}')||{}}catch(e){}
@@ -28,7 +26,7 @@
     }
     return stored;
   }
-  const attribution=readAttribution();
+  readAttribution();
 
   window.dataLayer=window.dataLayer||[];
   function gtag(){window.dataLayer.push(arguments)}
@@ -50,9 +48,7 @@
   function event(name,params){
     params=params||{};
     window.dataLayer.push(Object.assign({event:name},params));
-    if(CONFIG.GA4_MEASUREMENT_ID||CONFIG.GOOGLE_ADS_ID){
-      try{gtag('event',name,params)}catch(e){}
-    }
+    if(CONFIG.GA4_MEASUREMENT_ID||CONFIG.GOOGLE_ADS_ID){try{gtag('event',name,params)}catch(e){}}
   }
 
   function vnPhoneToE164(phone){
@@ -90,7 +86,6 @@
       utm_campaign:payload.utm_campaign||'',
       gclid_present:payload.gclid?'yes':'no'
     });
-
     if(!CONFIG.FORM_ENDPOINT){
       safeStore('hlxqn_pending_lead',JSON.stringify(payload));
       return {dispatched:false,payload:payload};
