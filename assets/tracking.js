@@ -68,11 +68,20 @@
     return p?('+'+p):'';
   }
 
+  function classifySource(a,fallback){
+    const src=String(a.utm_source||'').toLowerCase();
+    const med=String(a.utm_medium||'').toLowerCase();
+    if(src==='google'&&(med==='cpc'||med==='ppc'||med==='paidsearch'))return 'Google Ads';
+    if(src)return a.utm_source;
+    if(a.gclid||a.gbraid||a.wbraid)return 'Google Ads';
+    return fallback||'Website';
+  }
+
   function buildLead(data){
     const a=readAttribution();
     return Object.assign({},data,{
       lead_id:data.lead_id||uuid(),
-      source:data.source||a.utm_source||'Website',
+      source:classifySource(a,data.source),
       landing_page:location.href,
       utm_source:a.utm_source||'',utm_medium:a.utm_medium||'',utm_campaign:a.utm_campaign||'',
       utm_term:a.utm_term||'',utm_content:a.utm_content||'',
@@ -83,8 +92,8 @@
 
   async function submitLead(data){
     const payload=buildLead(data);
-    event('form_submit',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||''});
-    event('generate_lead_intent',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||''});
+    event('form_submit',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||'',lead_source:payload.source});
+    event('generate_lead_intent',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||'',lead_source:payload.source});
     if(!CONFIG.FORM_ENDPOINT){
       safeStore('hlxqn_pending_lead',JSON.stringify(payload));
       return {dispatched:false,payload:payload};
@@ -99,7 +108,7 @@
         if(phone)gtag('set','user_data',{phone_number:phone});
         gtag('event','conversion',{send_to:CONFIG.GOOGLE_ADS_ID+'/'+CONFIG.GOOGLE_ADS_CONVERSION_LABEL});
       }
-      event('generate_lead',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||''});
+      event('generate_lead',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||'',lead_source:payload.source});
       try{localStorage.removeItem('hlxqn_pending_lead')}catch(e){}
       return {dispatched:true,payload:payload};
     }catch(err){
@@ -124,14 +133,8 @@
     const a=e.target.closest&&e.target.closest('a');
     if(!a)return;
     const href=a.getAttribute('href')||'';
-    if(href.indexOf('tel:')===0){
-      event('phone_click',{link_url:href});
-      event('click_call',{link_url:href});
-    }
-    if(href.indexOf('zalo.me/')!==-1){
-      event('zalo_click',{link_url:href});
-      event('click_zalo',{link_url:href});
-    }
+    if(href.indexOf('tel:')===0){event('phone_click',{link_url:href});event('click_call',{link_url:href})}
+    if(href.indexOf('zalo.me/')!==-1){event('zalo_click',{link_url:href});event('click_zalo',{link_url:href})}
   },true);
 
   if(document.readyState==='loading'){
