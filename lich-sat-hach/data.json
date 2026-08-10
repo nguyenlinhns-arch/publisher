@@ -1,17 +1,60 @@
 {
-  "last_checked": "2026-08-08T10:55:00+07:00",
+  "last_checked": "2026-08-10T08:55:48+07:00",
   "update_frequency": "weekly",
   "verified_schedules": [],
   "centers": [
-    {"id":"quang-hanh","name":"Quang Hanh · Cẩm Phả","status":"updating","message":"Chưa có lịch sát hạch mới được công khai và xác minh trong lần rà gần nhất."},
-    {"id":"uong-bi","name":"Uông Bí","status":"updating","message":"Chưa có lịch sát hạch mới được công khai và xác minh trong lần rà gần nhất."},
-    {"id":"mong-cai","name":"Móng Cái","status":"updating","message":"Chưa có lịch sát hạch mới được công khai và xác minh trong lần rà gần nhất."}
+    {
+      "id": "quang-hanh",
+      "name": "Quang Hanh · Cẩm Phả",
+      "status": "updating",
+      "last_checked": "2026-08-10T08:55:48+07:00",
+      "message": "Chưa có lịch sát hạch mới tại Quang Hanh được nguồn chính thức công khai và xác minh trong lần rà ngày 10/08/2026."
+    },
+    {
+      "id": "uong-bi",
+      "name": "Uông Bí",
+      "status": "updating",
+      "last_checked": "2026-08-10T08:55:48+07:00",
+      "message": "Chưa có lịch sát hạch mới tại Uông Bí được nguồn chính thức công khai và xác minh trong lần rà ngày 10/08/2026."
+    },
+    {
+      "id": "mong-cai",
+      "name": "Móng Cái",
+      "status": "updating",
+      "last_checked": "2026-08-10T08:55:48+07:00",
+      "message": "Chưa có lịch sát hạch mới tại Móng Cái được nguồn chính thức công khai và xác minh trong lần rà ngày 10/08/2026."
+    }
   ],
   "official_sources": [
-    {"name":"Trường Cao đẳng Than - Khoáng sản Việt Nam","domain":"caodangtkv.edu.vn"},
-    {"name":"Cổng thông tin tỉnh Quảng Ninh","domain":"quangninh.gov.vn"},
-    {"name":"Sở Xây dựng Quảng Ninh","domain":"quangninh.gov.vn"},
-    {"name":"Công an/CSGT Quảng Ninh","domain":"quangninh.gov.vn"},
-    {"name":"Cục Đường bộ Việt Nam","domain":"drvn.gov.vn"}
+    {
+      "name": "Trường Cao đẳng Than - Khoáng sản Việt Nam",
+      "domain": "caodangtkv.edu.vn",
+      "last_checked": "2026-08-10T08:55:48+07:00",
+      "result": "Không tìm thấy thông báo lịch sát hạch mới đủ điều kiện xác minh cho Quang Hanh, Uông Bí hoặc Móng Cái."
+    },
+    {
+      "name": "Cổng thông tin tỉnh Quảng Ninh",
+      "domain": "quangninh.gov.vn",
+      "last_checked": "2026-08-10T08:55:48+07:00",
+      "result": "Không tìm thấy thông báo lịch sát hạch mới đủ điều kiện xác minh cho ba cơ sở theo dõi."
+    },
+    {
+      "name": "Sở Xây dựng Quảng Ninh",
+      "domain": "quangninh.gov.vn/So/soxaydung",
+      "last_checked": "2026-08-10T08:55:48+07:00",
+      "result": "Không có lịch sát hạch mới được công khai cho Quang Hanh, Uông Bí hoặc Móng Cái trong lần rà này."
+    },
+    {
+      "name": "Công an/CSGT Quảng Ninh",
+      "domain": "quangninh.gov.vn/bannganh/ttpvhcc",
+      "last_checked": "2026-08-10T08:55:48+07:00",
+      "result": "Không tìm thấy thông báo lịch sát hạch mới trong tuần 10-16/08/2026 cho ba cơ sở theo dõi."
+    },
+    {
+      "name": "Cục Đường bộ Việt Nam",
+      "domain": "drvn.gov.vn",
+      "last_checked": "2026-08-10T08:55:48+07:00",
+      "result": "Không tìm thấy lịch sát hạch mới tại Quảng Ninh cho ba cơ sở theo dõi."
+    }
   ]
 }
