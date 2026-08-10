@@ -1,5 +1,5 @@
 window.HLX_CONFIG={
-  FORM_ENDPOINT:'',
+  FORM_ENDPOINT:'https://script.google.com/macros/s/AKfycbw0QjEWzZf-NXI7ykt2851kePOGJN5w10O7SMt3JMr7dPK5g7Vp2l4ABLnSO1vpFeqS/exec',
   GA4_MEASUREMENT_ID:'',
   GOOGLE_ADS_ID:'',
   GOOGLE_ADS_CONVERSION_LABEL:'',
