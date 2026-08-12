@@ -124,9 +124,26 @@
     return fallback||'Website';
   }
 
+  function normalizeLicense(value){
+    const raw=String(value||'').trim();
+    if(/^B(?:\s|$)/i.test(raw))return 'B';
+    if(/^C1(?:\s|$)/i.test(raw))return 'C1';
+    if(/^D2(?:\s|$)/i.test(raw))return 'D2';
+    if(/^D(?:\s|$)/i.test(raw))return 'D';
+    if(/^C(?:\s|$)/i.test(raw))return 'C';
+    if(/^A1(?:\s|$)/i.test(raw))return 'A1';
+    return 'Cần tư vấn';
+  }
+
   function buildLead(data){
     const a=readAttribution();
+    const requestedLicense=String(data.license||'').trim();
+    const normalizedLicense=normalizeLicense(requestedLicense);
+    const noteParts=[String(data.note||'').trim()];
+    if(requestedLicense&&requestedLicense!==normalizedLicense)noteParts.push('Lựa chọn hạng: '+requestedLicense);
     return Object.assign({},data,{
+      license:normalizedLicense,
+      note:noteParts.filter(Boolean).join(' | '),
       lead_id:data.lead_id||uuid(),
       source:classifySource(a,data.source),
       landing_page:location.href,
