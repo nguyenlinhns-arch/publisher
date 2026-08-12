@@ -115,9 +115,7 @@
     try{
       await fetch(CONFIG.FORM_ENDPOINT,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload)});
       if(CONFIG.GOOGLE_ADS_ID&&CONFIG.GOOGLE_ADS_CONVERSION_LABEL){
-        const phone=vnPhoneToE164(payload.phone);
-        if(phone)gtag('set','user_data',{phone_number:phone});
-        fireAdsConversion(CONFIG.GOOGLE_ADS_CONVERSION_LABEL,{value:1.0,currency:'VND'});
+        fireAdsConversion(CONFIG.GOOGLE_ADS_CONVERSION_LABEL,{value:1.0,currency:'VND',transaction_id:payload.lead_id});
       }
       event('generate_lead',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||'',lead_source:payload.source});
       return {dispatched:true,payload};
