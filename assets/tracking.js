@@ -76,6 +76,38 @@
     }catch(e){return false}
   }
 
+  function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+
+  function jsonp(params,timeoutMs){
+    return new Promise((resolve,reject)=>{
+      const callback='__hlxAck'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+      const script=document.createElement('script');
+      const timer=setTimeout(()=>finish(new Error('ACK_TIMEOUT')),timeoutMs||2500);
+      function finish(error,value){
+        clearTimeout(timer);
+        try{delete window[callback]}catch(_){window[callback]=undefined}
+        if(script.parentNode)script.parentNode.removeChild(script);
+        if(error)reject(error);else resolve(value);
+      }
+      window[callback]=value=>finish(null,value);
+      script.onerror=()=>finish(new Error('ACK_NETWORK_ERROR'));
+      const query=new URLSearchParams(Object.assign({},params,{callback,t:String(Date.now())}));
+      script.src=CONFIG.FORM_ENDPOINT+(CONFIG.FORM_ENDPOINT.indexOf('?')===-1?'?':'&')+query.toString();
+      document.head.appendChild(script);
+    });
+  }
+
+  async function confirmLead(leadId){
+    for(let attempt=0;attempt<12;attempt++){
+      if(attempt)await delay(550);
+      try{
+        const ack=await jsonp({mode:'status',lead_id:leadId},2200);
+        if(ack&&ack.ok&&ack.saved)return ack;
+      }catch(_){}
+    }
+    return null;
+  }
+
   function vnPhoneToE164(phone){
     const p=String(phone||'').replace(/\D/g,'');
     if(/^0\d{9,10}$/.test(p))return '+84'+p.slice(1);
@@ -114,11 +146,16 @@
     }
     try{
       await fetch(CONFIG.FORM_ENDPOINT,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload)});
-      if(CONFIG.GOOGLE_ADS_ID&&CONFIG.GOOGLE_ADS_CONVERSION_LABEL){
+      const ack=await confirmLead(payload.lead_id);
+      if(!ack){
+        event('lead_submit_unconfirmed',{lead_id:payload.lead_id});
+        return {dispatched:false,confirmed:false,pending:true,payload};
+      }
+      if(!ack.duplicate&&CONFIG.GOOGLE_ADS_ID&&CONFIG.GOOGLE_ADS_CONVERSION_LABEL){
         fireAdsConversion(CONFIG.GOOGLE_ADS_CONVERSION_LABEL,{value:1.0,currency:'VND',transaction_id:payload.lead_id});
       }
-      event('generate_lead',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||'',lead_source:payload.source});
-      return {dispatched:true,payload};
+      event(ack.duplicate?'lead_duplicate':'generate_lead',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||'',lead_source:payload.source,row:ack.row||'',email_notified:ack.email_notified});
+      return {dispatched:true,confirmed:true,duplicate:!!ack.duplicate,ack,payload};
     }catch(err){
       event('lead_submit_error',{lead_id:payload.lead_id});
       return {dispatched:false,payload,error:err};
@@ -134,6 +171,25 @@
       safeStore(key,'1');
       event('form_start',{form_id:form.id||'',page_path:location.pathname});
     },true);
+  }
+
+  function ensureConversionCtas(){
+    if(!document.querySelector('.sticky-mobile')){
+      const nav=document.createElement('nav');
+      nav.className='sticky-mobile';
+      nav.setAttribute('aria-label','Liên hệ nhanh');
+      nav.innerHTML='<a href="tel:0398696879">☎ Gọi</a><a class="zalo" href="https://zalo.me/0398696879">Zalo</a><a href="/dang-ky-hoc-lai-xe-quang-ninh.html#dang-ky">Đăng ký</a>';
+      document.body.appendChild(nav);
+    }
+    if(!document.querySelector('main a[href^="tel:"], main a[href*="zalo.me/"]')){
+      const main=document.querySelector('main');
+      if(!main)return;
+      const section=document.createElement('section');
+      section.className='site-conversion-cta';
+      section.setAttribute('aria-label','Tư vấn học lái xe');
+      section.innerHTML='<div><strong>Cần tư vấn hạng học phù hợp?</strong><span>Gọi hoặc nhắn Zalo 0398696879. Không thu phí tư vấn.</span></div><div><a href="tel:0398696879">Gọi ngay</a><a class="zalo" href="https://zalo.me/0398696879">Nhắn Zalo</a><a href="/dang-ky-hoc-lai-xe-quang-ninh.html#dang-ky">Đăng ký</a></div>';
+      main.appendChild(section);
+    }
   }
 
   document.addEventListener('click',function(e){
@@ -155,8 +211,9 @@
   function init(){
     event('view_content',{page_path:location.pathname,page_title:document.title});
     registerFormStart();
+    ensureConversionCtas();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 
-  window.LaiXeTracking={config:CONFIG,event,getAttribution:readAttribution,buildLead,submitLead,fireAdsConversion};
+  window.LaiXeTracking={config:CONFIG,event,getAttribution:readAttribution,buildLead,submitLead,confirmLead,fireAdsConversion};
 })();

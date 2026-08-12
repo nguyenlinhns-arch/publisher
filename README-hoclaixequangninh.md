@@ -3,10 +3,11 @@
 Website tuyển sinh lái xe Quảng Ninh, tập trung thông tin đào tạo và sát hạch của Trường Cao đẳng Than - Khoáng sản Việt Nam.
 
 ## Nhánh triển khai
-- Branch: `hoclaixequangninh`
+- Branch: `gh-pages` (nguồn GitHub Pages đang phục vụ production)
 - Domain: `hoclaixequangninh.vn`
 - Trang chính: `index.html`
 - SEO: `robots.txt`, `sitemap.xml`, canonical, schema.org
+- Lead: website → Apps Script → Google Sheet/email → xác nhận lưu thành công → Google Ads conversion
 
 ## Cấu trúc hiện tại
 - Trang chủ
