@@ -43,7 +43,7 @@ for (const file of files) {
   if (!html.includes('application/ld+json') && !utility.has(file)) errors.push(`${file}: thiếu schema`);
   if (!html.includes('BreadcrumbList') && !utility.has(file)) errors.push(`${file}: thiếu BreadcrumbList`);
   if (!html.includes('assets/mobile-v2.css') && !utility.has(file)) errors.push(`${file}: thiếu CSS mobile`);
-  if (!html.includes('assets/lead-intake.js')) errors.push(`${file}: thiếu tracking/CTA dùng chung`);
+  if (!html.includes('assets/site-runtime.js')) errors.push(`${file}: thiếu tracking/CTA dùng chung`);
   if (/nguyenlinhns-arch\.github\.io\/publisher/i.test(html)) errors.push(`${file}: còn URL GitHub Pages cũ`);
 
   const wordCount = text(html).split(/\s+/).filter(Boolean).length;
@@ -71,11 +71,12 @@ for (const url of sitemapUrls) {
   if (!fs.existsSync(path.join(root, target))) errors.push(`sitemap: URL không có tệp ${url}`);
 }
 
-const lead = fs.readFileSync(path.join(root, 'assets/lead-intake.js'), 'utf8');
+const lead = fs.readFileSync(path.join(root, 'assets/site-runtime.js'), 'utf8');
 const ackIndex = lead.indexOf('const ack=await confirmLead');
 const conversionIndex = lead.indexOf("fireAdsConversion(CONFIG.GOOGLE_ADS_CONVERSION_LABEL");
-if (ackIndex < 0 || conversionIndex < ackIndex) errors.push('lead-intake: conversion chưa được khóa sau xác nhận Sheet');
-if (!lead.includes("event('lead_submit_unconfirmed'")) errors.push('lead-intake: thiếu nhánh không xác nhận được');
+if (ackIndex < 0 || conversionIndex < ackIndex) errors.push('site-runtime: conversion chưa được khóa sau xác nhận Sheet');
+if (!lead.includes("event('lead_submit_unconfirmed'")) errors.push('site-runtime: thiếu nhánh không xác nhận được');
+if (!lead.includes('function normalizeLicense')) errors.push('site-runtime: thiếu chuẩn hóa hạng bằng cho Google Sheet');
 
 console.log(JSON.stringify({pages: files.length, sitemapUrls: sitemapUrls.length, errors, warnings}, null, 2));
 if (errors.length) process.exit(1);
