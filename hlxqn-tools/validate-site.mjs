@@ -63,7 +63,9 @@ for (const file of files) {
 
 const sitemap = fs.readFileSync(path.join(root, 'sitemap.xml'), 'utf8');
 const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-if (sitemapUrls.length !== 60) errors.push(`sitemap: cần 60 URL, hiện có ${sitemapUrls.length}`);
+const excludedFromSitemap = new Set(['404.html', 'huong-dan-hoc-lai-xe.html', 'lich-sat-hach-lai-xe.html']);
+const expectedSitemapUrls = files.filter(file => !excludedFromSitemap.has(file)).length + 1; // + lich-sat-hach/index.html
+if (sitemapUrls.length !== expectedSitemapUrls) errors.push(`sitemap: cần ${expectedSitemapUrls} URL, hiện có ${sitemapUrls.length}`);
 if (new Set(sitemapUrls).size !== sitemapUrls.length) errors.push('sitemap: có URL trùng');
 for (const url of sitemapUrls) {
   const relative = url.replace(`${domain}/`, '');
