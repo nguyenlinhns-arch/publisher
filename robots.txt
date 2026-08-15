@@ -1,3 +1,30 @@
 User-agent: *
 Allow: /
+
+# Chỉ dành ngân sách crawl cho website học lái xe, không cho các thư mục mã nguồn
+# và nghiên cứu khác cùng tồn tại trên nhánh GitHub Pages.
+Disallow: /.github/
+Disallow: /bin/
+Disallow: /coin-v7/
+Disallow: /coin-v8/
+Disallow: /coin-v9/
+Disallow: /coin_research/
+Disallow: /docs/
+Disallow: /editor_tests/
+Disallow: /hlxqn-tools/
+Disallow: /scripts/
+Disallow: /src/
+Disallow: /tests/
+
+# Tệp phát triển/đóng gói ở thư mục gốc không phải nội dung tìm kiếm.
+Disallow: /README.md
+Disallow: /README-hoclaixequangninh.md
+Disallow: /RELEASE_NOTES_
+Disallow: /THIRD_PARTY_NOTICES.md
+Disallow: /config.example.toml
+Disallow: /pyproject.toml
+Disallow: /requirements.txt
+Disallow: /requirements-dev.txt
+Disallow: /seo-keywords.md
+
 Sitemap: https://hoclaixequangninh.vn/sitemap.xml
