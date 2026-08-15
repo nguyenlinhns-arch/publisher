@@ -51,6 +51,39 @@
       node.nodeValue=text;
     });
   }
+  function upgradeHomepageForm(){
+    if(!document.querySelector('.institutional-home'))return;
+    const old=document.getElementById('quickForm');
+    if(!old||old.dataset.officialCapture==='1')return;
+    const form=old.cloneNode(true);
+    form.dataset.officialCapture='1';
+    old.replaceWith(form);
+    const name=form.querySelector('#name'),phone=form.querySelector('#phone'),license=form.querySelector('#license'),area=form.querySelector('#area'),status=form.querySelector('#formStatus'),btn=form.querySelector('button[type="submit"]');
+    if(!name||!phone||!license||!area||!status||!btn)return;
+    const success=document.createElement('div');
+    success.className='success-box';
+    success.innerHTML='<strong>Đăng ký đã được ghi nhận.</strong><p>Bạn không cần gửi lại thông tin. Nếu muốn trao đổi ngay, có thể nhắn Zalo.</p><a href="'+ZALO+'">Nhắn Zalo ngay</a>';
+    form.appendChild(success);
+    form.addEventListener('submit',async function(e){
+      e.preventDefault();
+      const ph=phone.value.replace(/\D/g,'');
+      if(name.value.trim().length<2){name.focus();return}
+      if(!/^[0-9]{9,11}$/.test(ph)){phone.setCustomValidity('Nhập số điện thoại 9–11 chữ số');phone.reportValidity();return}
+      phone.setCustomValidity('');btn.disabled=true;status.textContent='Đang ghi nhận đăng ký...';success.classList.remove('show');
+      let result={dispatched:false};
+      if(window.LaiXeTracking&&typeof window.LaiXeTracking.submitLead==='function'){
+        result=await window.LaiXeTracking.submitLead({name:name.value.trim(),phone:ph,license:license.value,area:area.value,consent:true,source:'Website',note:'Form trang chủ'});
+      }
+      btn.disabled=false;
+      if(result.confirmed){
+        status.textContent=result.duplicate?'Thông tin này đã được ghi nhận trước đó.':'Đã ghi nhận đăng ký thành công.';
+        success.classList.add('show');
+        form.querySelectorAll('input,select').forEach(function(el){if(el.id!=='consent')el.disabled=true});
+        btn.style.display='none';
+      }else if(result.pending){status.textContent='Yêu cầu đã được gửi và đang chờ xác nhận. Nếu cần trao đổi ngay, vui lòng gọi hoặc nhắn Zalo.'}
+      else{status.textContent='Chưa ghi nhận được tự động. Vui lòng gọi 0398696879 hoặc nhắn Zalo để được hỗ trợ.'}
+    });
+  }
   function init(){
     const old=document.querySelector('.simple-header,.header,.official-header');
     if(old && !old.classList.contains('official-header')){
@@ -58,6 +91,7 @@
     }else if(!old){const h=document.createElement('header');h.className='official-header';h.innerHTML=headerHtml();document.body.insertBefore(h,document.body.firstChild)}
     if(!document.querySelector('.official-footer'))document.body.insertAdjacentHTML('beforeend',footerHtml());
     polishNarrative();
+    setTimeout(upgradeHomepageForm,0);
     document.addEventListener('click',function(e){
       const open=document.querySelectorAll('.official-nav details[open],.official-mobile-menu[open]');
       open.forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open')});
