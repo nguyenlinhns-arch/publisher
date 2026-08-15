@@ -2,6 +2,7 @@
   'use strict';
   const PHONE='0398696879';
   const ZALO='https://zalo.me/'+PHONE;
+
   function headerHtml(){
     return '<div class="official-topbar"><div class="official-wrap"><div class="topbar-left">Tuyển sinh & hỗ trợ học viên học lái xe tại Quảng Ninh</div><div class="topbar-right">Tư vấn: <a href="tel:'+PHONE+'">'+PHONE+'</a> · <a href="'+ZALO+'">Zalo</a></div></div></div>'+
     '<div class="official-wrap official-head-main">'+
@@ -14,9 +15,10 @@
         '<a href="/hoc-ly-thuyet.html">Cẩm nang</a><a href="/tin-tuc.html">Tin tức</a><a href="/lien-he.html">Liên hệ</a>'+
       '</nav>'+
       '<a class="official-head-cta" href="/dang-ky-hoc-lai-xe-quang-ninh.html#dang-ky">Đăng ký học</a>'+
-      '<details class="official-mobile-menu"><summary>☰ Menu</summary><div class="official-mobile-panel"><a href="/">Trang chủ</a><a href="/gioi-thieu.html">Giới thiệu</a><a href="/hoc-lai-xe-so-tu-dong-quang-ninh.html">B số tự động</a><a href="/hoc-lai-xe-so-co-khi-quang-ninh.html">B số cơ khí</a><a href="/hoc-c1-quang-ninh.html">Hạng C1</a><a href="/hoc-phi-hoc-lai-xe-quang-ninh.html">Học phí</a><a href="/ho-so-hoc-lai-xe-quang-ninh.html">Hồ sơ</a><a href="/lich-sat-hach/">Lịch sát hạch</a><a href="/hoc-ly-thuyet.html">Cẩm nang</a><a href="/tin-tuc.html">Tin tức</a><a href="/lien-he.html">Liên hệ</a><a href="/dang-ky-hoc-lai-xe-quang-ninh.html#dang-ky">Đăng ký học</a></div></details>'+
+      '<details class="official-mobile-menu"><summary>☰ Menu</summary><div class="official-mobile-panel"><a href="/">Trang chủ</a><a href="/gioi-thieu.html">Giới thiệu</a><a href="/hoc-lai-xe-so-tu-dong-quang-ninh.html">B số tự động</a><a href="/hoc-lai-xe-so-co-khi-quang-ninh.html">B số cơ khí</a><a href="/hoc-c1-quang-ninh.html">Hạng C1</a><a href="/hoc-a1-quang-ninh.html">Hạng A1</a><a href="/hoc-phi-hoc-lai-xe-quang-ninh.html">Học phí</a><a href="/ho-so-hoc-lai-xe-quang-ninh.html">Hồ sơ</a><a href="/lich-sat-hach/">Lịch sát hạch</a><a href="/hoc-ly-thuyet.html">Cẩm nang</a><a href="/tin-tuc.html">Tin tức</a><a href="/lien-he.html">Liên hệ</a><a href="/dang-ky-hoc-lai-xe-quang-ninh.html#dang-ky">Đăng ký học</a></div></details>'+
     '</div>';
   }
+
   function footerHtml(){
     return '<footer class="official-footer">'+
       '<div class="official-wrap official-footer-main">'+
@@ -28,6 +30,7 @@
       '<div class="official-footer-bottom"><div class="official-wrap"><div class="official-disclaimer">hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh, không phải cổng thông tin của cơ quan quản lý nhà nước. Thông tin học phí, lịch học và sát hạch được cập nhật theo thông báo áp dụng của đơn vị đào tạo/cơ quan có thẩm quyền.</div><div>© hoclaixequangninh.vn</div></div></div>'+
     '</footer>';
   }
+
   function polishNarrative(){
     const replacements=[
       ['Website tổ chức nội dung theo từng khu vực để người học dễ tìm địa điểm, chương trình và thông tin liên quan.','Chọn khu vực thuận tiện để xem địa điểm học, chương trình và thông tin phù hợp.'],
@@ -41,16 +44,20 @@
       ['Website không thu phí tư vấn hoặc phí môi giới.','Tư vấn không thu phí hoặc phí môi giới.'],
       ['Xem thêm thông tin các khu vực Hạ Long, Uông Bí và Móng Cái trên website.','Thông tin Hạ Long, Uông Bí và Móng Cái được cập nhật theo từng khu vực.'],
       ['Website tổng hợp và trình bày theo từng nhu cầu:','Thông tin được trình bày theo từng nhu cầu:'],
-      ['Website có thể lưu UTM/GCLID khi truy cập từ quảng cáo để đo hiệu quả.','Hệ thống có thể lưu UTM/GCLID khi truy cập từ quảng cáo để đo hiệu quả.']
+      ['Website có thể lưu UTM/GCLID khi truy cập từ quảng cáo để đo hiệu quả.','Hệ thống có thể lưu UTM/GCLID khi truy cập từ quảng cáo để đo hiệu quả.'],
+      ['Thông tin có thể xem ngay trên website','Thông tin nên xem trước khi quyết định'],
+      ['Website tuyển sinh','Tuyển sinh học lái xe']
     ];
     const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
-    const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+    const nodes=[];
+    while(walker.nextNode())nodes.push(walker.currentNode);
     nodes.forEach(function(node){
       let text=node.nodeValue;
       replacements.forEach(function(pair){if(text.indexOf(pair[0])!==-1)text=text.split(pair[0]).join(pair[1])});
       node.nodeValue=text;
     });
   }
+
   function upgradeHomepageForm(){
     if(!document.querySelector('.institutional-home'))return;
     const old=document.getElementById('quickForm');
@@ -69,7 +76,10 @@
       const ph=phone.value.replace(/\D/g,'');
       if(name.value.trim().length<2){name.focus();return}
       if(!/^[0-9]{9,11}$/.test(ph)){phone.setCustomValidity('Nhập số điện thoại 9–11 chữ số');phone.reportValidity();return}
-      phone.setCustomValidity('');btn.disabled=true;status.textContent='Đang ghi nhận đăng ký...';success.classList.remove('show');
+      phone.setCustomValidity('');
+      btn.disabled=true;
+      status.textContent='Đang ghi nhận đăng ký...';
+      success.classList.remove('show');
       let result={dispatched:false};
       if(window.LaiXeTracking&&typeof window.LaiXeTracking.submitLead==='function'){
         result=await window.LaiXeTracking.submitLead({name:name.value.trim(),phone:ph,license:license.value,area:area.value,consent:true,source:'Website',note:'Form trang chủ'});
@@ -80,16 +90,47 @@
         success.classList.add('show');
         form.querySelectorAll('input,select').forEach(function(el){if(el.id!=='consent')el.disabled=true});
         btn.style.display='none';
-      }else if(result.pending){status.textContent='Yêu cầu đã được gửi và đang chờ xác nhận. Nếu cần trao đổi ngay, vui lòng gọi hoặc nhắn Zalo.'}
-      else{status.textContent='Chưa ghi nhận được tự động. Vui lòng gọi 0398696879 hoặc nhắn Zalo để được hỗ trợ.'}
+      }else if(result.pending){
+        status.textContent='Yêu cầu đã được gửi và đang chờ xác nhận. Nếu cần trao đổi ngay, vui lòng gọi hoặc nhắn Zalo.';
+      }else{
+        status.textContent='Chưa ghi nhận được tự động. Vui lòng gọi 0398696879 hoặc nhắn Zalo để được hỗ trợ.';
+      }
     });
   }
+
+  function installHeader(){
+    const current=document.querySelector('.official-header');
+    if(current)return;
+    const legacy=document.querySelector('.simple-header,.header,body > header');
+    const h=document.createElement('header');
+    h.className='official-header';
+    h.innerHTML=headerHtml();
+    if(legacy)legacy.replaceWith(h);
+    else document.body.insertBefore(h,document.body.firstChild);
+  }
+
+  function installFooter(){
+    const current=document.querySelector('.official-footer');
+    if(current)return;
+    const holder=document.createElement('div');
+    holder.innerHTML=footerHtml();
+    const footer=holder.firstElementChild;
+    const legacy=document.querySelector('body > footer,.simple-footer,.footer');
+    if(legacy)legacy.replaceWith(footer);
+    else document.body.appendChild(footer);
+  }
+
+  function removeLegacyMobileBars(){
+    document.querySelectorAll('nav.mobile').forEach(function(nav){
+      if(nav.classList.contains('sticky-mobile'))return;
+      nav.remove();
+    });
+  }
+
   function init(){
-    const old=document.querySelector('.simple-header,.header,.official-header');
-    if(old && !old.classList.contains('official-header')){
-      const h=document.createElement('header');h.className='official-header';h.innerHTML=headerHtml();old.replaceWith(h);
-    }else if(!old){const h=document.createElement('header');h.className='official-header';h.innerHTML=headerHtml();document.body.insertBefore(h,document.body.firstChild)}
-    if(!document.querySelector('.official-footer'))document.body.insertAdjacentHTML('beforeend',footerHtml());
+    installHeader();
+    installFooter();
+    removeLegacyMobileBars();
     polishNarrative();
     setTimeout(upgradeHomepageForm,0);
     document.addEventListener('click',function(e){
@@ -97,5 +138,6 @@
       open.forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open')});
     });
   }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
