@@ -7,6 +7,15 @@ window.HLX_CONFIG={
   GOOGLE_ADS_ZALO_CONVERSION_LABEL:'A5g8CM7OuOAcEKn0tog-'
 };
 (function(){
+  // Favicon ổn định cho nhận diện trình duyệt và Search appearance.
+  if(!document.querySelector('link[rel~="icon"]')){
+    var icon=document.createElement('link');
+    icon.rel='icon';
+    icon.type='image/svg+xml';
+    icon.href='/favicon.svg';
+    document.head.appendChild(icon);
+  }
+
   // Các trang chuẩn đã nạp mobile-v2.css tĩnh trong <head>; không tải trùng CSS.
   // Một số trang đặc thù/legacy có stylesheet riêng: chỉ bổ sung design system khi thiếu.
   var links=Array.prototype.slice.call(document.querySelectorAll('link[rel="stylesheet"]'));
