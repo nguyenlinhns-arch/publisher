@@ -67,6 +67,14 @@
     old.replaceWith(form);
     const name=form.querySelector('#name'),phone=form.querySelector('#phone'),license=form.querySelector('#license'),area=form.querySelector('#area'),status=form.querySelector('#formStatus'),btn=form.querySelector('button[type="submit"]');
     if(!name||!phone||!license||!area||!status||!btn)return;
+
+    document.querySelectorAll('[data-license]').forEach(function(link){
+      link.addEventListener('click',function(){
+        const selected=link.getAttribute('data-license');
+        if(selected)license.value=selected;
+      });
+    });
+
     const success=document.createElement('div');
     success.className='success-box';
     success.innerHTML='<strong>Đăng ký đã được ghi nhận.</strong><p>Bạn không cần gửi lại thông tin. Nếu muốn trao đổi ngay, có thể nhắn Zalo.</p><a href="'+ZALO+'">Nhắn Zalo ngay</a>';
