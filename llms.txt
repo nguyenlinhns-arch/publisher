@@ -1,75 +1,87 @@
 # Học Lái Xe Quảng Ninh
 
-Website: https://hoclaixequangninh.vn/
+URL chính: https://hoclaixequangninh.vn/
 Ngôn ngữ: vi-VN
-Chủ đề chính: thông tin và tư vấn tuyển sinh, cẩm nang học và sát hạch lái xe tại Quảng Ninh.
+Cập nhật nội dung trọng tâm: 2026-08-15
+Chủ đề: tuyển sinh, khóa học, học phí, hồ sơ, DAT, khu vực học, cẩm nang và sát hạch lái xe tại Quảng Ninh.
 
-## Vai trò của website
-hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Hoạt động đào tạo, học và sát hạch được thực hiện theo chương trình, kế hoạch và quy định của Trường Cao đẳng Than - Khoáng sản Việt Nam và cơ quan có thẩm quyền.
+## Vai trò
+hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Đây không phải cổng thông tin của cơ quan quản lý nhà nước. Hoạt động đào tạo và sát hạch thực hiện theo chương trình của cơ sở đào tạo và quy định của cơ quan có thẩm quyền.
 
-## Trang chuyển đổi chính
+## Thông tin liên hệ
+- Điện thoại/Zalo: 0398696879
+- Không thu phí tư vấn hoặc phí môi giới.
+- Form đăng ký không yêu cầu thanh toán.
+
+## Trang tuyển sinh chính
 - Trang chủ: https://hoclaixequangninh.vn/
 - Đăng ký: https://hoclaixequangninh.vn/dang-ky-hoc-lai-xe-quang-ninh.html
-- Hạng B: https://hoclaixequangninh.vn/hoc-bang-b-quang-ninh.html
+- Chọn hạng B: https://hoclaixequangninh.vn/hoc-bang-b-quang-ninh.html
 - B số tự động: https://hoclaixequangninh.vn/hoc-lai-xe-so-tu-dong-quang-ninh.html
 - B số cơ khí: https://hoclaixequangninh.vn/hoc-lai-xe-so-co-khi-quang-ninh.html
 - Hạng C1: https://hoclaixequangninh.vn/hoc-c1-quang-ninh.html
 - Hạng A1: https://hoclaixequangninh.vn/hoc-a1-quang-ninh.html
 - Học phí: https://hoclaixequangninh.vn/hoc-phi-hoc-lai-xe-quang-ninh.html
-- Thời gian học: https://hoclaixequangninh.vn/hoc-lai-xe-quang-ninh-bao-lau.html
-- Quy định B và C1: https://hoclaixequangninh.vn/quy-dinh-hang-b-c1-2026.html
-- Học phí, thời gian, DAT: https://hoclaixequangninh.vn/quy-dinh-hoc-phi-thoi-gian-dat.html
 - Hồ sơ: https://hoclaixequangninh.vn/ho-so-hoc-lai-xe-quang-ninh.html
+- DAT: https://hoclaixequangninh.vn/dat-hoc-lai-xe-la-gi.html
+- Thời gian học: https://hoclaixequangninh.vn/hoc-lai-xe-quang-ninh-bao-lau.html
+- B và C1: https://hoclaixequangninh.vn/quy-dinh-hang-b-c1-2026.html
 - Lịch sát hạch: https://hoclaixequangninh.vn/lich-sat-hach/
-
-## Cẩm nang theo hành trình người học
-- Cẩm nang tổng: https://hoclaixequangninh.vn/hoc-ly-thuyet.html
-- Học lái xe gần tôi / nên học ở đâu: https://hoclaixequangninh.vn/hoc-lai-xe-gan-toi-quang-ninh.html
-- Học lái xe cho người đi làm: https://hoclaixequangninh.vn/hoc-lai-xe-cho-nguoi-di-lam.html
-- Kinh nghiệm học lái xe lần đầu: https://hoclaixequangninh.vn/kinh-nghiem-hoc-lai-xe-lan-dau.html
-- Học lái xe cần chuẩn bị gì: https://hoclaixequangninh.vn/hoc-lai-xe-can-chuan-bi-gi.html
-- Học xong bao lâu thì thi: https://hoclaixequangninh.vn/hoc-lai-xe-bao-lau-thi.html
-- B số tự động hay B số cơ khí: https://hoclaixequangninh.vn/b-so-tu-dong-hay-b-so-co-khi.html
-- C1 phù hợp với ai: https://hoclaixequangninh.vn/hoc-c1-phu-hop-voi-ai.html
-- DAT là gì: https://hoclaixequangninh.vn/dat-hoc-lai-xe-la-gi.html
-- Buổi học lái xe đầu tiên: https://hoclaixequangninh.vn/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
-- Chỉnh ghế, gương, vô-lăng: https://hoclaixequangninh.vn/cach-chinh-ghe-guong-vo-lang-khi-hoc-lai-xe.html
-- Quan sát gương: https://hoclaixequangninh.vn/cach-quan-sat-guong-khi-hoc-lai-xe.html
-- Giữ làn: https://hoclaixequangninh.vn/cach-giu-lan-khi-hoc-lai-xe.html
-- Đánh vô-lăng: https://hoclaixequangninh.vn/cach-danh-vo-lang-khi-hoc-lai-xe.html
-- Lùi xe cho người mới: https://hoclaixequangninh.vn/cach-lui-xe-cho-nguoi-moi.html
-- Phối hợp côn, ga, phanh: https://hoclaixequangninh.vn/cach-phoi-hop-con-ga-phanh-cho-nguoi-moi.html
-- Học xe số tự động cho người mới: https://hoclaixequangninh.vn/cach-lai-xe-so-tu-dong-cho-nguoi-moi.html
-- Mẹo lái xe đường trường: https://hoclaixequangninh.vn/meo-lai-xe-duong-truong-cho-nguoi-moi.html
-- Lỗi thường gặp khi học sa hình: https://hoclaixequangninh.vn/loi-thuong-gap-khi-hoc-sa-hinh.html
-- Lỗi dễ mất điểm khi thi sa hình: https://hoclaixequangninh.vn/loi-de-mat-diem-khi-thi-sa-hinh.html
-- Kế hoạch ôn sát hạch 7 ngày: https://hoclaixequangninh.vn/ke-hoach-on-thi-sat-hach-7-ngay.html
-- Mẹo học 600 câu: https://hoclaixequangninh.vn/meo-hoc-600-cau-ly-thuyet-lai-xe.html
-- Mẹo nhớ biển báo: https://hoclaixequangninh.vn/meo-nho-bien-bao-giao-thong.html
-- Mẹo căn bánh xe: https://hoclaixequangninh.vn/meo-can-banh-xe-sa-hinh.html
-- Mẹo ghép xe dọc: https://hoclaixequangninh.vn/meo-ghep-xe-doc.html
-- Mẹo ghép xe ngang: https://hoclaixequangninh.vn/meo-ghep-xe-ngang.html
-- Mẹo ngang dốc: https://hoclaixequangninh.vn/meo-dung-khoi-hanh-ngang-doc.html
-- Mẹo thực hành hạng B: https://hoclaixequangninh.vn/meo-hoc-thuc-hanh-lai-xe-b.html
-- Mẹo trước ngày thi: https://hoclaixequangninh.vn/meo-truoc-ngay-thi-sat-hach.html
+- Tin đào tạo & sát hạch: https://hoclaixequangninh.vn/tin-tuc.html
 
 ## Khu vực
-- Quang Hanh/Cẩm Phả: https://hoclaixequangninh.vn/trung-tam-quang-hanh.html
+- Chọn khu vực học: https://hoclaixequangninh.vn/hoc-lai-xe-gan-toi-quang-ninh.html
+- Quang Hanh/Cẩm Phả: https://hoclaixequangninh.vn/hoc-lai-xe-cam-pha.html
+- Trung tâm Quang Hanh: https://hoclaixequangninh.vn/trung-tam-quang-hanh.html
+- Hạ Long: https://hoclaixequangninh.vn/hoc-lai-xe-ha-long.html
 - Uông Bí: https://hoclaixequangninh.vn/hoc-lai-xe-uong-bi.html
 - Móng Cái: https://hoclaixequangninh.vn/hoc-lai-xe-mong-cai.html
-- Hạ Long: https://hoclaixequangninh.vn/hoc-lai-xe-ha-long.html
 
-## Liên hệ và minh bạch
-- Liên hệ: https://hoclaixequangninh.vn/lien-he.html
-- Chính sách bảo mật: https://hoclaixequangninh.vn/chinh-sach-bao-mat.html
-- Điều khoản: https://hoclaixequangninh.vn/dieu-khoan-su-dung.html
-- Điện thoại/Zalo: 0398696879
+## Học phí và thời gian đang thông tin
+Các mức dưới đây là thông tin tuyển sinh đang hiển thị và cần được xác nhận lại nếu có thông báo mới tại thời điểm nộp hồ sơ.
+- B số tự động: 20.900.000đ; thời gian dự kiến 42 ngày.
+- B số cơ khí: 20.900.000đ; thời gian dự kiến 46 ngày.
+- C1: 25.500.000đ; thời gian dự kiến 72 ngày.
 
-## Thông tin học phí đang hiển thị
-- B số tự động: 20.900.000đ; thời gian học 42 ngày.
-- B số cơ khí: 20.900.000đ; thời gian học 46 ngày.
-- C1: 25.500.000đ; thời gian học 72 ngày.
-Thông tin cần được xác nhận lại tại thời điểm nộp hồ sơ nếu có thông báo điều chỉnh mới.
+## Phạm vi giấy phép cần lưu ý
+- A1: mô tô hai bánh có dung tích xi-lanh đến 125 cm³ hoặc động cơ điện có công suất đến 11 kW.
+- Hạng B: ô tô chở người đến 8 chỗ không kể chỗ người lái; ô tô tải và ô tô chuyên dùng có khối lượng toàn bộ theo thiết kế đến 3.500 kg.
+- Người có giấy phép hạng B số tự động không được lái ô tô số cơ khí.
+- C1: ô tô tải và ô tô chuyên dùng có khối lượng toàn bộ theo thiết kế trên 3.500 kg đến 7.500 kg; đồng thời bao gồm các loại xe thuộc phạm vi hạng B.
+
+## Cơ sở đào tạo được đề cập
+Trường Cao đẳng Than - Khoáng sản Việt Nam được Sở Xây dựng Quảng Ninh công bố giấy phép đào tạo lái xe ô tô số 326/SXD-QLVTPT&NL ngày 25/6/2025, gồm B số tự động, B số cơ khí, C1, C, D2 và D; lưu lượng đào tạo không vượt quá 5.000 học viên.
+
+Nguồn: https://www.quangninh.gov.vn/So/soxaydung/Trang/ChiTietTinTuc.aspx?nid=4879
+
+## Trung tâm Quang Hanh
+Cổng thông tin Quảng Ninh ghi nhận Trung tâm đào tạo, sát hạch lái xe tại Quang Hanh được nâng cấp gần 15 tỷ đồng trong năm 2024, gồm phòng học, mô phỏng, sân sát hạch, phương tiện và hệ thống nhận diện phục vụ sát hạch. Tại thời điểm bài viết công bố có 20 xe sát hạch.
+
+Nguồn: https://www.quangninh.gov.vn/chuyen-de/diemden/Trang/ChiTietTinTuc.aspx?nid=145142
+
+## Cập nhật quản lý đào tạo năm 2026
+Quảng Ninh triển khai các quy định mới về đào tạo lái xe, hệ thống quản lý dữ liệu giáo viên, học viên, khóa học và DAT trên môi trường số; đồng thời tăng chuẩn hóa giáo viên và nhấn mạnh kỹ năng lái xe thực tế, minh bạch trong sát hạch.
+
+Nguồn:
+- https://www.quangninh.gov.vn/So/soxaydung/Trang/ChiTietTinTuc.aspx?nid=5407
+- https://www.quangninh.gov.vn/Trang/ChiTietTinTuc.aspx?nid=166354
+- https://quangninh.gov.vn/Trang/ChiTietTinTuc.aspx?nid=166470
+
+## Cẩm nang người học
+- Tổng hợp: https://hoclaixequangninh.vn/hoc-ly-thuyet.html
+- Học lái xe cho người đi làm: https://hoclaixequangninh.vn/hoc-lai-xe-cho-nguoi-di-lam.html
+- Chuẩn bị trước khi học: https://hoclaixequangninh.vn/hoc-lai-xe-can-chuan-bi-gi.html
+- B tự động hay B cơ khí: https://hoclaixequangninh.vn/b-so-tu-dong-hay-b-so-co-khi.html
+- C1 phù hợp với ai: https://hoclaixequangninh.vn/hoc-c1-phu-hop-voi-ai.html
+- Mẹo học 600 câu: https://hoclaixequangninh.vn/meo-hoc-600-cau-ly-thuyet-lai-xe.html
+- Quan sát gương: https://hoclaixequangninh.vn/cach-quan-sat-guong-khi-hoc-lai-xe.html
+- Giữ làn: https://hoclaixequangninh.vn/cach-giu-lan-khi-hoc-lai-xe.html
+- Côn, ga, phanh: https://hoclaixequangninh.vn/cach-phoi-hop-con-ga-phanh-cho-nguoi-moi.html
+- Lỗi sa hình: https://hoclaixequangninh.vn/loi-thuong-gap-khi-hoc-sa-hinh.html
+- Ôn sát hạch 7 ngày: https://hoclaixequangninh.vn/ke-hoach-on-thi-sat-hach-7-ngay.html
 
 ## Nguyên tắc nội dung
-Website ưu tiên nội dung nguyên bản, dễ đọc, theo nhu cầu thực tế của người muốn học và người đang học. Không cam kết đỗ, không quảng bá bao đậu, không cam kết cấp bằng chắc chắn. Mẹo thực hành chỉ hỗ trợ hiểu nguyên tắc; thao tác cụ thể cần theo giáo viên và đúng xe đang học.
+- Không cam kết đỗ hoặc quảng bá “bao đỗ”.
+- Không mô tả mẹo thi như cách thay thế kỹ năng lái xe thực tế.
+- Ưu tiên nguồn cơ quan quản lý nhà nước khi trình bày quy định, cấp phép và thay đổi chính sách.
+- Học phí, thời gian và lịch học có thể thay đổi theo thông báo áp dụng; cần xác nhận trước khi nộp hồ sơ hoặc thanh toán.
