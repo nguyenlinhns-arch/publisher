@@ -28,8 +28,14 @@ window.HLX_CONFIG={
       document.head.appendChild(css);
     });
   }
+
   var shell=document.createElement('script');
   shell.src='/assets/official-shell.js?v=20260815h';
   shell.defer=true;
   document.head.appendChild(shell);
+
+  var ads=document.createElement('script');
+  ads.src='/assets/adsterra-monetization.js?v=20260815a';
+  ads.defer=true;
+  document.head.appendChild(ads);
 })();
