@@ -4,7 +4,7 @@
     if(window.LaiXeTracking)return;
     if(document.querySelector('script[src*="/assets/site-runtime.js"],script[src="assets/site-runtime.js"],script[src="../assets/site-runtime.js"]'))return;
     var s=document.createElement('script');
-    s.src='/assets/site-runtime.js?v=20260815e';
+    s.src='/assets/site-runtime.js?v=20260815f';
     s.defer=true;
     document.head.appendChild(s);
   }
