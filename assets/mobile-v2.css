@@ -2,7 +2,7 @@
 @import url('/assets/official-pages.css?v=20260815c');
 
 /* Shared mobile-first production rules */
-footer,.footer,.simple-footer{display:none!important}
+.footer,.simple-footer{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{overflow-x:hidden}
 .keep-line,.phone,.mini-call{white-space:nowrap;word-break:keep-all}
