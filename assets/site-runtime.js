@@ -76,10 +76,10 @@
 
   function event(name,params){
     params=Object.assign({},attributionParams(),params||{});
-    window.dataLayer.push(Object.assign({event:name},params));
     if(CONFIG.GA4_MEASUREMENT_ID||CONFIG.GOOGLE_ADS_ID){
-      try{gtag('event',name,params)}catch(e){}
+      try{gtag('event',name,params);return}catch(e){}
     }
+    window.dataLayer.push(Object.assign({event:name},params));
   }
 
   function fireAdsConversion(label,params){
