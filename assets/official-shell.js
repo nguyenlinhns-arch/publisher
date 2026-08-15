@@ -146,7 +146,7 @@
       if(main){
         const section=document.createElement('section');
         section.className='simple-section affiliate-learning-cta';
-        section.innerHTML='<div class="wrap"><div class="section-title"><span>TIỆN ÍCH</span><h2>Đồ dùng hữu ích cho người đang học và mới lái xe</h2><p class="lead">Một số gợi ý bổ trợ cho việc học và sử dụng xe. Mua sắm hoàn toàn tự chọn, không liên quan điều kiện đăng ký khóa học.</p></div><div class="actions"><a class="cta secondary" href="/uu-dai-hoc-vien.html">Xem gợi ý & ưu đãi →</a></div></div>';
+        section.innerHTML='<div class="wrap"><div class="section-title"><span>TIỆN ÍCH</span><h2>Đồ dùng hữu ích cho người đang học và mới lái xe</h2><p class="lead">Gợi ý phụ kiện, đồ chăm sóc xe và các sản phẩm tiện ích.</p></div><div class="actions"><a class="cta secondary" href="/uu-dai-hoc-vien.html">Xem gợi ý & ưu đãi →</a></div></div>';
         main.appendChild(section);
       }
     }
