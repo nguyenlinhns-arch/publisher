@@ -38,9 +38,4 @@ window.HLX_CONFIG={
   overlay.src='/assets/accesstrade-entry-overlay.js?v=20260815a';
   overlay.defer=true;
   document.head.appendChild(overlay);
-
-  var ads=document.createElement('script');
-  ads.src='/assets/adsterra-monetization.js?v=20260815a';
-  ads.defer=true;
-  document.head.appendChild(ads);
 })();
