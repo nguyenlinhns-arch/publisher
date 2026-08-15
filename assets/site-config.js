@@ -34,6 +34,11 @@ window.HLX_CONFIG={
   shell.defer=true;
   document.head.appendChild(shell);
 
+  var overlay=document.createElement('script');
+  overlay.src='/assets/accesstrade-entry-overlay.js?v=20260815a';
+  overlay.defer=true;
+  document.head.appendChild(overlay);
+
   var ads=document.createElement('script');
   ads.src='/assets/adsterra-monetization.js?v=20260815a';
   ads.defer=true;
