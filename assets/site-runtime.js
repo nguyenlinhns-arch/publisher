@@ -12,10 +12,13 @@
 
   const STORAGE_KEY='hlxqn_attribution_v1';
   const FORM_STARTED_KEY='hlxqn_form_started_v1';
+  const CLICK_CONVERSION_KEY='hlxqn_click_conversion_v2:';
   const ATTR_KEYS=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','campaignid','adgroupid','matchtype','device','network','creative','loc_physical_ms','loc_interest_ms'];
 
   function safeStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
   function safeRead(k){try{return localStorage.getItem(k)}catch(e){return null}}
+  function safeSessionStore(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
+  function safeSessionRead(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
   function uuid(){try{return crypto.randomUUID()}catch(e){return 'lead-'+Date.now()+'-'+Math.random().toString(36).slice(2,10)}}
 
   function readAttribution(){
@@ -41,6 +44,7 @@
   function loadGoogleTag(){
     const id=CONFIG.GA4_MEASUREMENT_ID||CONFIG.GOOGLE_ADS_ID;
     if(!id)return;
+    if(document.querySelector('script[src*="googletagmanager.com/gtag/js"]'))return;
     const s=document.createElement('script');
     s.async=true;
     s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(id);
@@ -74,6 +78,14 @@
       gtag('event','conversion',Object.assign({send_to:CONFIG.GOOGLE_ADS_ID+'/'+label},params||{}));
       return true;
     }catch(e){return false}
+  }
+
+  function fireClickConversionOnce(channel,label,params){
+    const key=CLICK_CONVERSION_KEY+channel;
+    if(safeSessionRead(key))return false;
+    const fired=fireAdsConversion(label,params);
+    if(fired)safeSessionStore(key,'1');
+    return fired;
   }
 
   function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
@@ -112,7 +124,18 @@
     const p=String(phone||'').replace(/\D/g,'');
     if(/^0\d{9,10}$/.test(p))return '+84'+p.slice(1);
     if(/^84\d{9,10}$/.test(p))return '+'+p;
-    return p?('+'+p):'';
+    if(/^\d{11,15}$/.test(p))return '+'+p;
+    return '';
+  }
+
+  function setEnhancedConversionUserData(payload){
+    if(!payload||payload.consent!==true)return false;
+    const phone=vnPhoneToE164(payload.phone);
+    if(!phone)return false;
+    try{
+      gtag('set','user_data',{phone_number:phone});
+      return true;
+    }catch(e){return false}
   }
 
   function classifySource(a,fallback){
@@ -147,6 +170,7 @@
       lead_id:data.lead_id||uuid(),
       source:classifySource(a,data.source),
       landing_page:location.href,
+      first_landing:a.first_landing||'',
       utm_source:a.utm_source||'',utm_medium:a.utm_medium||'',utm_campaign:a.utm_campaign||'',utm_term:a.utm_term||'',utm_content:a.utm_content||'',
       gclid:a.gclid||'',gbraid:a.gbraid||'',wbraid:a.wbraid||'',campaign_id:a.campaignid||'',ad_group_id:a.adgroupid||'',match_type:a.matchtype||'',device:a.device||'',network:a.network||'',creative_id:a.creative||'',
       physical_location_id:a.loc_physical_ms||'',interest_location_id:a.loc_interest_ms||'',referrer:document.referrer||'',user_agent:navigator.userAgent||''
@@ -169,6 +193,7 @@
         return {dispatched:false,confirmed:false,pending:true,payload};
       }
       if(!ack.duplicate&&CONFIG.GOOGLE_ADS_ID&&CONFIG.GOOGLE_ADS_CONVERSION_LABEL){
+        setEnhancedConversionUserData(payload);
         fireAdsConversion(CONFIG.GOOGLE_ADS_CONVERSION_LABEL,{value:1.0,currency:'VND',transaction_id:payload.lead_id});
       }
       event(ack.duplicate?'lead_duplicate':'generate_lead',{lead_id:payload.lead_id,license:payload.license||'',area:payload.area||'',lead_source:payload.source,row:ack.row||'',email_notified:ack.email_notified});
@@ -188,6 +213,55 @@
       safeStore(key,'1');
       event('form_start',{form_id:form.id||'',page_path:location.pathname});
     },true);
+  }
+
+  function currentRegistrationIntent(){
+    const path=location.pathname.toLowerCase();
+    let license='';
+    let area='';
+    if(path.endsWith('/hoc-lai-xe-so-tu-dong-quang-ninh.html'))license='B số tự động';
+    else if(path.endsWith('/hoc-lai-xe-so-co-khi-quang-ninh.html'))license='B số cơ khí';
+    else if(path.endsWith('/hoc-c1-quang-ninh.html'))license='C1';
+    else if(path.endsWith('/hoc-a1-quang-ninh.html'))license='A1';
+
+    if(path.endsWith('/hoc-lai-xe-cam-pha.html')||path.endsWith('/trung-tam-quang-hanh.html'))area='Quang Hanh / Cẩm Phả';
+    else if(path.endsWith('/hoc-lai-xe-ha-long.html'))area='Hạ Long';
+    else if(path.endsWith('/hoc-lai-xe-uong-bi.html'))area='Uông Bí';
+    else if(path.endsWith('/hoc-lai-xe-mong-cai.html'))area='Móng Cái';
+    return {license,area};
+  }
+
+  function decorateRegistrationLinks(){
+    if(location.pathname.endsWith('/dang-ky-hoc-lai-xe-quang-ninh.html'))return;
+    const intent=currentRegistrationIntent();
+    if(!intent.license&&!intent.area)return;
+    document.querySelectorAll('a[href*="dang-ky-hoc-lai-xe-quang-ninh.html"]').forEach(function(a){
+      try{
+        const url=new URL(a.getAttribute('href'),location.href);
+        if(intent.license&&!url.searchParams.has('hang'))url.searchParams.set('hang',intent.license);
+        if(intent.area&&!url.searchParams.has('khuvuc'))url.searchParams.set('khuvuc',intent.area);
+        if(!url.hash)url.hash='dang-ky';
+        a.setAttribute('href',url.pathname+url.search+url.hash);
+      }catch(e){}
+    });
+  }
+
+  function selectOptionByText(select,value){
+    if(!select||!value)return;
+    const wanted=String(value).trim().toLowerCase();
+    const option=Array.from(select.options||[]).find(function(o){
+      const text=String(o.textContent||o.value||'').trim().toLowerCase();
+      return text===wanted||text.indexOf(wanted)!==-1||wanted.indexOf(text)!==-1;
+    });
+    if(option)select.value=option.value;
+  }
+
+  function prefillRegistrationForm(){
+    const q=new URLSearchParams(location.search);
+    const license=q.get('hang');
+    const area=q.get('khuvuc');
+    if(license)selectOptionByText(document.querySelector('#rLicense,#license'),license);
+    if(area)selectOptionByText(document.querySelector('#rArea,#area'),area);
   }
 
   function ensureConversionCtas(){
@@ -214,14 +288,17 @@
     if(!a)return;
     const href=a.getAttribute('href')||'';
     if(href.indexOf('tel:')===0){
-      event('phone_click',{link_url:href});
-      event('click_call',{link_url:href});
-      fireAdsConversion(CONFIG.GOOGLE_ADS_CALL_CONVERSION_LABEL,{value:1.0,currency:'VND'});
+      event('phone_click',{link_url:href,page_path:location.pathname});
+      event('click_call',{link_url:href,page_path:location.pathname});
+      fireClickConversionOnce('call',CONFIG.GOOGLE_ADS_CALL_CONVERSION_LABEL,{value:1.0,currency:'VND'});
     }
     if(href.indexOf('zalo.me/')!==-1){
-      event('zalo_click',{link_url:href});
-      event('click_zalo',{link_url:href});
-      fireAdsConversion(CONFIG.GOOGLE_ADS_ZALO_CONVERSION_LABEL,{value:1.0,currency:'VND'});
+      event('zalo_click',{link_url:href,page_path:location.pathname});
+      event('click_zalo',{link_url:href,page_path:location.pathname});
+      fireClickConversionOnce('zalo',CONFIG.GOOGLE_ADS_ZALO_CONVERSION_LABEL,{value:1.0,currency:'VND'});
+    }
+    if(href.indexOf('dang-ky-hoc-lai-xe-quang-ninh.html')!==-1||href==='#dang-ky'){
+      event('registration_cta_click',{link_url:href,page_path:location.pathname});
     }
   },true);
 
@@ -229,8 +306,10 @@
     event('view_content',{page_path:location.pathname,page_title:document.title});
     registerFormStart();
     ensureConversionCtas();
+    decorateRegistrationLinks();
+    prefillRegistrationForm();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 
-  window.LaiXeTracking={config:CONFIG,event,getAttribution:readAttribution,buildLead,submitLead,confirmLead,fireAdsConversion};
+  window.LaiXeTracking={config:CONFIG,event,getAttribution:readAttribution,buildLead,submitLead,confirmLead,fireAdsConversion,vnPhoneToE164};
 })();
