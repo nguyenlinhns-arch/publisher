@@ -1,6 +1,7 @@
 (function(){
   'use strict';
 
+  // ACCESSTRADE entry overlay v1.1
   var SMARTLINK='https://nguyenlinhtkv_aul4jx.accesslanding.site';
   var SESSION_KEY='hlxqn_accesstrade_entry_closed_v1';
 
