@@ -25,7 +25,7 @@
         '<div class="official-footer-brand"><strong>Học Lái Xe Quảng Ninh</strong><p>Thông tin tuyển sinh, học phí, hồ sơ, chương trình học, khu vực đào tạo và hướng dẫn dành cho người học lái xe tại Quảng Ninh.</p><p><b style="color:#fff">Tư vấn: '+PHONE+'</b></p></div>'+
         '<div><h4>Tuyển sinh</h4><div class="official-footer-links"><a href="/hoc-phi-hoc-lai-xe-quang-ninh.html">Học phí</a><a href="/ho-so-hoc-lai-xe-quang-ninh.html">Hồ sơ đăng ký</a><a href="/dang-ky-hoc-lai-xe-quang-ninh.html">Đăng ký học</a><a href="/lich-sat-hach/">Lịch sát hạch</a></div></div>'+
         '<div><h4>Khóa học</h4><div class="official-footer-links"><a href="/hoc-lai-xe-so-tu-dong-quang-ninh.html">B số tự động</a><a href="/hoc-lai-xe-so-co-khi-quang-ninh.html">B số cơ khí</a><a href="/hoc-c1-quang-ninh.html">Hạng C1</a><a href="/hoc-a1-quang-ninh.html">Hạng A1</a></div></div>'+
-        '<div><h4>Thông tin</h4><div class="official-footer-links"><a href="/gioi-thieu.html">Giới thiệu</a><a href="/tin-tuc.html">Tin tức</a><a href="/hoc-ly-thuyet.html">Cẩm nang</a><a href="/chinh-sach-bao-mat.html">Chính sách bảo mật</a><a href="/dieu-khoan-su-dung.html">Điều khoản sử dụng</a><a href="/lien-he.html">Liên hệ</a></div></div>'+
+        '<div><h4>Thông tin</h4><div class="official-footer-links"><a href="/gioi-thieu.html">Giới thiệu</a><a href="/tin-tuc.html">Tin tức</a><a href="/hoc-ly-thuyet.html">Cẩm nang</a><a href="/uu-dai-hoc-vien.html">Ưu đãi học viên</a><a href="/chinh-sach-bao-mat.html">Chính sách bảo mật</a><a href="/dieu-khoan-su-dung.html">Điều khoản sử dụng</a><a href="/lien-he.html">Liên hệ</a></div></div>'+
       '</div>'+
       '<div class="official-footer-bottom"><div class="official-wrap"><div class="official-disclaimer">hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh, không phải cổng thông tin của cơ quan quản lý nhà nước. Thông tin học phí, lịch học và sát hạch được cập nhật theo thông báo áp dụng của đơn vị đào tạo/cơ quan có thẩm quyền.</div><div>© hoclaixequangninh.vn</div></div></div>'+
     '</footer>';
@@ -128,6 +128,30 @@
     else document.body.appendChild(footer);
   }
 
+  function ensureAffiliateNavigation(){
+    const footer=document.querySelector('.official-footer');
+    if(footer&&!footer.querySelector('a[href="/uu-dai-hoc-vien.html"],a[href="uu-dai-hoc-vien.html"]')){
+      const groups=footer.querySelectorAll('.official-footer-links');
+      const target=groups.length?groups[groups.length-1]:null;
+      if(target){
+        const a=document.createElement('a');
+        a.href='/uu-dai-hoc-vien.html';
+        a.textContent='Ưu đãi học viên';
+        target.appendChild(a);
+      }
+    }
+
+    if(location.pathname.endsWith('/hoc-ly-thuyet.html')&&!document.querySelector('.affiliate-learning-cta')){
+      const main=document.querySelector('main');
+      if(main){
+        const section=document.createElement('section');
+        section.className='simple-section affiliate-learning-cta';
+        section.innerHTML='<div class="wrap"><div class="section-title"><span>TIỆN ÍCH</span><h2>Đồ dùng hữu ích cho người đang học và mới lái xe</h2><p class="lead">Một số gợi ý bổ trợ cho việc học và sử dụng xe. Mua sắm hoàn toàn tự chọn, không liên quan điều kiện đăng ký khóa học.</p></div><div class="actions"><a class="cta secondary" href="/uu-dai-hoc-vien.html">Xem gợi ý & ưu đãi →</a></div></div>';
+        main.appendChild(section);
+      }
+    }
+  }
+
   function removeLegacyMobileBars(){
     document.querySelectorAll('nav.mobile').forEach(function(nav){
       if(nav.classList.contains('sticky-mobile'))return;
@@ -135,12 +159,29 @@
     });
   }
 
+  function trackAffiliateClicks(){
+    document.addEventListener('click',function(e){
+      const a=e.target.closest&&e.target.closest('a[data-affiliate]');
+      if(!a)return;
+      if(window.LaiXeTracking&&typeof window.LaiXeTracking.event==='function'){
+        window.LaiXeTracking.event('affiliate_click',{
+          affiliate_network:'ACCESSTRADE',
+          affiliate_campaign:a.getAttribute('data-affiliate')||'accesstrade',
+          link_url:a.href,
+          page_path:location.pathname
+        });
+      }
+    },true);
+  }
+
   function init(){
     installHeader();
     installFooter();
     removeLegacyMobileBars();
     polishNarrative();
+    ensureAffiliateNavigation();
     setTimeout(upgradeHomepageForm,0);
+    trackAffiliateClicks();
     document.addEventListener('click',function(e){
       const open=document.querySelectorAll('.official-nav details[open],.official-mobile-menu[open]');
       open.forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open')});
