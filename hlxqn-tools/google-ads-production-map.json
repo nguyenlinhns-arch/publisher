@@ -1,0 +1,74 @@
+{
+  "updated": "2026-08-15",
+  "domain": "https://hoclaixequangninh.vn",
+  "measurement": {
+    "primary_conversion": "confirmed_lead",
+    "primary_ads_label": "WlccCOvqpeAcEKn0tog-",
+    "secondary_signals": ["click_call", "click_zalo", "form_start", "registration_cta_click"],
+    "notes": "Bidding should prioritize the confirmed lead action. Call/Zalo click actions are useful diagnostics/secondary conversions unless the Ads account deliberately chooses otherwise."
+  },
+  "recommended_final_url_suffix": "utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_term={keyword}&utm_content={creative}&campaignid={campaignid}&adgroupid={adgroupid}&keyword={keyword}&matchtype={matchtype}&device={device}&network={network}&creative={creative}&targetid={targetid}&placement={placement}&loc_physical_ms={loc_physical_ms}&loc_interest_ms={loc_interest_ms}",
+  "landing_pages": [
+    {
+      "theme": "generic_high_intent",
+      "queries": ["học lái xe quảng ninh", "đăng ký học lái xe quảng ninh", "trung tâm học lái xe quảng ninh"],
+      "final_url": "https://hoclaixequangninh.vn/"
+    },
+    {
+      "theme": "license_b",
+      "queries": ["học bằng b quảng ninh", "học bằng lái xe b quảng ninh", "bằng b quảng ninh"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-bang-b-quang-ninh.html"
+    },
+    {
+      "theme": "b_automatic",
+      "queries": ["học lái xe số tự động quảng ninh", "học bằng b số tự động quảng ninh", "b số tự động quảng ninh"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-lai-xe-so-tu-dong-quang-ninh.html"
+    },
+    {
+      "theme": "b_manual",
+      "queries": ["học lái xe số cơ khí quảng ninh", "học bằng b số cơ khí quảng ninh", "b số cơ khí quảng ninh"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-lai-xe-so-co-khi-quang-ninh.html"
+    },
+    {
+      "theme": "c1",
+      "queries": ["học c1 quảng ninh", "học bằng c1 quảng ninh", "đăng ký học c1 quảng ninh"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-c1-quang-ninh.html"
+    },
+    {
+      "theme": "a1",
+      "queries": ["học a1 quảng ninh", "thi a1 quảng ninh", "đăng ký a1 quảng ninh"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-a1-quang-ninh.html"
+    },
+    {
+      "theme": "tuition",
+      "queries": ["học phí lái xe quảng ninh", "học bằng lái xe quảng ninh bao nhiêu tiền", "giá học bằng b quảng ninh"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-phi-hoc-lai-xe-quang-ninh.html"
+    },
+    {
+      "theme": "cam_pha_quang_hanh",
+      "queries": ["học lái xe cẩm phả", "học lái xe quang hanh", "trung tâm lái xe cẩm phả"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-lai-xe-cam-pha.html"
+    },
+    {
+      "theme": "ha_long",
+      "queries": ["học lái xe hạ long", "học bằng lái xe hạ long"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-lai-xe-ha-long.html"
+    },
+    {
+      "theme": "uong_bi",
+      "queries": ["học lái xe uông bí", "học bằng lái xe uông bí"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-lai-xe-uong-bi.html"
+    },
+    {
+      "theme": "mong_cai",
+      "queries": ["học lái xe móng cái", "học bằng lái xe móng cái"],
+      "final_url": "https://hoclaixequangninh.vn/hoc-lai-xe-mong-cai.html"
+    }
+  ],
+  "seo_first_not_default_paid_search": [
+    "https://hoclaixequangninh.vn/lich-sat-hach/",
+    "https://hoclaixequangninh.vn/hoc-ly-thuyet.html",
+    "https://hoclaixequangninh.vn/meo-hoc-600-cau-ly-thuyet-lai-xe.html",
+    "https://hoclaixequangninh.vn/loi-thuong-gap-khi-hoc-sa-hinh.html"
+  ]
+}
