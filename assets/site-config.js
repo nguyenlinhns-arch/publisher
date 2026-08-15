@@ -29,7 +29,7 @@ window.HLX_CONFIG={
     });
   }
   var shell=document.createElement('script');
-  shell.src='/assets/official-shell.js?v=20260815f';
+  shell.src='/assets/official-shell.js?v=20260815g';
   shell.defer=true;
   document.head.appendChild(shell);
 })();
