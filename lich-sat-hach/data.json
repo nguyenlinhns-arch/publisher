@@ -1,5 +1,5 @@
 {
-  "last_checked": "2026-08-10T08:55:48+07:00",
+  "last_checked": "2026-08-15T21:53:00+07:00",
   "update_frequency": "weekly",
   "verified_schedules": [],
   "centers": [
@@ -7,54 +7,59 @@
       "id": "quang-hanh",
       "name": "Quang Hanh · Cẩm Phả",
       "status": "updating",
-      "last_checked": "2026-08-10T08:55:48+07:00",
-      "message": "Chưa có lịch sát hạch mới tại Quang Hanh được nguồn chính thức công khai và xác minh trong lần rà ngày 10/08/2026."
+      "last_checked": "2026-08-15T21:53:00+07:00",
+      "message": "Chưa tìm thấy lịch sát hạch mới tại Quang Hanh được nguồn công khai đủ điều kiện xác minh trong lần rà ngày 15/08/2026."
     },
     {
       "id": "uong-bi",
       "name": "Uông Bí",
       "status": "updating",
-      "last_checked": "2026-08-10T08:55:48+07:00",
-      "message": "Chưa có lịch sát hạch mới tại Uông Bí được nguồn chính thức công khai và xác minh trong lần rà ngày 10/08/2026."
+      "last_checked": "2026-08-15T21:53:00+07:00",
+      "message": "Chưa tìm thấy lịch sát hạch mới tại Uông Bí được nguồn công khai đủ điều kiện xác minh trong lần rà ngày 15/08/2026."
     },
     {
       "id": "mong-cai",
       "name": "Móng Cái",
       "status": "updating",
-      "last_checked": "2026-08-10T08:55:48+07:00",
-      "message": "Chưa có lịch sát hạch mới tại Móng Cái được nguồn chính thức công khai và xác minh trong lần rà ngày 10/08/2026."
+      "last_checked": "2026-08-15T21:53:00+07:00",
+      "message": "Chưa tìm thấy lịch sát hạch mới tại Móng Cái được nguồn công khai đủ điều kiện xác minh trong lần rà ngày 15/08/2026."
     }
   ],
   "official_sources": [
     {
       "name": "Trường Cao đẳng Than - Khoáng sản Việt Nam",
       "domain": "caodangtkv.edu.vn",
-      "last_checked": "2026-08-10T08:55:48+07:00",
-      "result": "Không tìm thấy thông báo lịch sát hạch mới đủ điều kiện xác minh cho Quang Hanh, Uông Bí hoặc Móng Cái."
+      "url": "https://caodangtkv.edu.vn/",
+      "last_checked": "2026-08-15T21:53:00+07:00",
+      "result": "Chưa tìm thấy thông báo lịch sát hạch mới công khai cho ba cơ sở theo dõi trong lần rà này."
     },
     {
       "name": "Cổng thông tin tỉnh Quảng Ninh",
       "domain": "quangninh.gov.vn",
-      "last_checked": "2026-08-10T08:55:48+07:00",
-      "result": "Không tìm thấy thông báo lịch sát hạch mới đủ điều kiện xác minh cho ba cơ sở theo dõi."
+      "url": "https://www.quangninh.gov.vn/",
+      "last_checked": "2026-08-15T21:53:00+07:00",
+      "result": "Chưa tìm thấy lịch mới đủ dữ kiện ngày thi, cơ sở và hạng GPLX cho Quang Hanh, Uông Bí hoặc Móng Cái."
     },
     {
       "name": "Sở Xây dựng Quảng Ninh",
       "domain": "quangninh.gov.vn/So/soxaydung",
-      "last_checked": "2026-08-10T08:55:48+07:00",
-      "result": "Không có lịch sát hạch mới được công khai cho Quang Hanh, Uông Bí hoặc Móng Cái trong lần rà này."
+      "url": "https://www.quangninh.gov.vn/So/soxaydung/",
+      "last_checked": "2026-08-15T21:53:00+07:00",
+      "result": "Không ghi nhận thông báo lịch sát hạch mới công khai cho ba cơ sở theo dõi trong lần rà này."
     },
     {
-      "name": "Công an/CSGT Quảng Ninh",
+      "name": "Cổng thông tin hành chính/Công an Quảng Ninh",
       "domain": "quangninh.gov.vn/bannganh/ttpvhcc",
-      "last_checked": "2026-08-10T08:55:48+07:00",
-      "result": "Không tìm thấy thông báo lịch sát hạch mới trong tuần 10-16/08/2026 cho ba cơ sở theo dõi."
+      "url": "https://www.quangninh.gov.vn/bannganh/ttpvhcc/",
+      "last_checked": "2026-08-15T21:53:00+07:00",
+      "result": "Chưa tìm thấy thông báo lịch tháng 8/2026 mới công khai tương ứng ba cơ sở theo dõi."
     },
     {
       "name": "Cục Đường bộ Việt Nam",
       "domain": "drvn.gov.vn",
-      "last_checked": "2026-08-10T08:55:48+07:00",
-      "result": "Không tìm thấy lịch sát hạch mới tại Quảng Ninh cho ba cơ sở theo dõi."
+      "url": "https://drvn.gov.vn/",
+      "last_checked": "2026-08-15T21:53:00+07:00",
+      "result": "Chưa tìm thấy lịch sát hạch mới cho ba cơ sở; nguồn hiện có chủ yếu cập nhật quy định đào tạo và sát hạch năm 2026."
     }
   ]
 }
