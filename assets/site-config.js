@@ -7,14 +7,10 @@ window.HLX_CONFIG={
   GOOGLE_ADS_ZALO_CONVERSION_LABEL:'A5g8CM7OuOAcEKn0tog-'
 };
 (function(){
-  ['official-site.css?v=20260815c','official-pages.css?v=20260815c'].forEach(function(file){
-    var css=document.createElement('link');
-    css.rel='stylesheet';
-    css.href='/assets/'+file;
-    document.head.appendChild(css);
-  });
+  // CSS production đã được nạp tĩnh qua mobile-v2.css trên mọi trang để tránh
+  // tải trùng và tránh thay đổi giao diện sau khi JavaScript chạy.
   var shell=document.createElement('script');
-  shell.src='/assets/official-shell.js?v=20260815c';
+  shell.src='/assets/official-shell.js?v=20260815d';
   shell.defer=true;
   document.head.appendChild(shell);
 })();
