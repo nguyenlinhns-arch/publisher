@@ -7,10 +7,23 @@ window.HLX_CONFIG={
   GOOGLE_ADS_ZALO_CONVERSION_LABEL:'A5g8CM7OuOAcEKn0tog-'
 };
 (function(){
-  // CSS production đã được nạp tĩnh qua mobile-v2.css trên mọi trang để tránh
-  // tải trùng và tránh thay đổi giao diện sau khi JavaScript chạy.
+  // Các trang chuẩn đã nạp mobile-v2.css tĩnh trong <head>; không tải trùng CSS.
+  // Một số trang đặc thù/legacy có stylesheet riêng: chỉ bổ sung design system khi thiếu.
+  var links=Array.prototype.slice.call(document.querySelectorAll('link[rel="stylesheet"]'));
+  var hasInstitutionalCss=links.some(function(link){
+    var href=String(link.getAttribute('href')||'');
+    return /(?:^|\/)mobile-v2\.css(?:\?|$)/.test(href)||/(?:^|\/)official-site\.css(?:\?|$)/.test(href);
+  });
+  if(!hasInstitutionalCss){
+    ['official-site.css?v=20260815d','official-pages.css?v=20260815d'].forEach(function(file){
+      var css=document.createElement('link');
+      css.rel='stylesheet';
+      css.href='/assets/'+file;
+      document.head.appendChild(css);
+    });
+  }
   var shell=document.createElement('script');
-  shell.src='/assets/official-shell.js?v=20260815d';
+  shell.src='/assets/official-shell.js?v=20260815e';
   shell.defer=true;
   document.head.appendChild(shell);
 })();
