@@ -36,6 +36,8 @@ jobs:
         run: node hlxqn-tools/finalize-performance.mjs
       - name: Render shared shell statically
         run: node hlxqn-tools/render-static-shell.mjs
+      - name: Finalize keyboard navigation accessibility
+        run: node hlxqn-tools/finalize-accessibility.mjs
       - name: Validate final production artifact
         run: node hlxqn-tools/validate-public-artifact.mjs
       - name: Validate internal link graph and crawl depth
@@ -50,6 +52,8 @@ jobs:
           test -s _site/dao-tao-lai-xe-tkv-6-thang-2026.html
           grep -q 'Cập nhật nội dung trọng tâm: 2026-08-16' _site/llms.txt
           grep -q 'dao-tao-lai-xe-tkv-6-thang-2026.html' _site/llms.txt
+          grep -q 'class="skip-link"' _site/index.html
+          grep -q 'id="main-content"' _site/index.html
           grep -q 'kinh-nghiem-hoc-lai-xe-lan-dau.html' _site/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
           grep -q 'loi-de-mat-diem-khi-thi-sa-hinh.html' _site/loi-thuong-gap-khi-hoc-sa-hinh.html
           grep -q 'cach-lai-xe-an-toan-khi-troi-mua.html' _site/meo-lai-xe-duong-truong-cho-nguoi-moi.html
