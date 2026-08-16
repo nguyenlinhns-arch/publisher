@@ -16,6 +16,12 @@ if(!html.includes('rel="preload" as="image" href="/assets/quang-hanh-san-sat-hac
   if(!html.includes(icon))throw new Error('Homepage favicon anchor missing');
   html=html.replace(icon,`${icon}\n  ${preload}`);
 }
-
 fs.writeFileSync(p,html);
-console.log(JSON.stringify({homepageTitle:true,lcpPreload:true},null,2));
+
+const llmsPath=path.join(root,'llms.txt');
+let llms=fs.readFileSync(llmsPath,'utf8');
+if(llms.includes('Cập nhật nội dung trọng tâm: 2026-08-15'))llms=llms.replace('Cập nhật nội dung trọng tâm: 2026-08-15','Cập nhật nội dung trọng tâm: 2026-08-16');
+else if(!llms.includes('Cập nhật nội dung trọng tâm: 2026-08-16'))throw new Error('llms.txt freshness anchor missing');
+fs.writeFileSync(llmsPath,llms);
+
+console.log(JSON.stringify({homepageTitle:true,lcpPreload:true,llmsFreshness:'2026-08-16'},null,2));
