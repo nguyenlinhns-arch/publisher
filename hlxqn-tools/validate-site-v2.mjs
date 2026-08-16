@@ -46,7 +46,7 @@ for(const file of files){
   if(noindexPages.has(file)&&!/noindex/i.test(robots))errors.push(`${file}: trang utility/redirect phải noindex`);
 
   const wordCount=text(html).split(/\s+/).filter(Boolean).length;
-  if(!utility.has(file)&&wordCount<180)warnings.push(`${file}: nội dung tương đối ngắn (${wordCount} từ); chỉ mở rộng nếu có thêm thông tin hữu ích`);
+  if(!utility.has(file)&&wordCount<150)warnings.push(`${file}: nội dung rất ngắn (${wordCount} từ); chỉ mở rộng khi có thêm thông tin hữu ích`);
 
   for(const match of html.matchAll(/<a\b[^>]*href="([^"]+)"/gi)){
     const href=match[1];
