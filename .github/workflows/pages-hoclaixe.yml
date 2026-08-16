@@ -30,6 +30,8 @@ jobs:
         run: node hlxqn-tools/validate-seo-uniqueness.mjs
       - name: Validate current 2026 driving-test rules
         run: node hlxqn-tools/validate-current-exam-rules.mjs
+      - name: Probe live lead ACK endpoint (read-only)
+        run: node hlxqn-tools/probe-lead-endpoint.mjs
       - name: Build dependency-aware public artifact
         run: node hlxqn-tools/build-public-site.mjs
       - name: Strengthen contextual internal links
