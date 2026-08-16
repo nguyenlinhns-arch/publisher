@@ -81,7 +81,10 @@ if(/@import[^;]+official-(?:site|pages)\.css/i.test(mobile))errors.push('mobile-
 if(fs.existsSync(path.join(root,'assets/official-shell.js')))errors.push('official-shell.js should not be deployed');
 const config=fs.readFileSync(path.join(root,'assets/site-config.js'),'utf8');
 if(config.includes('official-shell.js'))errors.push('site-config still references official-shell.js');
-if(!config.includes('if(isGooglePaidVisit())return'))errors.push('site-config does not block affiliate on Google paid traffic');
+const protectsCurrentPaid=config.includes("q.get('gclid')")&&config.includes("q.get('gbraid')")&&config.includes("q.get('wbraid')");
+const protectsPersistedPaid=config.includes("localStorage.getItem('hlxqn_attribution_v1')")&&config.includes('return paidSignals(saved)');
+const blocksAffiliateForPaid=config.includes('window.HLX_IS_GOOGLE_PAID_VISIT=isGooglePaidVisit()')&&config.includes('if(window.HLX_IS_GOOGLE_PAID_VISIT)return');
+if(!protectsCurrentPaid||!protectsPersistedPaid||!blocksAffiliateForPaid)errors.push('site-config does not block affiliate for current and persisted Google paid traffic');
 const productionText=all.filter(p=>/\.(?:html|js|css)$/i.test(p)).map(p=>fs.readFileSync(p,'utf8')).join('\n');
 if(/adsterra|effectivecpmnetwork|highperformanceformat/i.test(productionText))errors.push('production artifact contains Adsterra');
 
