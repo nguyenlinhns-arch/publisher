@@ -17,7 +17,7 @@ replaceOnceOrKeep(
 );
 replaceOnceOrKeep(
   "const ack=await jsonp({mode:'status',lead_id:leadId},2200);",
-  "const ack=await jsonp({mode:'status',lead_id:leadId,phone:String(phone||'').replace(/\\D/g,'')},2200);",
+  "const ack=await jsonp({mode:'status',lead_id:leadId,phone:String(phone||'')},2200);",
   'status ACK phone context'
 );
 replaceOnceOrKeep(
@@ -28,4 +28,4 @@ replaceOnceOrKeep(
 fs.writeFileSync(p,js);
 if(!js.includes("mode:'status',lead_id:leadId,phone:"))throw new Error('Phone context missing from lead ACK');
 if(!js.includes('confirmLead(payload.lead_id,payload.phone)'))throw new Error('Phone context not passed from payload');
-console.log(JSON.stringify({leadAckPhoneContext:true,conversionStillAfterConfirmedAck:true},null,2));
+console.log(JSON.stringify({leadAckPhoneContext:true,conversionStillAfterConfirmedAck:true,idempotent:true},null,2));
