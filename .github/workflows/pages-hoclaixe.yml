@@ -28,8 +28,12 @@ jobs:
         run: node hlxqn-tools/validate-site-v2.mjs
       - name: Build dependency-aware public artifact
         run: node hlxqn-tools/build-public-site.mjs
+      - name: Finalize homepage performance signals
+        run: node hlxqn-tools/finalize-performance.mjs
       - name: Render shared shell statically
         run: node hlxqn-tools/render-static-shell.mjs
+      - name: Validate final production artifact
+        run: node hlxqn-tools/validate-public-artifact.mjs
       - name: Verify public artifact
         run: |
           set -euo pipefail
@@ -40,6 +44,8 @@ jobs:
           test ! -e _site/assets/official-shell.js
           ! grep -q 'official-shell.js' _site/assets/site-config.js
           ! grep -Eq '@import[^;]+official-(site|pages)\.css' _site/assets/mobile-v2.css
+          grep -q '<title>Học Lái Xe Quảng Ninh | B tự động, B cơ khí, C1, A1</title>' _site/index.html
+          grep -q 'rel="preload" as="image" href="/assets/quang-hanh-san-sat-hach.jpg"' _site/index.html
           grep -q 'Học lái xe Quảng Ninh: <em>chọn đúng khóa học</em>' _site/index.html
           grep -q '<a class="primary" href="#dang-ky">Đăng ký tư vấn</a>' _site/index.html
           grep -q 'Nếu B tự động và B cơ khí cùng mức 20,9 triệu' _site/hoc-phi-hoc-lai-xe-quang-ninh.html
