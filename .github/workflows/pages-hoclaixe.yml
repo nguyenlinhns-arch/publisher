@@ -34,6 +34,8 @@ jobs:
         run: node hlxqn-tools/probe-lead-endpoint.mjs
       - name: Build dependency-aware public artifact
         run: node hlxqn-tools/build-public-site.mjs
+      - name: Harden lead ACK status context
+        run: node hlxqn-tools/harden-lead-runtime.mjs
       - name: Strengthen contextual internal links
         run: node hlxqn-tools/strengthen-context-links.mjs
       - name: Finalize homepage performance and AI discovery signals
@@ -63,6 +65,8 @@ jobs:
           grep -q 'không còn phần thi mô phỏng' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
           grep -q 'class="skip-link"' _site/index.html
           grep -q 'id="main-content"' _site/index.html
+          grep -q "mode:'status',lead_id:leadId,phone:" _site/assets/site-runtime.js
+          grep -q 'confirmLead(payload.lead_id,payload.phone)' _site/assets/site-runtime.js
           grep -q 'kinh-nghiem-hoc-lai-xe-lan-dau.html' _site/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
           grep -q 'loi-de-mat-diem-khi-thi-sa-hinh.html' _site/loi-thuong-gap-khi-hoc-sa-hinh.html
           grep -q 'cach-lai-xe-an-toan-khi-troi-mua.html' _site/meo-lai-xe-duong-truong-cho-nguoi-moi.html
