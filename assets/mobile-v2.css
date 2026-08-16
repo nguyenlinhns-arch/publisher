@@ -1,6 +1,3 @@
-@import url('/assets/official-site.css?v=20260815');
-@import url('/assets/official-pages.css?v=20260815d');
-
 /* Shared mobile-first production rules */
 .footer,.simple-footer{display:none!important}
 html{-webkit-text-size-adjust:100%}

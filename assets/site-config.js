@@ -29,14 +29,6 @@ window.HLX_CONFIG={
     });
   }
 
-  var staticHome=!!document.querySelector('.institutional-home')&&!!document.querySelector('.official-header')&&!!document.querySelector('.official-footer');
-  if(!staticHome){
-    var shell=document.createElement('script');
-    shell.src='/assets/official-shell.js?v=20260815h';
-    shell.async=true;
-    document.head.appendChild(shell);
-  }
-
   function isGooglePaidVisit(){
     try{
       var q=new URLSearchParams(location.search);
