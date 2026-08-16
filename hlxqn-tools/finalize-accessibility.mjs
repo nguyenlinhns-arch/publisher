@@ -38,13 +38,24 @@ for(const p of walk(root)){
   if(changed){fs.writeFileSync(p,html);updated++;}
 }
 
-const cssPath=path.join(root,'assets/official-site.css');
-let css=fs.readFileSync(cssPath,'utf8');
+const officialCssPath=path.join(root,'assets/official-site.css');
+let officialCss=fs.readFileSync(officialCssPath,'utf8');
 const rule='.skip-link{position:fixed;left:12px;top:8px;z-index:10000;transform:translateY(-160%);background:#fff;color:#062f57;border:2px solid #0b5ea8;border-radius:8px;padding:9px 12px;font-weight:900;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.16)}.skip-link:focus{transform:translateY(0)}';
-if(!css.includes('.skip-link{'))css=`${rule}\n${css}`;
-css=css.replace('--official-orange:#f58220;','--official-orange:#b94700;');
-css=css.replace('--official-muted:#617589;','--official-muted:#5c7084;');
-fs.writeFileSync(cssPath,css);
+if(!officialCss.includes('.skip-link{'))officialCss=`${rule}\n${officialCss}`;
+officialCss=officialCss.replace('--official-orange:#f58220;','--official-orange:#b94700;');
+officialCss=officialCss.replace('--official-muted:#617589;','--official-muted:#5c7084;');
+fs.writeFileSync(officialCssPath,officialCss);
+
+const stylePath=path.join(root,'assets/style.css');
+let style=fs.readFileSync(stylePath,'utf8');
+style=style.replace('--orange:#f58220;','--orange:#b94700;');
+style=style.replace('--muted:#60758a;','--muted:#5c7084;');
+fs.writeFileSync(stylePath,style);
+
+const affiliatePath=path.join(root,'assets/accesstrade-entry-overlay.js');
+let affiliate=fs.readFileSync(affiliatePath,'utf8');
+affiliate=affiliate.replace('background:#ee4d2d;color:#fff!important','background:#b33a20;color:#fff!important');
+fs.writeFileSync(affiliatePath,affiliate);
 
 let checked=0;
 for(const p of walk(root)){
@@ -55,5 +66,7 @@ for(const p of walk(root)){
   if(html.includes('aria-label="Học Lái Xe Quảng Ninh - Trang chủ"'))throw new Error(`Brand accessible-name mismatch remains: ${rel}`);
   checked++;
 }
-if(!css.includes('--official-orange:#b94700;')||!css.includes('--official-muted:#5c7084;'))throw new Error('Accessible contrast palette missing');
-console.log(JSON.stringify({updatedPages:updated,checkedPages:checked,skipNavigation:true,mobileNavLabels:true,brandNameMatch:true,contrastPalette:true},null,2));
+if(!officialCss.includes('--official-orange:#b94700;')||!officialCss.includes('--official-muted:#5c7084;'))throw new Error('Official accessible contrast palette missing');
+if(!style.includes('--orange:#b94700;')||!style.includes('--muted:#5c7084;'))throw new Error('Shared accessible contrast palette missing');
+if(!affiliate.includes('background:#b33a20;color:#fff!important'))throw new Error('Affiliate CTA contrast fix missing');
+console.log(JSON.stringify({updatedPages:updated,checkedPages:checked,skipNavigation:true,mobileNavLabels:true,brandNameMatch:true,contrastPalette:true,affiliateContrast:true},null,2));
