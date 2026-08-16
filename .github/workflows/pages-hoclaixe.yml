@@ -28,6 +28,8 @@ jobs:
         run: node hlxqn-tools/validate-site-v2.mjs
       - name: Validate unique SEO metadata and sitemap indexability
         run: node hlxqn-tools/validate-seo-uniqueness.mjs
+      - name: Validate current 2026 driving-test rules
+        run: node hlxqn-tools/validate-current-exam-rules.mjs
       - name: Build dependency-aware public artifact
         run: node hlxqn-tools/build-public-site.mjs
       - name: Strengthen contextual internal links
@@ -42,6 +44,8 @@ jobs:
         run: node hlxqn-tools/validate-performance-budget.mjs
       - name: Validate final production artifact
         run: node hlxqn-tools/validate-public-artifact.mjs
+      - name: Recheck current driving-test rules in production
+        run: node hlxqn-tools/validate-current-exam-rules.mjs _site
       - name: Validate internal link graph and crawl depth
         run: node hlxqn-tools/validate-internal-link-graph.mjs
       - name: Verify public artifact
@@ -54,6 +58,7 @@ jobs:
           test -s _site/dao-tao-lai-xe-tkv-6-thang-2026.html
           grep -q 'Cập nhật nội dung trọng tâm: 2026-08-16' _site/llms.txt
           grep -q 'dao-tao-lai-xe-tkv-6-thang-2026.html' _site/llms.txt
+          grep -q 'không còn phần thi mô phỏng' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
           grep -q 'class="skip-link"' _site/index.html
           grep -q 'id="main-content"' _site/index.html
           grep -q 'kinh-nghiem-hoc-lai-xe-lan-dau.html' _site/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
