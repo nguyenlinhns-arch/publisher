@@ -30,6 +30,8 @@ jobs:
         run: node hlxqn-tools/validate-seo-uniqueness.mjs
       - name: Build dependency-aware public artifact
         run: node hlxqn-tools/build-public-site.mjs
+      - name: Strengthen contextual internal links
+        run: node hlxqn-tools/strengthen-context-links.mjs
       - name: Finalize homepage performance and AI discovery signals
         run: node hlxqn-tools/finalize-performance.mjs
       - name: Render shared shell statically
@@ -48,6 +50,12 @@ jobs:
           test -s _site/dao-tao-lai-xe-tkv-6-thang-2026.html
           grep -q 'Cập nhật nội dung trọng tâm: 2026-08-16' _site/llms.txt
           grep -q 'dao-tao-lai-xe-tkv-6-thang-2026.html' _site/llms.txt
+          grep -q 'kinh-nghiem-hoc-lai-xe-lan-dau.html' _site/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
+          grep -q 'loi-de-mat-diem-khi-thi-sa-hinh.html' _site/loi-thuong-gap-khi-hoc-sa-hinh.html
+          grep -q 'cach-lai-xe-an-toan-khi-troi-mua.html' _site/meo-lai-xe-duong-truong-cho-nguoi-moi.html
+          grep -q 'cach-lai-xe-xuong-doc-an-toan.html' _site/meo-lai-xe-duong-truong-cho-nguoi-moi.html
+          grep -q 'cach-lai-xe-so-tu-dong-cho-nguoi-moi.html' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
+          grep -q 'meo-hoc-thuc-hanh-lai-xe-b.html' _site/hoc-thuc-hanh-sa-hinh.html
           test -s _site/assets/site-runtime.js
           test ! -e _site/assets/official-shell.js
           ! grep -q 'official-shell.js' _site/assets/site-config.js
