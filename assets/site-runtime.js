@@ -119,11 +119,11 @@
     });
   }
 
-  async function confirmLead(leadId){
+  async function confirmLead(leadId,phone){
     for(let attempt=0;attempt<12;attempt++){
       if(attempt)await delay(550);
       try{
-        const ack=await jsonp({mode:'status',lead_id:leadId},2200);
+        const ack=await jsonp({mode:'status',lead_id:leadId,phone:String(phone||'')},2200);
         if(ack&&ack.ok&&ack.saved)return ack;
       }catch(_){}
     }
@@ -197,7 +197,7 @@
     }
     try{
       await fetch(CONFIG.FORM_ENDPOINT,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload)});
-      const ack=await confirmLead(payload.lead_id);
+      const ack=await confirmLead(payload.lead_id,payload.phone);
       if(!ack){
         event('lead_submit_unconfirmed',{lead_id:payload.lead_id});
         return {dispatched:false,confirmed:false,pending:true,payload:payload};
