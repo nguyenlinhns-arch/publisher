@@ -17,6 +17,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    env:
+      INDEXNOW_KEY: d7541c382467bb931d7a40b9650e7e2e
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
@@ -94,13 +96,13 @@ jobs:
           test ! -e _site/requirements-dev.txt
           test ! -e _site/assets/nen.png
           test ! -e _site/assets/sound.mp3
-      - name: Generate ephemeral IndexNow ownership key
+      - name: Publish stable IndexNow ownership key
         shell: bash
         run: |
           set -euo pipefail
-          key="$(openssl rand -hex 16)"
-          printf 'INDEXNOW_KEY=%s\n' "$key" >> "$GITHUB_ENV"
-          printf '%s' "$key" > "_site/${key}.txt"
+          test -n "$INDEXNOW_KEY"
+          printf '%s' "$INDEXNOW_KEY" > "_site/${INDEXNOW_KEY}.txt"
+          test "$(cat "_site/${INDEXNOW_KEY}.txt")" = "$INDEXNOW_KEY"
       - uses: actions/configure-pages@v5
         with:
           enablement: true
@@ -111,6 +113,13 @@ jobs:
         uses: actions/deploy-pages@v4
       - name: Verify live HTTPS production responses
         run: node hlxqn-tools/smoke-live-site.mjs
+      - name: Verify stable IndexNow key is live
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://hoclaixequangninh.vn/${INDEXNOW_KEY}.txt?_verify=$(date +%s)"
+          value="$(curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "$url")"
+          test "$value" = "$INDEXNOW_KEY"
       - name: Notify IndexNow about changed URLs
         run: node hlxqn-tools/submit-indexnow.mjs
   status:
