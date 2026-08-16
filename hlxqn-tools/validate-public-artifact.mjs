@@ -36,34 +36,40 @@ const htmlFiles=all.filter(p=>p.endsWith('.html'));
 for(const page of htmlFiles){
   const rel=path.relative(root,page).replaceAll(path.sep,'/');
   const html=fs.readFileSync(page,'utf8');
+  const markup=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'');
   const isRootRedirect=!rel.includes('/')&&redirectRoot.has(rel);
   const robots=(html.match(/<meta\s+name=["']robots["']\s+content=["']([^"']+)/i)||[])[1]||'';
   const noindex=/noindex/i.test(robots);
 
   if(!/<title>[\s\S]+?<\/title>/i.test(html))errors.push(`${rel}: missing title`);
-  if(!noindex&&!/<h1\b/i.test(html))errors.push(`${rel}: indexable page missing H1`);
-  if(!noindex&&rel!=='404.html'&&!/<link\s+rel=["']canonical["']/i.test(html))errors.push(`${rel}: indexable page missing canonical`);
-  const canonical=(html.match(/<link\s+rel=["']canonical["']\s+href=["']([^"']+)/i)||[])[1];
+  if(!noindex&&!/<h1\b/i.test(markup))errors.push(`${rel}: indexable page missing H1`);
+  if(!noindex&&rel!=='404.html'&&!/<link\s+rel=["']canonical["']/i.test(markup))errors.push(`${rel}: indexable page missing canonical`);
+  const canonical=(markup.match(/<link\s+rel=["']canonical["']\s+href=["']([^"']+)/i)||[])[1];
   if(canonical&&!canonical.startsWith(domain))errors.push(`${rel}: canonical outside domain`);
 
   if(!isRootRedirect){
-    if(count(html,'class="official-header"')!==1)errors.push(`${rel}: expected exactly one official header`);
-    if(count(html,'class="official-footer"')!==1)errors.push(`${rel}: expected exactly one official footer`);
+    if(count(markup,'class="official-header"')!==1)errors.push(`${rel}: expected exactly one official header`);
+    if(count(markup,'class="official-footer"')!==1)errors.push(`${rel}: expected exactly one official footer`);
   }
   if(/official-shell\.js/i.test(html))errors.push(`${rel}: runtime shell reference leaked`);
   if(/adsterra|effectivecpmnetwork|highperformanceformat/i.test(html))errors.push(`${rel}: Adsterra leaked`);
 
-  for(const m of html.matchAll(/<(?:a|link)\b[^>]*href=["']([^"']+)["']/gi)){
+  for(const m of markup.matchAll(/<(?:a|link)\b[^>]*href=["']([^"']+)["']/gi)){
     const raw=m[1];
     const target=localTarget(page,raw);
     if(target&&!existsResolved(target))errors.push(`${rel}: broken href ${raw}`);
   }
-  for(const m of html.matchAll(/<(?:img|script)\b[^>]*src=["']([^"']+)["']/gi)){
+  for(const m of markup.matchAll(/<img\b[^>]*src=["']([^"']+)["']/gi)){
     const raw=m[1];
     const target=localTarget(page,raw);
-    if(target&&!existsResolved(target))errors.push(`${rel}: broken src ${raw}`);
+    if(target&&!existsResolved(target))errors.push(`${rel}: broken image src ${raw}`);
   }
-  for(const m of html.matchAll(/<img\b[^>]*>/gi)){
+  for(const m of html.matchAll(/<script\b[^>]*src=["']([^"']+)["']/gi)){
+    const raw=m[1];
+    const target=localTarget(page,raw);
+    if(target&&!existsResolved(target))errors.push(`${rel}: broken script src ${raw}`);
+  }
+  for(const m of markup.matchAll(/<img\b[^>]*>/gi)){
     const tag=m[0];
     if(!/\balt=["'][^"']*["']/i.test(tag))errors.push(`${rel}: image missing alt`);
     if(!/\b(?:width=["']\d+["']\s+height=["']\d+["']|height=["']\d+["']\s+width=["']\d+["'])/i.test(tag)&&!/loading=["']lazy["']/i.test(tag))warnings.push(`${rel}: non-lazy image without explicit width/height`);
@@ -101,7 +107,7 @@ if(sitemap.includes('/uu-dai-hoc-vien.html'))errors.push('affiliate noindex page
 if(!sitemap.includes('<loc>https://hoclaixequangninh.vn/</loc><lastmod>2026-08-16</lastmod>'))errors.push('homepage sitemap lastmod not updated');
 if(!sitemap.includes('<loc>https://hoclaixequangninh.vn/hoc-phi-hoc-lai-xe-quang-ninh.html</loc><lastmod>2026-08-16</lastmod>'))errors.push('pricing sitemap lastmod not updated');
 for(const url of urls){
-  let rel=url.replace(`${domain}/`,'');
+  const rel=url.replace(`${domain}/`,'');
   const target=rel===''?path.join(root,'index.html'):rel.endsWith('/')?path.join(root,rel,'index.html'):path.join(root,rel);
   if(!existsResolved(target))errors.push(`sitemap target missing: ${url}`);
 }
