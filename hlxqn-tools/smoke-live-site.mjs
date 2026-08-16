@@ -15,36 +15,46 @@ const checks=[
 const errors=[];
 const results=[];
 async function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-async function fetchWithRetry(path){
-  let last;
-  for(let i=0;i<6;i++){
+function validate(check,r,text){
+  const issues=[];
+  const ct=(r.headers.get('content-type')||'').toLowerCase();
+  if(!r.ok)issues.push(`HTTP ${r.status}`);
+  if(check.type==='text/html'&&!ct.includes('text/html'))issues.push(`unexpected content-type ${ct}`);
+  if(check.type==='text/plain'&&!ct.includes('text/plain'))issues.push(`unexpected content-type ${ct}`);
+  if(check.type==='xml'&&!ct.includes('xml'))issues.push(`unexpected content-type ${ct}`);
+  if(check.type==='javascript'&&!/(javascript|text\/plain)/.test(ct))issues.push(`unexpected content-type ${ct}`);
+  for(const needle of check.contains||[])if(!text.includes(needle))issues.push(`missing ${needle}`);
+  for(const needle of check.absent||[])if(text.includes(needle))issues.push(`forbidden ${needle}`);
+  if(/adsterra|effectivecpmnetwork|highperformanceformat/i.test(text))issues.push('Adsterra leaked live');
+  if(check.type==='text/html'&&!text.includes('https://hoclaixequangninh.vn/'))issues.push('canonical/domain signal missing');
+  return issues;
+}
+async function fetchUntilCurrent(check){
+  let last={issues:['not fetched']};
+  for(let i=0;i<12;i++){
     try{
-      const u=new URL(path,origin);
-      u.searchParams.set('_smoke',String(stamp));
-      const r=await fetch(u,{redirect:'follow',headers:{'cache-control':'no-cache','user-agent':'hoclaixequangninh-live-smoke/1.0'}});
+      const u=new URL(check.path,origin);
+      u.searchParams.set('_smoke',`${stamp}-${i}`);
+      const r=await fetch(u,{redirect:'follow',headers:{'cache-control':'no-cache, no-store','pragma':'no-cache','user-agent':'hoclaixequangninh-live-smoke/1.1'}});
       const text=await r.text();
-      last={r,text,url:u.href};
-      if(r.ok)return last;
-    }catch(e){last={error:e,url:new URL(path,origin).href};}
-    await sleep(2000*(i+1));
+      const issues=validate(check,r,text);
+      last={r,text,url:u.href,issues,attempt:i+1};
+      if(!issues.length)return last;
+    }catch(error){
+      last={error,url:new URL(check.path,origin).href,issues:[`network ${error}`],attempt:i+1};
+    }
+    await sleep(2500);
   }
   return last;
 }
 for(const check of checks){
-  const got=await fetchWithRetry(check.path);
-  if(got.error){errors.push(`${check.path}: network ${got.error}`);continue;}
-  const {r,text}=got;
-  const ct=(r.headers.get('content-type')||'').toLowerCase();
-  if(!r.ok)errors.push(`${check.path}: HTTP ${r.status}`);
-  if(check.type==='text/html'&&!ct.includes('text/html'))errors.push(`${check.path}: unexpected content-type ${ct}`);
-  if(check.type==='text/plain'&&!ct.includes('text/plain'))errors.push(`${check.path}: unexpected content-type ${ct}`);
-  if(check.type==='xml'&&!ct.includes('xml'))errors.push(`${check.path}: unexpected content-type ${ct}`);
-  if(check.type==='javascript'&&!/(javascript|text\/plain)/.test(ct))errors.push(`${check.path}: unexpected content-type ${ct}`);
-  for(const needle of check.contains||[])if(!text.includes(needle))errors.push(`${check.path}: missing ${needle}`);
-  for(const needle of check.absent||[])if(text.includes(needle))errors.push(`${check.path}: forbidden ${needle}`);
-  if(/adsterra|effectivecpmnetwork|highperformanceformat/i.test(text))errors.push(`${check.path}: Adsterra leaked live`);
-  if(check.type==='text/html'&&!text.includes('https://hoclaixequangninh.vn/'))errors.push(`${check.path}: canonical/domain signal missing`);
-  results.push({path:check.path,status:r.status,bytes:Buffer.byteLength(text),contentType:ct.split(';')[0]});
+  const got=await fetchUntilCurrent(check);
+  if(got.issues?.length){
+    for(const issue of got.issues)errors.push(`${check.path}: ${issue}`);
+    continue;
+  }
+  const ct=(got.r.headers.get('content-type')||'').toLowerCase();
+  results.push({path:check.path,status:got.r.status,bytes:Buffer.byteLength(got.text),contentType:ct.split(';')[0],attempt:got.attempt});
 }
 console.log(JSON.stringify({origin,checks:results,errors},null,2));
 if(errors.length)process.exit(1);
