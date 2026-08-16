@@ -109,6 +109,8 @@ jobs:
           path: '_site'
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify live HTTPS production responses
+        run: node hlxqn-tools/smoke-live-site.mjs
       - name: Notify IndexNow about changed URLs
         run: node hlxqn-tools/submit-indexnow.mjs
   status:
