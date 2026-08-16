@@ -38,6 +38,8 @@ jobs:
         run: node hlxqn-tools/render-static-shell.mjs
       - name: Finalize keyboard navigation accessibility
         run: node hlxqn-tools/finalize-accessibility.mjs
+      - name: Validate production performance budget
+        run: node hlxqn-tools/validate-performance-budget.mjs
       - name: Validate final production artifact
         run: node hlxqn-tools/validate-public-artifact.mjs
       - name: Validate internal link graph and crawl depth
