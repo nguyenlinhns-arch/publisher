@@ -21,12 +21,34 @@ jobs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate SEO, links, tracking and monetization
+        run: node hlxqn-tools/validate-site-v2.mjs
+      - name: Build clean public artifact
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site
+          find . -maxdepth 1 -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' -o -name 'CNAME' -o -name 'favicon.svg' -o -name '.nojekyll' \) -exec cp {} _site/ \;
+          cp -R assets _site/assets
+          cp -R lich-sat-hach _site/lich-sat-hach
+          test -s _site/index.html
+          test -s _site/robots.txt
+          test -s _site/sitemap.xml
+          test -s _site/assets/site-runtime.js
+          test ! -e _site/coin-v7
+          test ! -e _site/coin-v8
+          test ! -e _site/coin-v9
+          test ! -e _site/src
+          test ! -e _site/tests
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: '.'
+          path: '_site'
       - id: deployment
         uses: actions/deploy-pages@v4
   status:
