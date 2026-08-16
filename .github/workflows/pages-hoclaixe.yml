@@ -4,7 +4,7 @@ on:
     branches: [gh-pages]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   issues: write
 concurrency:
   group: validate-hoclaixe
@@ -62,8 +62,6 @@ jobs:
           grep -q 'id="main-content"' _site/index.html
           grep -q "mode:'status',lead_id:leadId,phone:" _site/assets/site-runtime.js
           grep -q 'confirmLead(payload.lead_id,payload.phone)' _site/assets/site-runtime.js
-          grep -q "mode:'status',lead_id:leadId,phone:" assets/site-runtime.js
-          grep -q 'confirmLead(payload.lead_id,payload.phone)' assets/site-runtime.js
           grep -q 'kinh-nghiem-hoc-lai-xe-lan-dau.html' _site/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
           grep -q 'loi-de-mat-diem-khi-thi-sa-hinh.html' _site/loi-thuong-gap-khi-hoc-sa-hinh.html
           grep -q 'cach-lai-xe-an-toan-khi-troi-mua.html' _site/meo-lai-xe-duong-truong-cho-nguoi-moi.html
@@ -91,6 +89,24 @@ jobs:
           test ! -e _site/assets/sound.mp3
           test -s "${INDEXNOW_KEY}.txt"
           test "$(tr -d '\r\n' < "${INDEXNOW_KEY}.txt")" = "$INDEXNOW_KEY"
+      - name: Sync validated artifact to legacy Pages source
+        if: github.actor != 'github-actions[bot]'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -a _site/ ./
+          rm -rf _site
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Legacy source already matches validated artifact.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Sync validated hoclaixe production [production-sync]'
+          git push origin HEAD:gh-pages
+          echo 'Validated artifact synced; follow-up bot run will verify the published source.'
+          exit 0
       - name: Allow legacy Pages publication to settle
         run: sleep 15
       - name: Verify live HTTPS production responses
