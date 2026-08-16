@@ -26,9 +26,11 @@ jobs:
           node-version: 22
       - name: Validate SEO, links, tracking and monetization
         run: node hlxqn-tools/validate-site-v2.mjs
+      - name: Validate unique SEO metadata and sitemap indexability
+        run: node hlxqn-tools/validate-seo-uniqueness.mjs
       - name: Build dependency-aware public artifact
         run: node hlxqn-tools/build-public-site.mjs
-      - name: Finalize homepage performance signals
+      - name: Finalize homepage performance and AI discovery signals
         run: node hlxqn-tools/finalize-performance.mjs
       - name: Render shared shell statically
         run: node hlxqn-tools/render-static-shell.mjs
@@ -40,6 +42,8 @@ jobs:
           test -s _site/index.html
           test -s _site/robots.txt
           test -s _site/sitemap.xml
+          test -s _site/llms.txt
+          grep -q 'Cập nhật nội dung trọng tâm: 2026-08-16' _site/llms.txt
           test -s _site/assets/site-runtime.js
           test ! -e _site/assets/official-shell.js
           ! grep -q 'official-shell.js' _site/assets/site-config.js
