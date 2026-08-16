@@ -3,8 +3,9 @@ import path from 'node:path';
 
 const root=path.resolve(import.meta.dirname,'..');
 const domain='https://hoclaixequangninh.vn';
-const utility=new Set(['404.html','lich-sat-hach-lai-xe.html','lien-he.html','dieu-khoan-su-dung.html','chinh-sach-bao-mat.html','gioi-thieu.html','tin-tuc.html','uu-dai-hoc-vien.html']);
-const noindexPages=new Set(['404.html','uu-dai-hoc-vien.html']);
+const redirectPages=new Set(['huong-dan-hoc-lai-xe.html','lich-sat-hach-lai-xe.html']);
+const utility=new Set(['404.html','huong-dan-hoc-lai-xe.html','lich-sat-hach-lai-xe.html','lien-he.html','dieu-khoan-su-dung.html','chinh-sach-bao-mat.html','gioi-thieu.html','tin-tuc.html','uu-dai-hoc-vien.html']);
+const noindexPages=new Set(['404.html','huong-dan-hoc-lai-xe.html','lich-sat-hach-lai-xe.html','uu-dai-hoc-vien.html']);
 const excludedFromSitemap=new Set(['404.html','huong-dan-hoc-lai-xe.html','lich-sat-hach-lai-xe.html','uu-dai-hoc-vien.html']);
 const files=fs.readdirSync(root).filter(f=>f.endsWith('.html')).sort();
 const errors=[];
@@ -31,21 +32,21 @@ for(const file of files){
   if(!title)errors.push(`${file}: thiếu title`);
   if(!description&&!utility.has(file))errors.push(`${file}: thiếu meta description`);
   if(!/<h1\b/i.test(html)&&!utility.has(file))errors.push(`${file}: thiếu H1`);
-  if(!canonical)errors.push(`${file}: thiếu canonical`);
+  if(!canonical&&file!=='404.html')errors.push(`${file}: thiếu canonical`);
   if(canonical&&!canonical.startsWith(domain))errors.push(`${file}: canonical ngoài tên miền (${canonical})`);
   if(canonical){
     if(seenCanonical.has(canonical)&&!utility.has(file))errors.push(`${file}: canonical trùng ${seenCanonical.get(canonical)}`);
     seenCanonical.set(canonical,file);
   }
   if(!html.includes('application/ld+json')&&!utility.has(file))errors.push(`${file}: thiếu schema`);
-  if(!html.includes('BreadcrumbList')&&!utility.has(file))errors.push(`${file}: thiếu BreadcrumbList`);
+  if(file!=='index.html'&&!html.includes('BreadcrumbList')&&!utility.has(file))errors.push(`${file}: thiếu BreadcrumbList`);
   if(!html.includes('assets/mobile-v2.css')&&!utility.has(file))errors.push(`${file}: thiếu CSS mobile`);
-  if(!html.includes('assets/site-runtime.js'))errors.push(`${file}: thiếu tracking/CTA dùng chung`);
+  if(!html.includes('assets/site-runtime.js')&&!redirectPages.has(file))errors.push(`${file}: thiếu tracking/CTA dùng chung`);
   if(/nguyenlinhns-arch\.github\.io\/publisher/i.test(html))errors.push(`${file}: còn URL GitHub Pages cũ`);
-  if(noindexPages.has(file)&&!/noindex/i.test(robots))errors.push(`${file}: trang utility phải noindex`);
+  if(noindexPages.has(file)&&!/noindex/i.test(robots))errors.push(`${file}: trang utility/redirect phải noindex`);
 
   const wordCount=text(html).split(/\s+/).filter(Boolean).length;
-  if(!utility.has(file)&&wordCount<250)warnings.push(`${file}: nội dung còn mỏng (${wordCount} từ)`);
+  if(!utility.has(file)&&wordCount<180)warnings.push(`${file}: nội dung tương đối ngắn (${wordCount} từ); chỉ mở rộng nếu có thêm thông tin hữu ích`);
 
   for(const match of html.matchAll(/<a\b[^>]*href="([^"]+)"/gi)){
     const href=match[1];
@@ -69,7 +70,10 @@ for(const url of sitemapUrls){
   const target=relative===''?'index.html':relative.endsWith('/')?`${relative}index.html`:relative;
   if(!fs.existsSync(path.join(root,target)))errors.push(`sitemap: URL không có tệp ${url}`);
 }
-if(sitemap.includes('/uu-dai-hoc-vien.html'))errors.push('sitemap: không đưa trang affiliate noindex vào sitemap');
+for(const file of excludedFromSitemap){
+  const url=file==='index.html'?`${domain}/`:`${domain}/${file}`;
+  if(sitemapUrls.includes(url))errors.push(`sitemap: không đưa trang utility/redirect vào sitemap (${url})`);
+}
 
 const robots=fs.readFileSync(path.join(root,'robots.txt'),'utf8');
 if(!robots.includes(`Sitemap: ${domain}/sitemap.xml`))errors.push('robots.txt: thiếu sitemap chuẩn');
