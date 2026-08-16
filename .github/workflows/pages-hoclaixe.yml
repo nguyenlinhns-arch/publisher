@@ -113,6 +113,25 @@ jobs:
         uses: actions/deploy-pages@v4
       - name: Verify live HTTPS production responses
         run: node hlxqn-tools/smoke-live-site.mjs
+      - name: Measure live homepage with Lighthouse 13.4.1
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          google-chrome --version || google-chrome-stable --version || true
+          npx --yes lighthouse@13.4.1 https://hoclaixequangninh.vn/ \
+            --quiet \
+            --chrome-flags="--headless --no-sandbox --disable-gpu" \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --output=json \
+            --output-path=/tmp/hoclaixe-lighthouse.json
+          rc=$?
+          if [ -s /tmp/hoclaixe-lighthouse.json ]; then
+            node hlxqn-tools/summarize-lighthouse.mjs /tmp/hoclaixe-lighthouse.json
+          else
+            echo "Lighthouse report unavailable (exit=$rc); live smoke remains the deployment health gate."
+          fi
+          exit 0
       - name: Verify stable IndexNow key is live
         shell: bash
         run: |
