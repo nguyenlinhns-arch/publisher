@@ -35,7 +35,7 @@ window.HLX_CONFIG={
   document.head.appendChild(shell);
 
   var overlay=document.createElement('script');
-  overlay.src='/assets/accesstrade-entry-overlay.js?v=20260815a';
+  overlay.src='/assets/accesstrade-entry-overlay.js?v=20260816a';
   overlay.defer=true;
   document.head.appendChild(overlay);
 })();
