@@ -28,6 +28,8 @@ jobs:
         run: node hlxqn-tools/validate-site-v2.mjs
       - name: Build dependency-aware public artifact
         run: node hlxqn-tools/build-public-site.mjs
+      - name: Render shared shell statically
+        run: node hlxqn-tools/render-static-shell.mjs
       - name: Verify public artifact
         run: |
           set -euo pipefail
@@ -35,6 +37,14 @@ jobs:
           test -s _site/robots.txt
           test -s _site/sitemap.xml
           test -s _site/assets/site-runtime.js
+          test ! -e _site/assets/official-shell.js
+          ! grep -q 'official-shell.js' _site/assets/site-config.js
+          ! grep -Eq '@import[^;]+official-(site|pages)\.css' _site/assets/mobile-v2.css
+          grep -q 'Học lái xe Quảng Ninh: <em>chọn đúng khóa học</em>' _site/index.html
+          grep -q '<a class="primary" href="#dang-ky">Đăng ký tư vấn</a>' _site/index.html
+          grep -q 'Nếu B tự động và B cơ khí cùng mức 20,9 triệu' _site/hoc-phi-hoc-lai-xe-quang-ninh.html
+          grep -q 'class="official-header"' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
+          grep -q 'class="official-footer"' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
           test ! -e _site/coin-v7
           test ! -e _site/coin-v8
           test ! -e _site/coin-v9
