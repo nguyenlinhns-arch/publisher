@@ -1,9 +1,8 @@
 (function(){
   'use strict';
 
-  // ACCESSTRADE entry overlay v1.1
   var SMARTLINK='https://nguyenlinhtkv_aul4jx.accesslanding.site';
-  var SESSION_KEY='hlxqn_accesstrade_entry_closed_v1';
+  var SESSION_KEY='hlxqn_accesstrade_offer_closed_v2';
 
   function isGooglePaidVisit(){
     try{
@@ -11,90 +10,62 @@
       if(q.get('gclid')||q.get('gbraid')||q.get('wbraid'))return true;
       var source=(q.get('utm_source')||'').toLowerCase();
       var medium=(q.get('utm_medium')||'').toLowerCase();
-      return source==='google' && /^(cpc|ppc|paid|paidsearch|paid_search)$/.test(medium);
+      return source==='google'&&/^(cpc|ppc|paid|paidsearch|paid_search)$/.test(medium);
     }catch(e){return false;}
   }
 
   function shouldSkip(){
-    if(sessionStorage.getItem(SESSION_KEY)==='1')return true;
+    try{if(sessionStorage.getItem(SESSION_KEY)==='1')return true}catch(e){}
     if(isGooglePaidVisit())return true;
-    if(/\/dang-ky-hoc-lai-xe-quang-ninh\.html$/.test(location.pathname))return true;
+    if(/\/(?:dang-ky-hoc-lai-xe-quang-ninh|uu-dai-hoc-vien)\.html$/.test(location.pathname))return true;
     return false;
   }
 
   function emit(name,params){
     try{
-      if(window.LaiXeTracking&&typeof window.LaiXeTracking.event==='function'){
-        window.LaiXeTracking.event(name,params||{});
-      }
+      if(window.LaiXeTracking&&typeof window.LaiXeTracking.event==='function')window.LaiXeTracking.event(name,params||{});
     }catch(e){}
   }
 
   function init(){
-    if(shouldSkip()||document.querySelector('.at-entry-overlay'))return;
+    if(shouldSkip()||document.querySelector('.at-offer-banner'))return;
 
     var style=document.createElement('style');
     style.textContent=''
-      +'.at-entry-lock{overflow:hidden!important}'
-      +'.at-entry-overlay{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:18px;background:rgba(3,20,36,.78);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}'
-      +'.at-entry-card{position:relative;width:min(520px,100%);border-radius:24px;background:#fff;box-shadow:0 28px 80px rgba(0,0,0,.34);overflow:hidden;border:1px solid rgba(255,255,255,.45)}'
-      +'.at-entry-top{padding:26px 26px 22px;background:linear-gradient(135deg,#fff3ec,#fff);text-align:left}'
-      +'.at-entry-tag{display:inline-flex;padding:6px 9px;border-radius:999px;background:#fff0e8;color:#b74022;font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}'
-      +'.at-entry-card h2{margin:11px 0 8px;color:#082f55;font-size:27px;line-height:1.16;letter-spacing:-.03em}'
-      +'.at-entry-card p{margin:0;color:#536777;font-size:14px;line-height:1.55}'
-      +'.at-entry-actions{padding:0 26px 24px;display:grid;gap:10px}'
-      +'.at-entry-primary{min-height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:#ee4d2d;color:#fff!important;text-decoration:none;font-size:15px;font-weight:900}'
-      +'.at-entry-secondary{min-height:46px;border:0;background:transparent;color:#5b6d79;font-size:13px;font-weight:800;cursor:pointer}'
-      +'.at-entry-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border:0;border-radius:50%;display:grid;place-items:center;background:#fff;color:#17384f;font-size:25px;line-height:1;box-shadow:0 4px 16px rgba(8,34,57,.14);cursor:pointer}'
-      +'.at-entry-note{padding:11px 26px 15px;background:#f7f9fb;color:#84919a;font-size:10px;line-height:1.4;text-align:center}'
-      +'@media(max-width:520px){.at-entry-overlay{padding:12px}.at-entry-card{border-radius:20px}.at-entry-top{padding:24px 20px 18px}.at-entry-card h2{font-size:24px}.at-entry-actions{padding:0 20px 20px}.at-entry-note{padding:10px 18px 13px}}';
+      +'.at-offer-banner{position:fixed;right:16px;bottom:16px;z-index:58;width:min(410px,calc(100% - 32px));border:1px solid #e7e1dc;border-radius:18px;background:#fff;box-shadow:0 18px 48px rgba(4,35,58,.18);overflow:hidden}'
+      +'.at-offer-inner{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:15px 16px}'
+      +'.at-offer-copy{min-width:0}.at-offer-tag{display:block;margin-bottom:4px;color:#b74022;font-size:10px;font-weight:900;letter-spacing:.055em;text-transform:uppercase}'
+      +'.at-offer-copy strong{display:block;color:#082f55;font-size:15px;line-height:1.25}.at-offer-copy small{display:block;margin-top:3px;color:#657785;font-size:11px;line-height:1.35}'
+      +'.at-offer-cta{min-height:42px;padding:0 13px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:#ee4d2d;color:#fff!important;text-decoration:none;font-size:12.5px;font-weight:900;white-space:nowrap}'
+      +'.at-offer-close{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:#81909a;font-size:20px;line-height:1;cursor:pointer}'
+      +'.at-offer-note{padding:6px 14px 8px;border-top:1px solid #f0ece9;background:#fbfaf9;color:#8a969d;font-size:9px;line-height:1.3}'
+      +'@media(max-width:600px){.at-offer-banner{left:10px;right:10px;bottom:78px;width:auto;border-radius:15px}.at-offer-inner{padding:13px 38px 13px 14px;grid-template-columns:1fr}.at-offer-cta{min-height:40px;width:100%}.at-offer-note{padding:5px 14px 7px}}';
     document.head.appendChild(style);
 
-    var overlay=document.createElement('div');
-    overlay.className='at-entry-overlay';
-    overlay.setAttribute('role','dialog');
-    overlay.setAttribute('aria-modal','true');
-    overlay.setAttribute('aria-labelledby','at-entry-title');
-    overlay.innerHTML=''
-      +'<div class="at-entry-card">'
-      +  '<button class="at-entry-close" type="button" aria-label="Đóng">×</button>'
-      +  '<div class="at-entry-top">'
-      +    '<span class="at-entry-tag">ƯU ĐÃI MUA SẮM</span>'
-      +    '<h2 id="at-entry-title">Xem ưu đãi đang có</h2>'
-      +    '<p>Phụ kiện ô tô, đồ chăm sóc xe và nhiều sản phẩm đang có ưu đãi.</p>'
-      +  '</div>'
-      +  '<div class="at-entry-actions">'
-      +    '<a class="at-entry-primary" href="'+SMARTLINK+'" target="_blank" rel="sponsored nofollow noopener" data-affiliate="accesstrade-entry-overlay">Xem ưu đãi</a>'
-      +    '<button class="at-entry-secondary" type="button">Tiếp tục xem website</button>'
-      +  '</div>'
-      +  '<div class="at-entry-note">Liên kết tiếp thị ACCESSTRADE có thể mang lại hoa hồng cho hoclaixequangninh.vn.</div>'
-      +'</div>';
+    var banner=document.createElement('aside');
+    banner.className='at-offer-banner';
+    banner.setAttribute('aria-label','Ưu đãi mua sắm');
+    banner.innerHTML=''
+      +'<button class="at-offer-close" type="button" aria-label="Đóng ưu đãi">×</button>'
+      +'<div class="at-offer-inner">'
+      +  '<div class="at-offer-copy"><span class="at-offer-tag">Ưu đãi học viên</span><strong>Phụ kiện & đồ dùng cho người học lái xe</strong><small>Xem sản phẩm và ưu đãi từ đối tác.</small></div>'
+      +  '<a class="at-offer-cta" href="'+SMARTLINK+'" target="_blank" rel="sponsored nofollow noopener" data-affiliate="accesstrade-entry-banner">Xem ưu đãi</a>'
+      +'</div>'
+      +'<div class="at-offer-note">Liên kết tiếp thị ACCESSTRADE có thể mang lại hoa hồng cho hoclaixequangninh.vn.</div>';
 
-    function closeOverlay(){
+    function closeBanner(){
       try{sessionStorage.setItem(SESSION_KEY,'1')}catch(e){}
-      document.documentElement.classList.remove('at-entry-lock');
-      overlay.remove();
-      emit('affiliate_overlay_close',{page_path:location.pathname});
+      banner.remove();
+      emit('affiliate_banner_close',{page_path:location.pathname});
     }
 
-    overlay.querySelector('.at-entry-close').addEventListener('click',closeOverlay);
-    overlay.querySelector('.at-entry-secondary').addEventListener('click',closeOverlay);
-    overlay.querySelector('.at-entry-primary').addEventListener('click',function(){
-      emit('affiliate_click',{affiliate_network:'ACCESSTRADE',affiliate_campaign:'entry_overlay',link_url:SMARTLINK,page_path:location.pathname});
+    banner.querySelector('.at-offer-close').addEventListener('click',closeBanner);
+    banner.querySelector('.at-offer-cta').addEventListener('click',function(){
+      emit('affiliate_click',{affiliate_network:'ACCESSTRADE',affiliate_campaign:'entry_banner',link_url:SMARTLINK,page_path:location.pathname});
     });
-    overlay.addEventListener('click',function(e){if(e.target===overlay)closeOverlay()});
-    document.addEventListener('keydown',function esc(e){
-      if(e.key==='Escape'){
-        document.removeEventListener('keydown',esc);
-        closeOverlay();
-      }
-    });
-
-    document.documentElement.classList.add('at-entry-lock');
-    document.body.appendChild(overlay);
-    emit('affiliate_overlay_view',{page_path:location.pathname});
-    setTimeout(function(){var btn=overlay.querySelector('.at-entry-close');if(btn)btn.focus()},0);
+    document.body.appendChild(banner);
+    emit('affiliate_banner_view',{page_path:location.pathname});
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

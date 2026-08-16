@@ -29,13 +29,37 @@ window.HLX_CONFIG={
     });
   }
 
-  var shell=document.createElement('script');
-  shell.src='/assets/official-shell.js?v=20260815h';
-  shell.defer=true;
-  document.head.appendChild(shell);
+  var staticHome=!!document.querySelector('.institutional-home')&&!!document.querySelector('.official-header')&&!!document.querySelector('.official-footer');
+  if(!staticHome){
+    var shell=document.createElement('script');
+    shell.src='/assets/official-shell.js?v=20260815h';
+    shell.async=true;
+    document.head.appendChild(shell);
+  }
 
-  var overlay=document.createElement('script');
-  overlay.src='/assets/accesstrade-entry-overlay.js?v=20260816a';
-  overlay.defer=true;
-  document.head.appendChild(overlay);
+  function isGooglePaidVisit(){
+    try{
+      var q=new URLSearchParams(location.search);
+      if(q.get('gclid')||q.get('gbraid')||q.get('wbraid'))return true;
+      var source=(q.get('utm_source')||'').toLowerCase();
+      var medium=(q.get('utm_medium')||'').toLowerCase();
+      return source==='google'&&/^(cpc|ppc|paid|paidsearch|paid_search)$/.test(medium);
+    }catch(e){return false;}
+  }
+
+  function loadAffiliate(){
+    if(isGooglePaidVisit())return;
+    if(/\/(?:dang-ky-hoc-lai-xe-quang-ninh|uu-dai-hoc-vien)\.html$/.test(location.pathname))return;
+    var offer=document.createElement('script');
+    offer.src='/assets/accesstrade-entry-overlay.js?v=20260816b';
+    offer.async=true;
+    document.head.appendChild(offer);
+  }
+
+  function scheduleAffiliate(){
+    if('requestIdleCallback' in window)requestIdleCallback(loadAffiliate,{timeout:1800});
+    else setTimeout(loadAffiliate,900);
+  }
+  if(document.readyState==='complete')scheduleAffiliate();
+  else window.addEventListener('load',scheduleAffiliate,{once:true});
 })();
