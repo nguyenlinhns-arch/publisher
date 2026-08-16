@@ -63,7 +63,8 @@ const dates={
   'loi-thuong-gap-khi-hoc-sa-hinh.html':'2026-08-12',
   'meo-lai-xe-duong-truong-cho-nguoi-moi.html':'2026-08-12',
   'hoc-lai-xe-so-tu-dong-quang-ninh.html':'2026-08-15',
-  'hoc-thuc-hanh-sa-hinh.html':'2026-08-12'
+  'hoc-thuc-hanh-sa-hinh.html':'2026-08-12',
+  'ke-hoach-on-thi-sat-hach-7-ngay.html':'2026-08-12'
 };
 for(const [file,oldDate] of Object.entries(dates)){
   const old=`<loc>https://hoclaixequangninh.vn/${file}</loc><lastmod>${oldDate}</lastmod>`;
@@ -73,4 +74,4 @@ for(const [file,oldDate] of Object.entries(dates)){
 }
 fs.writeFileSync(sitemapPath,sitemap);
 
-console.log(JSON.stringify({contextualLinks:6,updatedPages:5,lastmod:'2026-08-16'},null,2));
+console.log(JSON.stringify({contextualLinks:6,updatedPages:6,lastmod:'2026-08-16'},null,2));
