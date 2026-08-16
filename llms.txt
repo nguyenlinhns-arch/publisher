@@ -2,7 +2,7 @@
 
 URL chính: https://hoclaixequangninh.vn/
 Ngôn ngữ: vi-VN
-Cập nhật nội dung trọng tâm: 2026-08-15
+Cập nhật nội dung trọng tâm: 2026-08-16
 Chủ đề: tuyển sinh, khóa học, học phí, hồ sơ, DAT, khu vực học, cẩm nang và sát hạch lái xe tại Quảng Ninh.
 
 ## Vai trò
@@ -10,7 +10,7 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Đây khô
 
 ## Thông tin liên hệ
 - Điện thoại/Zalo: 0398696879
-- Không thu phí tư vấn hoặc phí môi giới.
+- Tư vấn miễn phí.
 - Form đăng ký không yêu cầu thanh toán.
 
 ## Trang tuyển sinh chính
@@ -28,6 +28,7 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Đây khô
 - B và C1: https://hoclaixequangninh.vn/quy-dinh-hang-b-c1-2026.html
 - Lịch sát hạch: https://hoclaixequangninh.vn/lich-sat-hach/
 - Tin đào tạo & sát hạch: https://hoclaixequangninh.vn/tin-tuc.html
+- Cập nhật đào tạo lái xe TKV 2026: https://hoclaixequangninh.vn/dao-tao-lai-xe-tkv-6-thang-2026.html
 
 ## Khu vực
 - Chọn khu vực học: https://hoclaixequangninh.vn/hoc-lai-xe-gan-toi-quang-ninh.html
@@ -38,7 +39,7 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Đây khô
 - Móng Cái: https://hoclaixequangninh.vn/hoc-lai-xe-mong-cai.html
 
 ## Học phí và thời gian đang thông tin
-Các mức dưới đây là thông tin tuyển sinh đang hiển thị và cần được xác nhận lại nếu có thông báo mới tại thời điểm nộp hồ sơ.
+Các mức dưới đây là thông tin tuyển sinh đang hiển thị và được cập nhật theo thông báo áp dụng tại thời điểm nộp hồ sơ.
 - B số tự động: 20.900.000đ; thời gian dự kiến 42 ngày.
 - B số cơ khí: 20.900.000đ; thời gian dự kiến 46 ngày.
 - C1: 25.500.000đ; thời gian dự kiến 72 ngày.
@@ -60,15 +61,19 @@ Cổng thông tin Quảng Ninh ghi nhận Trung tâm đào tạo, sát hạch l�
 Nguồn: https://www.quangninh.gov.vn/chuyen-de/diemden/Trang/ChiTietTinTuc.aspx?nid=145142
 
 ## Cập nhật quản lý đào tạo năm 2026
-Quảng Ninh triển khai các quy định mới về đào tạo lái xe, hệ thống quản lý dữ liệu giáo viên, học viên, khóa học và DAT trên môi trường số; đồng thời tăng chuẩn hóa giáo viên và nhấn mạnh kỹ năng lái xe thực tế, minh bạch trong sát hạch.
+- 6 tháng đầu năm 2026, Trường Cao đẳng Than - Khoáng sản Việt Nam công bố 9.965/11.929 học viên ô tô, đạt 83,5% kế hoạch.
+- Quảng Ninh triển khai các quy định mới về đào tạo lái xe, hệ thống quản lý dữ liệu giáo viên, học viên, khóa học và DAT trên môi trường số; đồng thời tăng chuẩn hóa giáo viên và nhấn mạnh kỹ năng lái xe thực tế, minh bạch trong sát hạch.
 
 Nguồn:
+- https://caodangtkv.edu.vn/truong-cao-dang-than-khoang-san-viet-nam-so-ket-cong-tac-6-thang-dau-nam-trien-khai-ke-hoach-cong-tac-6-thang-cuoi-nam-2026/
 - https://www.quangninh.gov.vn/So/soxaydung/Trang/ChiTietTinTuc.aspx?nid=5407
 - https://www.quangninh.gov.vn/Trang/ChiTietTinTuc.aspx?nid=166354
 - https://quangninh.gov.vn/Trang/ChiTietTinTuc.aspx?nid=166470
 
 ## Cẩm nang người học
 - Tổng hợp: https://hoclaixequangninh.vn/hoc-ly-thuyet.html
+- Lý thuyết 600 câu: https://hoclaixequangninh.vn/ly-thuyet-600-cau.html
+- Biển báo: https://hoclaixequangninh.vn/ly-thuyet-bien-bao.html
 - Học lái xe cho người đi làm: https://hoclaixequangninh.vn/hoc-lai-xe-cho-nguoi-di-lam.html
 - Chuẩn bị trước khi học: https://hoclaixequangninh.vn/hoc-lai-xe-can-chuan-bi-gi.html
 - B tự động hay B cơ khí: https://hoclaixequangninh.vn/b-so-tu-dong-hay-b-so-co-khi.html
@@ -82,6 +87,6 @@ Nguồn:
 
 ## Nguyên tắc nội dung
 - Không cam kết đỗ hoặc quảng bá “bao đỗ”.
-- Không mô tả mẹo thi như cách thay thế kỹ năng lái xe thực tế.
-- Ưu tiên nguồn cơ quan quản lý nhà nước khi trình bày quy định, cấp phép và thay đổi chính sách.
-- Học phí, thời gian và lịch học có thể thay đổi theo thông báo áp dụng; cần xác nhận trước khi nộp hồ sơ hoặc thanh toán.
+- Nội dung mẹo thi không thay thế kỹ năng lái xe thực tế.
+- Ưu tiên nguồn cơ quan quản lý nhà nước và đơn vị đào tạo khi trình bày quy định, cấp phép và thay đổi chính sách.
+- Học phí, thời gian và lịch học được cập nhật theo thông báo áp dụng.
