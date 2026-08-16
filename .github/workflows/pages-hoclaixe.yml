@@ -36,6 +36,8 @@ jobs:
         run: node hlxqn-tools/render-static-shell.mjs
       - name: Validate final production artifact
         run: node hlxqn-tools/validate-public-artifact.mjs
+      - name: Validate internal link graph and crawl depth
+        run: node hlxqn-tools/validate-internal-link-graph.mjs
       - name: Verify public artifact
         run: |
           set -euo pipefail
@@ -43,7 +45,9 @@ jobs:
           test -s _site/robots.txt
           test -s _site/sitemap.xml
           test -s _site/llms.txt
+          test -s _site/dao-tao-lai-xe-tkv-6-thang-2026.html
           grep -q 'Cập nhật nội dung trọng tâm: 2026-08-16' _site/llms.txt
+          grep -q 'dao-tao-lai-xe-tkv-6-thang-2026.html' _site/llms.txt
           test -s _site/assets/site-runtime.js
           test ! -e _site/assets/official-shell.js
           ! grep -q 'official-shell.js' _site/assets/site-config.js

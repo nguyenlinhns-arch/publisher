@@ -22,6 +22,18 @@ const llmsPath=path.join(root,'llms.txt');
 let llms=fs.readFileSync(llmsPath,'utf8');
 if(llms.includes('Cập nhật nội dung trọng tâm: 2026-08-15'))llms=llms.replace('Cập nhật nội dung trọng tâm: 2026-08-15','Cập nhật nội dung trọng tâm: 2026-08-16');
 else if(!llms.includes('Cập nhật nội dung trọng tâm: 2026-08-16'))throw new Error('llms.txt freshness anchor missing');
+const articleLine='- Cập nhật đào tạo lái xe TKV 2026: https://hoclaixequangninh.vn/dao-tao-lai-xe-tkv-6-thang-2026.html';
+if(!llms.includes(articleLine)){
+  const newsLine='- Tin đào tạo & sát hạch: https://hoclaixequangninh.vn/tin-tuc.html';
+  if(!llms.includes(newsLine))throw new Error('llms.txt news anchor missing');
+  llms=llms.replace(newsLine,`${newsLine}\n${articleLine}`);
+}
+const dataLine='- 6 tháng đầu năm 2026, Trường Cao đẳng Than - Khoáng sản Việt Nam công bố 9.965/11.929 học viên ô tô, đạt 83,5% kế hoạch.';
+if(!llms.includes(dataLine)){
+  const updateHeading='## Cập nhật quản lý đào tạo năm 2026';
+  if(!llms.includes(updateHeading))throw new Error('llms.txt 2026 update anchor missing');
+  llms=llms.replace(updateHeading,`${updateHeading}\n${dataLine}`);
+}
 fs.writeFileSync(llmsPath,llms);
 
-console.log(JSON.stringify({homepageTitle:true,lcpPreload:true,llmsFreshness:'2026-08-16'},null,2));
+console.log(JSON.stringify({homepageTitle:true,lcpPreload:true,llmsFreshness:'2026-08-16',llmsTrainingUpdate:true},null,2));
