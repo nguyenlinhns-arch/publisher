@@ -7,7 +7,7 @@ if(!reportPath||!fs.existsSync(reportPath)){
 }
 const lhr=JSON.parse(fs.readFileSync(reportPath,'utf8'));
 const score=name=>Math.round(((lhr.categories?.[name]?.score??0)*100));
-const numeric=id)=>{
+const numeric=id=>{
   const a=lhr.audits?.[id];
   return a&&typeof a.numericValue==='number'?Math.round(a.numericValue):null;
 };
@@ -39,4 +39,5 @@ const summary={
   opportunities,
   failedBinaryAudits:diagnostics
 };
+console.log('LIGHTHOUSE_SUMMARY '+JSON.stringify(summary));
 console.log(JSON.stringify(summary,null,2));
