@@ -75,6 +75,7 @@ jobs:
           grep -q 'rel="preload" as="image" href="/assets/quang-hanh-san-sat-hach.jpg"' _site/index.html
           grep -q 'Học lái xe Quảng Ninh: <em>chọn đúng khóa học</em>' _site/index.html
           grep -q '<a class="primary" href="#dang-ky">Đăng ký tư vấn</a>' _site/index.html
+          grep -q 'Tư vấn miễn phí' _site/index.html
           grep -q 'Nếu B tự động và B cơ khí cùng mức 20,9 triệu' _site/hoc-phi-hoc-lai-xe-quang-ninh.html
           grep -q 'class="official-header"' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
           grep -q 'class="official-footer"' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
@@ -87,6 +88,13 @@ jobs:
           test ! -e _site/requirements-dev.txt
           test ! -e _site/assets/nen.png
           test ! -e _site/assets/sound.mp3
+      - name: Generate ephemeral IndexNow ownership key
+        shell: bash
+        run: |
+          set -euo pipefail
+          key="$(openssl rand -hex 16)"
+          printf 'INDEXNOW_KEY=%s\n' "$key" >> "$GITHUB_ENV"
+          printf '%s' "$key" > "_site/${key}.txt"
       - uses: actions/configure-pages@v5
         with:
           enablement: true
@@ -95,6 +103,8 @@ jobs:
           path: '_site'
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Notify IndexNow about changed URLs
+        run: node hlxqn-tools/submit-indexnow.mjs
   status:
     if: always()
     needs: deploy
