@@ -89,7 +89,10 @@ const siteConfig=fs.readFileSync(path.join(root,'assets/site-config.js'),'utf8')
 const affiliate=fs.readFileSync(path.join(root,'assets/accesstrade-entry-overlay.js'),'utf8');
 const productionFiles=[siteConfig,runtime,affiliate,...files.map(f=>fs.readFileSync(path.join(root,f),'utf8'))].join('\n');
 if(/adsterra|effectivecpmnetwork|highperformanceformat/i.test(productionFiles))errors.push('monetization: còn mã Adsterra trong production');
-if(!siteConfig.includes('isGooglePaidVisit')||!siteConfig.includes('if(isGooglePaidVisit())return'))errors.push('affiliate: chưa loại traffic Google Ads trước khi tải');
+const protectsCurrentPaid=siteConfig.includes("q.get('gclid')")&&siteConfig.includes("q.get('gbraid')")&&siteConfig.includes("q.get('wbraid')");
+const protectsPersistedPaid=siteConfig.includes("localStorage.getItem('hlxqn_attribution_v1')")&&siteConfig.includes('return paidSignals(saved)');
+const blocksAffiliateForPaid=siteConfig.includes('window.HLX_IS_GOOGLE_PAID_VISIT=isGooglePaidVisit()')&&siteConfig.includes('if(window.HLX_IS_GOOGLE_PAID_VISIT)return');
+if(!protectsCurrentPaid||!protectsPersistedPaid||!blocksAffiliateForPaid)errors.push('affiliate: chưa loại đầy đủ traffic Google Ads hiện tại và đã lưu trước khi tải');
 if(/at-entry-lock|inset:0;z-index:214748/i.test(affiliate))errors.push('affiliate: còn dấu hiệu interstitial che toàn màn hình');
 if(!affiliate.includes('at-offer-banner'))errors.push('affiliate: chưa dùng banner không xâm lấn');
 if(!affiliate.includes('rel="sponsored nofollow noopener"'))errors.push('affiliate: thiếu rel sponsored/nofollow/noopener');
