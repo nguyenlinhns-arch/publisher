@@ -34,7 +34,8 @@ function isCurrentRemovalStatement(s){
   return /không còn[^.]{0,140}mô phỏng/.test(t)
     || /bỏ[^.]{0,140}mô phỏng/.test(t)
     || /loại bỏ[^.]{0,140}mô phỏng/.test(t)
-    || /mô phỏng[^.]{0,140}(?:đã\s+)?(?:được\s+)?bỏ/.test(t);
+    || /mô phỏng[^.]{0,140}(?:đã\s+)?(?:được\s+)?bỏ/.test(t)
+    || /mô phỏng[^.]{0,180}không còn[^.]{0,120}(?:là\s+)?(?:một\s+)?phần thi/.test(t);
 }
 function isFacilityOrTrainingContext(s){
   const t=s.toLowerCase();
