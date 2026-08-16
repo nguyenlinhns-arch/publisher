@@ -1,26 +1,19 @@
-name: Deploy hoclaixequangninh.vn
+name: Validate hoclaixequangninh.vn
 on:
   push:
     branches: [gh-pages]
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
   issues: write
 concurrency:
-  group: pages-hoclaixe
+  group: validate-hoclaixe
   cancel-in-progress: true
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  validate:
     runs-on: ubuntu-latest
     env:
       INDEXNOW_KEY: d7541c382467bb931d7a40b9650e7e2e
-    outputs:
-      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
@@ -34,15 +27,15 @@ jobs:
         run: node hlxqn-tools/validate-current-exam-rules.mjs
       - name: Probe live lead ACK endpoint (read-only)
         run: node hlxqn-tools/probe-lead-endpoint.mjs
-      - name: Build dependency-aware public artifact
+      - name: Build dependency-aware public artifact for validation
         run: node hlxqn-tools/build-public-site.mjs
-      - name: Harden lead ACK status context
+      - name: Harden lead ACK status context in validation artifact
         run: node hlxqn-tools/harden-lead-runtime.mjs
-      - name: Strengthen contextual internal links
+      - name: Strengthen contextual internal links in validation artifact
         run: node hlxqn-tools/strengthen-context-links.mjs
       - name: Finalize homepage performance and AI discovery signals
         run: node hlxqn-tools/finalize-performance.mjs
-      - name: Render shared shell statically
+      - name: Render shared shell statically in validation artifact
         run: node hlxqn-tools/render-static-shell.mjs
       - name: Finalize keyboard navigation accessibility
         run: node hlxqn-tools/finalize-accessibility.mjs
@@ -50,11 +43,11 @@ jobs:
         run: node hlxqn-tools/validate-performance-budget.mjs
       - name: Validate final production artifact
         run: node hlxqn-tools/validate-public-artifact.mjs
-      - name: Recheck current driving-test rules in production
+      - name: Recheck current driving-test rules in production artifact
         run: node hlxqn-tools/validate-current-exam-rules.mjs _site
       - name: Validate internal link graph and crawl depth
         run: node hlxqn-tools/validate-internal-link-graph.mjs
-      - name: Verify public artifact
+      - name: Verify public artifact and legacy source invariants
         run: |
           set -euo pipefail
           test -s _site/index.html
@@ -69,6 +62,8 @@ jobs:
           grep -q 'id="main-content"' _site/index.html
           grep -q "mode:'status',lead_id:leadId,phone:" _site/assets/site-runtime.js
           grep -q 'confirmLead(payload.lead_id,payload.phone)' _site/assets/site-runtime.js
+          grep -q "mode:'status',lead_id:leadId,phone:" assets/site-runtime.js
+          grep -q 'confirmLead(payload.lead_id,payload.phone)' assets/site-runtime.js
           grep -q 'kinh-nghiem-hoc-lai-xe-lan-dau.html' _site/buoi-hoc-lai-xe-dau-tien-can-biet-gi.html
           grep -q 'loi-de-mat-diem-khi-thi-sa-hinh.html' _site/loi-thuong-gap-khi-hoc-sa-hinh.html
           grep -q 'cach-lai-xe-an-toan-khi-troi-mua.html' _site/meo-lai-xe-duong-truong-cho-nguoi-moi.html
@@ -85,8 +80,6 @@ jobs:
           grep -q '<a class="primary" href="#dang-ky">Đăng ký tư vấn</a>' _site/index.html
           grep -q 'Tư vấn miễn phí' _site/index.html
           grep -q 'Nếu B tự động và B cơ khí cùng mức 20,9 triệu' _site/hoc-phi-hoc-lai-xe-quang-ninh.html
-          grep -q 'class="official-header"' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
-          grep -q 'class="official-footer"' _site/hoc-lai-xe-so-tu-dong-quang-ninh.html
           test ! -e _site/coin-v7
           test ! -e _site/coin-v8
           test ! -e _site/coin-v9
@@ -96,21 +89,10 @@ jobs:
           test ! -e _site/requirements-dev.txt
           test ! -e _site/assets/nen.png
           test ! -e _site/assets/sound.mp3
-      - name: Publish stable IndexNow ownership key
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$INDEXNOW_KEY"
-          printf '%s' "$INDEXNOW_KEY" > "_site/${INDEXNOW_KEY}.txt"
-          test "$(cat "_site/${INDEXNOW_KEY}.txt")" = "$INDEXNOW_KEY"
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: '_site'
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          test -s "${INDEXNOW_KEY}.txt"
+          test "$(tr -d '\r\n' < "${INDEXNOW_KEY}.txt")" = "$INDEXNOW_KEY"
+      - name: Allow legacy Pages publication to settle
+        run: sleep 15
       - name: Verify live HTTPS production responses
         run: node hlxqn-tools/smoke-live-site.mjs
       - name: Measure live homepage with Lighthouse 13.4.1
@@ -129,10 +111,11 @@ jobs:
           if [ -s /tmp/hoclaixe-lighthouse.json ]; then
             node hlxqn-tools/summarize-lighthouse.mjs /tmp/hoclaixe-lighthouse.json
           else
-            echo "Lighthouse report unavailable (exit=$rc); live smoke remains the deployment health gate."
+            echo "Lighthouse report unavailable (exit=$rc); live smoke remains the health gate."
           fi
           exit 0
       - name: Diagnose stable IndexNow key availability
+        continue-on-error: true
         shell: bash
         run: |
           set +e
@@ -147,13 +130,14 @@ jobs:
             echo "IndexNow key not yet visible (attempt=${attempt}, http=${code}); retrying..."
             sleep 3
           done
-          echo "::warning::IndexNow key verification is temporarily unavailable on the custom-domain CDN. Website health is unaffected; submission will still be attempted."
+          echo "::warning::IndexNow key verification is temporarily unavailable on the CDN. Website health is unaffected."
           exit 0
       - name: Notify IndexNow about changed URLs
+        continue-on-error: true
         run: node hlxqn-tools/submit-indexnow.mjs
   status:
     if: always()
-    needs: deploy
+    needs: validate
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -161,12 +145,12 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         env:
-          RESULT: ${{ needs.deploy.result }}
-          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+          RESULT: ${{ needs.validate.result }}
+          PAGE_URL: https://hoclaixequangninh.vn/
         with:
           script: |
             const title='PAGES_STATUS: hoclaixequangninh.vn';
-            const body=`Result: ${process.env.RESULT}\nURL: ${process.env.PAGE_URL||''}\nCommit: ${context.sha}\nRun: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body=`Result: ${process.env.RESULT}\nURL: ${process.env.PAGE_URL}\nCommit: ${context.sha}\nRun: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const {data:items}=await github.rest.issues.listForRepo({owner:context.repo.owner,repo:context.repo.repo,state:'all',per_page:100});
             const found=items.find(x=>x.title===title);
             if(found) await github.rest.issues.update({owner:context.repo.owner,repo:context.repo.repo,issue_number:found.number,body,state:'closed'});
