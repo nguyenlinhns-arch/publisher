@@ -22,6 +22,7 @@ hoclaixequangninh.vn là kênh thông tin và tư vấn tuyển sinh. Đây khô
 - Hạng C1: https://hoclaixequangninh.vn/hoc-c1-quang-ninh.html
 - Hạng A1: https://hoclaixequangninh.vn/hoc-a1-quang-ninh.html
 - Học phí: https://hoclaixequangninh.vn/hoc-phi-hoc-lai-xe-quang-ninh.html
+- Học phí, giờ học & DAT 2026: https://hoclaixequangninh.vn/quy-dinh-hoc-phi-thoi-gian-dat.html
 - Hồ sơ: https://hoclaixequangninh.vn/ho-so-hoc-lai-xe-quang-ninh.html
 - DAT: https://hoclaixequangninh.vn/dat-hoc-lai-xe-la-gi.html
 - Thời gian học: https://hoclaixequangninh.vn/hoc-lai-xe-quang-ninh-bao-lau.html
@@ -43,6 +44,19 @@ Các mức dưới đây là thông tin tuyển sinh đang hiển thị và đư
 - B số tự động: 20.900.000đ; thời gian dự kiến 42 ngày.
 - B số cơ khí: 20.900.000đ; thời gian dự kiến 46 ngày.
 - C1: 25.500.000đ; thời gian dự kiến 72 ngày.
+
+## Khối lượng đào tạo từ 01/07/2026
+Theo Thông tư 17/2026/TT-BXD:
+- B số tự động: 136 giờ lý thuyết + 60 giờ thực hành = 196 giờ; 950 km thực hành.
+- B số cơ khí: 152 giờ lý thuyết + 76 giờ thực hành = 228 giờ; 1.050 km thực hành.
+- C1: 152 giờ lý thuyết + 85 giờ thực hành = 237 giờ; 1.050 km thực hành.
+- B số tự động, B số cơ khí và C1 đều có 4 giờ học phần mềm mô phỏng các tình huống giao thông trong chương trình đào tạo.
+- Từ 01/07/2026, kỳ sát hạch ô tô không còn phần thi mô phỏng trên máy tính; quy trình sát hạch thực hiện tuần tự lý thuyết, thực hành trong hình và thực hành trên đường.
+- Cần phân biệt: mô phỏng vẫn là nội dung đào tạo/kiểm tra hoàn thành khóa, nhưng không còn là một phần thi trong kỳ sát hạch ô tô.
+
+Nguồn:
+- https://vanban.chinhphu.vn/?classid=1&docid=218042&pageid=27160
+- https://xaydungchinhsach.chinhphu.vn/quy-dinh-moi-bo-phan-sat-hach-lai-xe-mo-phong-tu-01-7-2026-119260627105803901.htm
 
 ## Phạm vi giấy phép cần lưu ý
 - A1: mô tô hai bánh có dung tích xi-lanh đến 125 cm³ hoặc động cơ điện có công suất đến 11 kW.

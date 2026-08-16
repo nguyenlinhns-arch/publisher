@@ -34,7 +34,7 @@ touchArticle('hoc-thuc-hanh-sa-hinh.html','2026-08-12');
 
 const sitemapPath=path.join(root,'sitemap.xml');
 let sitemap=fs.readFileSync(sitemapPath,'utf8');
-const files=['buoi-hoc-lai-xe-dau-tien-can-biet-gi.html','loi-thuong-gap-khi-hoc-sa-hinh.html','meo-lai-xe-duong-truong-cho-nguoi-moi.html','hoc-lai-xe-so-tu-dong-quang-ninh.html','hoc-thuc-hanh-sa-hinh.html','ke-hoach-on-thi-sat-hach-7-ngay.html'];
+const files=['buoi-hoc-lai-xe-dau-tien-can-biet-gi.html','loi-thuong-gap-khi-hoc-sa-hinh.html','meo-lai-xe-duong-truong-cho-nguoi-moi.html','hoc-lai-xe-so-tu-dong-quang-ninh.html','hoc-thuc-hanh-sa-hinh.html','ke-hoach-on-thi-sat-hach-7-ngay.html','quy-dinh-hoc-phi-thoi-gian-dat.html'];
 for(const file of files){
   const escaped=file.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const re=new RegExp(`(<loc>https://hoclaixequangninh\\.vn/${escaped}<\\/loc><lastmod>)[^<]+(<\\/lastmod>)`);
@@ -42,4 +42,4 @@ for(const file of files){
   sitemap=sitemap.replace(re,'$12026-08-16$2');
 }
 fs.writeFileSync(sitemapPath,sitemap);
-console.log(JSON.stringify({contextualLinks:6,updatedPages:6,lastmod:'2026-08-16',idempotent:true},null,2));
+console.log(JSON.stringify({contextualLinks:6,updatedPages:7,lastmod:'2026-08-16',idempotent:true},null,2));
