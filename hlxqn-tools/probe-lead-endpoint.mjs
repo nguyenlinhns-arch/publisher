@@ -29,9 +29,9 @@ try{
   }
   const supportsStatus=mode==='jsonp-status'&&payload&&payload.ok===true&&Object.prototype.hasOwnProperty.call(payload,'saved');
   console.log(JSON.stringify({httpStatus:response.status,mode,supportsStatus,payload},null,2));
-  // Diagnostic only. A later gate can be made strict after the live deployment capability is known.
-  process.exit(0);
+  if(!response.ok)throw new Error(`Lead endpoint HTTP ${response.status}`);
+  if(!supportsStatus)throw new Error(`Live lead endpoint does not expose required JSONP status ACK (mode=${mode})`);
 }catch(error){
-  console.log(JSON.stringify({httpStatus:null,mode:'network-error',supportsStatus:false,error:String(error)},null,2));
-  process.exit(0);
+  console.error(String(error));
+  process.exit(1);
 }
