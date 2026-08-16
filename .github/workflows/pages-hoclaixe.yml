@@ -26,14 +26,11 @@ jobs:
           node-version: 22
       - name: Validate SEO, links, tracking and monetization
         run: node hlxqn-tools/validate-site-v2.mjs
-      - name: Build clean public artifact
+      - name: Build dependency-aware public artifact
+        run: node hlxqn-tools/build-public-site.mjs
+      - name: Verify public artifact
         run: |
           set -euo pipefail
-          rm -rf _site
-          mkdir -p _site
-          find . -maxdepth 1 -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' -o -name 'CNAME' -o -name 'favicon.svg' -o -name '.nojekyll' \) -exec cp {} _site/ \;
-          cp -R assets _site/assets
-          cp -R lich-sat-hach _site/lich-sat-hach
           test -s _site/index.html
           test -s _site/robots.txt
           test -s _site/sitemap.xml
@@ -43,6 +40,10 @@ jobs:
           test ! -e _site/coin-v9
           test ! -e _site/src
           test ! -e _site/tests
+          test ! -e _site/requirements.txt
+          test ! -e _site/requirements-dev.txt
+          test ! -e _site/assets/nen.png
+          test ! -e _site/assets/sound.mp3
       - uses: actions/configure-pages@v5
         with:
           enablement: true
