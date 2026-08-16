@@ -36,7 +36,15 @@ jobs:
       - name: Finalize homepage performance and AI discovery signals
         run: node hlxqn-tools/finalize-performance.mjs
       - name: Render shared shell statically in validation artifact
-        run: node hlxqn-tools/render-static-shell.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q 'official-shell.js' _site/assets/site-config.js; then
+            node hlxqn-tools/render-static-shell.mjs
+          else
+            rm -f _site/assets/official-shell.js
+            echo 'Shared shell is already static in source; renderer skipped.'
+          fi
       - name: Finalize keyboard navigation accessibility
         run: node hlxqn-tools/finalize-accessibility.mjs
       - name: Validate production performance budget
@@ -105,8 +113,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Sync validated hoclaixe production [production-sync]'
           git push origin HEAD:gh-pages
-          echo 'Validated artifact synced; follow-up bot run will verify the published source.'
-          exit 0
+          echo 'Validated artifact synced; current run will verify the published source after propagation.'
       - name: Allow legacy Pages publication to settle
         run: sleep 15
       - name: Verify live HTTPS production responses
