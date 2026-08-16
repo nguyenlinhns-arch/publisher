@@ -28,17 +28,35 @@ const payload={
   keyLocation:`https://hoclaixequangninh.vn/${key}.txt`,
   urlList
 };
-try{
-  const response=await fetch('https://api.indexnow.org/indexnow',{
-    method:'POST',
-    headers:{'content-type':'application/json; charset=utf-8'},
-    body:JSON.stringify(payload)
-  });
-  const body=await response.text();
-  const accepted=response.status===200||response.status===202;
-  console.log(JSON.stringify({indexNow:accepted?'accepted':'not-accepted',status:response.status,today,submitted:urlList.length,urls:urlList,sitemapRoot:path.relative(repoRoot,root)||'.',response:body.slice(0,500)},null,2));
-  process.exit(0);
-}catch(error){
-  console.log(JSON.stringify({indexNow:'network-error',today,submitted:urlList.length,sitemapRoot:path.relative(repoRoot,root)||'.',error:String(error)},null,2));
-  process.exit(0);
+
+async function post(endpoint){
+  try{
+    const response=await fetch(endpoint,{
+      method:'POST',
+      headers:{'content-type':'application/json; charset=utf-8'},
+      body:JSON.stringify(payload)
+    });
+    const body=await response.text();
+    return {endpoint,status:response.status,accepted:response.status===200||response.status===202,response:body.slice(0,500)};
+  }catch(error){
+    return {endpoint,status:0,accepted:false,error:String(error)};
+  }
 }
+
+const attempts=[];
+const primary=await post('https://api.indexnow.org/indexnow');
+attempts.push(primary);
+if(!primary.accepted&&(primary.status===403||primary.status===0)){
+  attempts.push(await post('https://www.bing.com/indexnow'));
+}
+const accepted=attempts.find(x=>x.accepted);
+console.log(JSON.stringify({
+  indexNow:accepted?'accepted':'not-accepted',
+  acceptedBy:accepted?.endpoint||'',
+  today,
+  submitted:urlList.length,
+  urls:urlList,
+  sitemapRoot:path.relative(repoRoot,root)||'.',
+  attempts
+},null,2));
+process.exit(0);
