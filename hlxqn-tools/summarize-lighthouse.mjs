@@ -16,10 +16,19 @@ const opportunities=Object.values(lhr.audits||{})
   .sort((a,b)=>b.details.overallSavingsMs-a.details.overallSavingsMs)
   .slice(0,8)
   .map(a=>({id:a.id,title:a.title,savingsMs:Math.round(a.details.overallSavingsMs)}));
+function auditItems(id){
+  const items=lhr.audits?.[id]?.details?.items;
+  if(!Array.isArray(items))return [];
+  return items.slice(0,12).map(item=>({
+    selector:item?.node?.selector||item?.node?.path||'',
+    snippet:item?.node?.snippet||'',
+    explanation:item?.node?.explanation||item?.failureSummary||''
+  }));
+}
 const diagnostics=Object.values(lhr.audits||{})
   .filter(a=>a&&a.scoreDisplayMode==='binary'&&a.score===0)
   .slice(0,12)
-  .map(a=>({id:a.id,title:a.title}));
+  .map(a=>({id:a.id,title:a.title,items:auditItems(a.id)}));
 const summary={
   lighthouseVersion:lhr.lighthouseVersion,
   finalUrl:lhr.finalDisplayedUrl||lhr.finalUrl,
