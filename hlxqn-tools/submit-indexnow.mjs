@@ -1,18 +1,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const root=path.resolve(import.meta.dirname,'..','_site');
+const repoRoot=path.resolve(import.meta.dirname,'..');
+const artifactRoot=path.join(repoRoot,'_site');
+const root=fs.existsSync(path.join(artifactRoot,'sitemap.xml'))?artifactRoot:repoRoot;
 const key=String(process.env.INDEXNOW_KEY||'').trim();
 if(!/^[A-Za-z0-9-]{8,128}$/.test(key)){
   console.log(JSON.stringify({indexNow:'skipped',reason:'missing-or-invalid-key'},null,2));
   process.exit(0);
 }
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-const sitemap=fs.readFileSync(path.join(root,'sitemap.xml'),'utf8');
+const sitemapPath=path.join(root,'sitemap.xml');
+if(!fs.existsSync(sitemapPath)){
+  console.log(JSON.stringify({indexNow:'skipped',reason:'sitemap-missing',sitemapPath},null,2));
+  process.exit(0);
+}
+const sitemap=fs.readFileSync(sitemapPath,'utf8');
 const rows=[...sitemap.matchAll(/<url>\s*<loc>([^<]+)<\/loc>\s*<lastmod>([^<]+)<\/lastmod>[\s\S]*?<\/url>/g)].map(m=>({url:m[1],lastmod:m[2]}));
 const urlList=rows.filter(x=>x.lastmod===today).map(x=>x.url);
 if(!urlList.length){
-  console.log(JSON.stringify({indexNow:'skipped',reason:'no-urls-changed-today',today},null,2));
+  console.log(JSON.stringify({indexNow:'skipped',reason:'no-urls-changed-today',today,sitemapRoot:path.relative(repoRoot,root)||'.'},null,2));
   process.exit(0);
 }
 const payload={
@@ -29,10 +36,9 @@ try{
   });
   const body=await response.text();
   const accepted=response.status===200||response.status===202;
-  console.log(JSON.stringify({indexNow:accepted?'accepted':'not-accepted',status:response.status,today,submitted:urlList.length,urls:urlList,response:body.slice(0,500)},null,2));
-  // IndexNow is a discovery enhancement; transient remote failures must not roll back a valid website deployment.
+  console.log(JSON.stringify({indexNow:accepted?'accepted':'not-accepted',status:response.status,today,submitted:urlList.length,urls:urlList,sitemapRoot:path.relative(repoRoot,root)||'.',response:body.slice(0,500)},null,2));
   process.exit(0);
 }catch(error){
-  console.log(JSON.stringify({indexNow:'network-error',today,submitted:urlList.length,error:String(error)},null,2));
+  console.log(JSON.stringify({indexNow:'network-error',today,submitted:urlList.length,sitemapRoot:path.relative(repoRoot,root)||'.',error:String(error)},null,2));
   process.exit(0);
 }
