@@ -18,6 +18,14 @@ if(!html.includes('rel="preload" as="image" href="/assets/quang-hanh-san-sat-hac
 }
 fs.writeFileSync(p,html);
 
+const sitemapPath=path.join(root,'sitemap.xml');
+let sitemap=fs.readFileSync(sitemapPath,'utf8');
+const guideOld='<url><loc>https://hoclaixequangninh.vn/hoc-ly-thuyet.html</loc><lastmod>2026-08-14</lastmod>';
+const guideNew='<url><loc>https://hoclaixequangninh.vn/hoc-ly-thuyet.html</loc><lastmod>2026-08-16</lastmod>';
+if(sitemap.includes(guideOld))sitemap=sitemap.replace(guideOld,guideNew);
+else if(!sitemap.includes(guideNew))throw new Error('Sitemap handbook lastmod anchor missing');
+fs.writeFileSync(sitemapPath,sitemap);
+
 const llmsPath=path.join(root,'llms.txt');
 let llms=fs.readFileSync(llmsPath,'utf8');
 if(llms.includes('Cập nhật nội dung trọng tâm: 2026-08-15'))llms=llms.replace('Cập nhật nội dung trọng tâm: 2026-08-15','Cập nhật nội dung trọng tâm: 2026-08-16');
@@ -36,4 +44,4 @@ if(!llms.includes(dataLine)){
 }
 fs.writeFileSync(llmsPath,llms);
 
-console.log(JSON.stringify({homepageTitle:true,lcpPreload:true,llmsFreshness:'2026-08-16',llmsTrainingUpdate:true},null,2));
+console.log(JSON.stringify({homepageTitle:true,lcpPreload:true,llmsFreshness:'2026-08-16',llmsTrainingUpdate:true,handbookLastmod:'2026-08-16'},null,2));
