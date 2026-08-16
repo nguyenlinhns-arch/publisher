@@ -40,6 +40,14 @@ function optimizeHomepage(){
   html=replaceOnceOrKeep(html,'<h1>Thông tin rõ ràng để <em>chọn đúng khóa học</em> trước khi đăng ký</h1>','<h1>Học lái xe Quảng Ninh: <em>chọn đúng khóa học</em> trước khi đăng ký</h1>','homepage H1');
   html=replaceOnceOrKeep(html,'<p class="institutional-hero-lead">Tra cứu hạng bằng, học phí, thời gian học, hồ sơ, DAT, khu vực đào tạo và lịch sát hạch. Đăng ký trực tuyến để được hướng dẫn theo đúng nhu cầu sử dụng xe.</p>','<p class="institutional-hero-lead">Tra cứu B số tự động, B số cơ khí, C1, A1; học phí, hồ sơ, DAT, khu vực học và lịch sát hạch. Đăng ký tư vấn trực tuyến để được hướng dẫn theo nhu cầu sử dụng xe.</p>','homepage hero lead');
   html=replaceOnceOrKeep(html,'<div class="institutional-actions"><a class="primary" href="#khoa-hoc">Xem các khóa học</a><a class="secondary" href="#dang-ky">Đăng ký tư vấn</a></div>','<div class="institutional-actions"><a class="primary" href="#dang-ky">Đăng ký tư vấn</a><a class="secondary" href="#khoa-hoc">Xem các khóa học</a></div>','homepage hero CTA');
+  html=html
+    .replace(/<span>Không phí tư vấn<\/span>/g,'<span>Tư vấn miễn phí</span>')
+    .replace(/<span>Có hệ thống ghi nhận đăng ký trực tuyến<\/span>/g,'<span>Đăng ký trực tuyến được ghi nhận</span>')
+    .replace('Học phí và thời gian trên là thông tin đang hiển thị trên hệ thống tuyển sinh; nên kiểm tra trang chi tiết và thông báo áp dụng tại thời điểm đăng ký.','Học phí và thời gian được cập nhật theo thông báo áp dụng tại thời điểm đăng ký.')
+    .replace('Tư vấn không thu phí hoặc phí môi giới. Học phí và các khoản chính thức thực hiện theo thông báo áp dụng của đơn vị đào tạo hoặc cơ quan có thẩm quyền.','Tư vấn miễn phí. Học phí và các khoản chính thức thực hiện theo thông báo áp dụng của đơn vị đào tạo hoặc cơ quan có thẩm quyền.')
+    .replace('Không. Tư vấn không thu phí hoặc phí môi giới. Các khoản học phí, lệ phí và chi phí chính thức thực hiện theo thông báo đang áp dụng.','Tư vấn miễn phí. Các khoản học phí, lệ phí và chi phí chính thức thực hiện theo thông báo đang áp dụng.')
+    .replace('<div class="consultation-checks"><span>Không yêu cầu thanh toán trên website</span><span>Có thể gọi hoặc nhắn Zalo nếu cần trao đổi ngay</span><span>Thông tin nguồn quảng cáo được lưu để đo hiệu quả tuyển sinh</span></div>','<div class="consultation-checks"><span>Form chỉ ghi nhận thông tin tư vấn</span><span>Gọi hoặc nhắn Zalo để trao đổi ngay</span><span>Nguồn đăng ký được ghi nhận để đo hiệu quả tuyển sinh</span></div>')
+    .replace('Hệ thống có thể lưu UTM/GCLID khi truy cập từ quảng cáo để đo hiệu quả.','Thông tin được ghi nhận để tư vấn và đo hiệu quả nguồn đăng ký.');
   fs.writeFileSync(p,html);
 }
 function normalizePricingPage(){
@@ -75,7 +83,8 @@ for(const item of ['coin-v7','coin-v8','coin-v9','coin_research','src','tests','
 const home=fs.readFileSync(path.join(out,'index.html'),'utf8'),pricing=fs.readFileSync(path.join(out,'hoc-phi-hoc-lai-xe-quang-ninh.html'),'utf8');
 if(!home.includes('Học lái xe Quảng Ninh: <em>chọn đúng khóa học</em>'))throw new Error('Optimized homepage H1 missing');
 if(!home.includes('<a class="primary" href="#dang-ky">Đăng ký tư vấn</a>'))throw new Error('Optimized homepage primary CTA missing');
+if(!home.includes('Tư vấn miễn phí'))throw new Error('Homepage simplified consultation copy missing');
 if(!pricing.includes('Nếu B tự động và B cơ khí cùng mức 20,9 triệu'))throw new Error('Pricing decision guidance missing');
 if(!pricing.includes('"dateModified":"2026-08-16"'))throw new Error('Pricing modified date missing');
 let files=0,bytes=0;(function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else{files++;bytes+=fs.statSync(p).size}}})(out);
-console.log(JSON.stringify({publicFiles:files,publicBytes:bytes,assets:[...seen].sort(),productionOptimizations:['homepage-intent-copy','primary-registration-cta','pricing-source-aligned','accurate-lastmod','flattened-css-imports']},null,2));
+console.log(JSON.stringify({publicFiles:files,publicBytes:bytes,assets:[...seen].sort(),productionOptimizations:['homepage-intent-copy','primary-registration-cta','homepage-conversion-copy','pricing-source-aligned','accurate-lastmod','flattened-css-imports']},null,2));
