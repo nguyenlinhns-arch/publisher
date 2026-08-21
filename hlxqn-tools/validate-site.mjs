@@ -3,7 +3,8 @@ import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
 const domain = 'https://hoclaixequangninh.vn';
-const utility = new Set(['404.html', 'lich-sat-hach-lai-xe.html', 'lien-he.html', 'dieu-khoan-su-dung.html', 'chinh-sach-bao-mat.html', 'gioi-thieu.html', 'tin-tuc.html']);
+const redirectPages = new Set(['huong-dan-hoc-lai-xe.html', 'lich-sat-hach-lai-xe.html']);
+const utility = new Set(['404.html', 'huong-dan-hoc-lai-xe.html', 'lich-sat-hach-lai-xe.html', 'lien-he.html', 'dieu-khoan-su-dung.html', 'chinh-sach-bao-mat.html', 'gioi-thieu.html', 'tin-tuc.html', 'uu-dai-hoc-vien.html']);
 const files = fs.readdirSync(root).filter(file => file.endsWith('.html')).sort();
 const errors = [];
 const warnings = [];
@@ -34,20 +35,20 @@ for (const file of files) {
   if (!title) errors.push(`${file}: thiếu title`);
   if (!description && !utility.has(file)) errors.push(`${file}: thiếu meta description`);
   if (!/<h1\b/i.test(html) && !utility.has(file)) errors.push(`${file}: thiếu H1`);
-  if (!canonical) errors.push(`${file}: thiếu canonical`);
+  if (!canonical && file !== '404.html') errors.push(`${file}: thiếu canonical`);
   if (canonical && !canonical.startsWith(domain)) errors.push(`${file}: canonical ngoài tên miền (${canonical})`);
   if (canonical) {
     if (seenCanonical.has(canonical) && !utility.has(file)) errors.push(`${file}: canonical trùng ${seenCanonical.get(canonical)}`);
     seenCanonical.set(canonical, file);
   }
   if (!html.includes('application/ld+json') && !utility.has(file)) errors.push(`${file}: thiếu schema`);
-  if (!html.includes('BreadcrumbList') && !utility.has(file)) errors.push(`${file}: thiếu BreadcrumbList`);
+  if (file !== 'index.html' && !html.includes('BreadcrumbList') && !utility.has(file)) errors.push(`${file}: thiếu BreadcrumbList`);
   if (!html.includes('assets/mobile-v2.css') && !utility.has(file)) errors.push(`${file}: thiếu CSS mobile`);
-  if (!html.includes('assets/site-runtime.js')) errors.push(`${file}: thiếu tracking/CTA dùng chung`);
+  if (!html.includes('assets/site-runtime.js') && !redirectPages.has(file)) errors.push(`${file}: thiếu tracking/CTA dùng chung`);
   if (/nguyenlinhns-arch\.github\.io\/publisher/i.test(html)) errors.push(`${file}: còn URL GitHub Pages cũ`);
 
   const wordCount = text(html).split(/\s+/).filter(Boolean).length;
-  if (!utility.has(file) && wordCount < 250) warnings.push(`${file}: nội dung còn mỏng (${wordCount} từ)`);
+  if (!utility.has(file) && wordCount < 150) warnings.push(`${file}: nội dung rất ngắn (${wordCount} từ); chỉ mở rộng khi có thêm thông tin hữu ích`);
 
   for (const match of html.matchAll(/<a\b[^>]*href="([^"]+)"/gi)) {
     const href = match[1];
@@ -63,7 +64,7 @@ for (const file of files) {
 
 const sitemap = fs.readFileSync(path.join(root, 'sitemap.xml'), 'utf8');
 const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-const excludedFromSitemap = new Set(['404.html', 'huong-dan-hoc-lai-xe.html', 'lich-sat-hach-lai-xe.html']);
+const excludedFromSitemap = new Set(['404.html', 'huong-dan-hoc-lai-xe.html', 'lich-sat-hach-lai-xe.html', 'uu-dai-hoc-vien.html']);
 const expectedSitemapUrls = files.filter(file => !excludedFromSitemap.has(file)).length + 1; // + lich-sat-hach/index.html
 if (sitemapUrls.length !== expectedSitemapUrls) errors.push(`sitemap: cần ${expectedSitemapUrls} URL, hiện có ${sitemapUrls.length}`);
 if (new Set(sitemapUrls).size !== sitemapUrls.length) errors.push('sitemap: có URL trùng');

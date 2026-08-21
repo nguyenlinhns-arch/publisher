@@ -37,9 +37,9 @@ let sitemap=fs.readFileSync(sitemapPath,'utf8');
 const files=['buoi-hoc-lai-xe-dau-tien-can-biet-gi.html','loi-thuong-gap-khi-hoc-sa-hinh.html','meo-lai-xe-duong-truong-cho-nguoi-moi.html','hoc-lai-xe-so-tu-dong-quang-ninh.html','hoc-lai-xe-so-co-khi-quang-ninh.html','hoc-c1-quang-ninh.html','hoc-a1-quang-ninh.html','hoc-bang-b-quang-ninh.html','dang-ky-hoc-lai-xe-quang-ninh.html','hoc-thuc-hanh-sa-hinh.html','ke-hoach-on-thi-sat-hach-7-ngay.html','quy-dinh-hoc-phi-thoi-gian-dat.html'];
 for(const file of files){
   const escaped=file.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const re=new RegExp(`(<loc>https://hoclaixequangninh\\.vn/${escaped}<\\/loc><lastmod>)[^<]+(<\\/lastmod>)`);
+  const re=new RegExp(`(<loc>https://hoclaixequangninh\\.vn/${escaped}<\\/loc><lastmod>)([^<]+)(<\\/lastmod>)`);
   if(!re.test(sitemap))throw new Error(`Sitemap date anchor missing: ${file}`);
-  sitemap=sitemap.replace(re,'$12026-08-16$2');
+  sitemap=sitemap.replace(re,(_,before,current,after)=>`${before}${current>'2026-08-16'?current:'2026-08-16'}${after}`);
 }
 fs.writeFileSync(sitemapPath,sitemap);
 console.log(JSON.stringify({contextualLinks:6,updatedPages:12,lastmod:'2026-08-16',idempotent:true},null,2));
