@@ -61,6 +61,9 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
         raise RenderError(f"missing voiceover: {plan.audio.voiceover}")
     if plan.audio.music and not plan.audio.music.expanduser().resolve().is_file():
         raise RenderError(f"missing music: {plan.audio.music}")
+    for sfx in plan.audio.sfx:
+        if not sfx.path.expanduser().resolve().is_file():
+            raise RenderError(f"missing sfx: {sfx.path}")
 
     with tempfile.TemporaryDirectory(prefix="linh-edit-") as td:
         work = Path(td)
@@ -77,6 +80,7 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
         next_input = len(plan.clips)
         voice_index: int | None = None
         music_index: int | None = None
+        sfx_inputs: list[tuple[int, object]] = []
         if plan.audio.voiceover:
             voice_index = next_input
             command.extend(["-i", str(plan.audio.voiceover.expanduser().resolve())])
@@ -84,6 +88,10 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
         if plan.audio.music:
             music_index = next_input
             command.extend(["-stream_loop", "-1", "-i", str(plan.audio.music.expanduser().resolve())])
+            next_input += 1
+        for sfx in plan.audio.sfx:
+            sfx_inputs.append((next_input, sfx))
+            command.extend(["-i", str(sfx.path.expanduser().resolve())])
             next_input += 1
 
         filters: list[str] = []
@@ -163,6 +171,18 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
             )
             mix_labels.append("[music]")
 
+        for sfx_number, (sfx_index, sfx) in enumerate(sfx_inputs):
+            delay_ms = max(0, round(sfx.start * 1000))
+            label = f"[sfx{sfx_number}]"
+            filters.append(
+                f"[{sfx_index}:a:0]aresample=48000,"
+                f"aformat=sample_fmts=fltp:channel_layouts=stereo,"
+                f"volume={sfx.gain:.6f},"
+                f"adelay={delay_ms}|{delay_ms},apad,"
+                f"atrim=duration={duration:.3f},asetpts=PTS-STARTPTS{label}"
+            )
+            mix_labels.append(label)
+
         if len(mix_labels) == 1:
             filters.append("[basea]anull[outa]")
         else:
@@ -219,7 +239,10 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
         report.write_text(
             json.dumps(
                 {
-                    "passed": qa.passed,
+                    "technical_pass": qa.passed,
+                    "visual_review": "PENDING",
+                    "audio_review": "PENDING",
+                    "style_review": "PENDING",
                     "duration": qa.duration,
                     "width": qa.width,
                     "height": qa.height,
