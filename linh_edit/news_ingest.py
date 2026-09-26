@@ -257,7 +257,7 @@ def apply_news_scenes(
 
     image_paths = _image_paths(project, images)
     if total_seconds is None:
-        default_total = max(30.0, min(90.0, len(scenes) * 7.0))
+        default_total = max(12.0, min(90.0, len(scenes) * 7.0))
         total_seconds = min(max(10.0, project.target_seconds), default_total)
     durations = allocate_scene_seconds(scenes, total_seconds)
 
