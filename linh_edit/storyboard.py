@@ -16,7 +16,8 @@ def _resolve(base: Path, value: str | None) -> str:
 
 def import_storyboard(path: Path, project: ProjectState) -> ProjectState:
     path = path.expanduser().resolve()
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    # Accept JSON written by Windows PowerShell/legacy apps with an UTF-8 BOM.
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
     base = path.parent
 
     assets = payload.get("media") or payload.get("images") or []
