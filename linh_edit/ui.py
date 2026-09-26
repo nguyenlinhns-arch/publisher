@@ -14,6 +14,7 @@ from .cover import extract_cover
 from .engine_adapter import render_project
 from .paths import output_dir
 from .planner import build_rough_cut, import_media
+from .legacy_import import import_legacy_script
 from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
@@ -73,6 +74,10 @@ class LinhEditWindow:
         file_menu.add_command(label="Dự án mới", command=self.new_project)
         file_menu.add_command(label="Mở dự án...", command=self.open_project)
         file_menu.add_command(label="Nhập storyboard JSON...", command=self.import_storyboard_json)
+        file_menu.add_command(
+            label="Nhập dự án app cũ (script.json)...",
+            command=self.import_legacy_project,
+        )
         file_menu.add_separator()
         file_menu.add_command(label="Lưu", command=self.save_project)
         file_menu.add_command(label="Lưu thành...", command=self.save_project_as)
@@ -1059,6 +1064,33 @@ class LinhEditWindow:
         self.status_var.set(
             f"Đã nhập storyboard: {len(self.project.timeline)} cảnh, "
             f"{len(self.project.media)} media."
+        )
+
+    def import_legacy_project(self) -> None:
+        if self.busy:
+            return
+        value = filedialog.askopenfilename(
+            title="Nhập script.json từ app News / Editorial cũ",
+            filetypes=[("script.json / JSON", "*.json"), ("Tất cả tệp", "*.*")],
+        )
+        if not value:
+            return
+        try:
+            import_legacy_script(Path(value), self.project)
+        except Exception as exc:
+            messagebox.showerror("Không nhập được dự án cũ", str(exc))
+            return
+
+        self.profile_var.set(PROFILE_NAMES.get(self.project.profile, "Tin tức"))
+        self.target_var.set(self.project.target_seconds)
+        self.title_var.set(self.project.title)
+        self.voice_var.set(self.project.voiceover)
+        self.music_var.set(self.project.music)
+        self._refresh_all()
+        voice_note = " • đã khớp voice cũ" if self.project.voiceover else ""
+        self.status_var.set(
+            f"Đã hợp nhất {self.project.source_mode}: "
+            f"{len(self.project.timeline)} cảnh{voice_note}."
         )
 
     def save_project(self) -> None:
