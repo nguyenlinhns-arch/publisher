@@ -766,7 +766,23 @@ class LinhEditWindow:
             filetypes=[("MP4", "*.mp4")],
         )
         if target:
-            self._render_async(Path(target), preview=False)
+            safe_target = self._versioned_output(Path(target))
+            if safe_target != Path(target):
+                self.status_var.set(
+                    f"File đã tồn tại → xuất bản mới: {safe_target.name}"
+                )
+            self._render_async(safe_target, preview=False)
+
+    @staticmethod
+    def _versioned_output(path: Path) -> Path:
+        if not path.exists():
+            return path
+        number = 2
+        while True:
+            candidate = path.with_name(f"{path.stem}_v{number}{path.suffix}")
+            if not candidate.exists():
+                return candidate
+            number += 1
 
     def _render_async(self, target: Path, *, preview: bool) -> None:
         self._sync_project()
