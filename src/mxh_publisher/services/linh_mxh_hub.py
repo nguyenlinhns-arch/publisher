@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, replace
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone, tzinfo
 from hashlib import sha256
 import json
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..config import AppConfig
 from ..models import Delivery, DeliveryStatus, Platform, Post, PostStatus
@@ -159,12 +159,7 @@ class RepositoryHubScheduler:
     ) -> None:
         self.repository = repository
         self.request = request
-        try:
-            self.timezone = ZoneInfo(request.timezone_name)
-        except Exception as exc:
-            raise LinhMXHError(
-                f"Invalid timezone: {request.timezone_name}"
-            ) from exc
+        self.timezone = self._load_timezone(request.timezone_name)
         self.publish_time = self._parse_time(request.preferred_time)
         current = now or datetime.now(self.timezone)
         if current.tzinfo is None or current.utcoffset() is None:
@@ -177,6 +172,17 @@ class RepositoryHubScheduler:
             raise LinhMXHError("minimum_lead_minutes cannot be negative.")
         if not 1 <= request.search_horizon_days <= 3650:
             raise LinhMXHError("search_horizon_days must be between 1 and 3650.")
+
+    @staticmethod
+    def _load_timezone(name: str) -> tzinfo:
+        try:
+            return ZoneInfo(name)
+        except ZoneInfoNotFoundError as exc:
+            if name == "Asia/Ho_Chi_Minh":
+                # Vietnam is UTC+07 and does not currently observe DST.
+                # Keep the headless Hub action dependency-free on Windows.
+                return timezone(timedelta(hours=7), name)
+            raise LinhMXHError(f"Invalid timezone: {name}") from exc
 
     @staticmethod
     def _parse_time(value: str) -> time:
