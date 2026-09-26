@@ -55,6 +55,9 @@ jobs:
           ffmpeg -y -hide_banner -loglevel error \
             -f lavfi -i "sine=frequency=880:sample_rate=48000" \
             -t 0.25 -c:a mp3 ci/sfx.mp3
+          ffmpeg -y -hide_banner -loglevel error \
+            -f lavfi -i "color=c=0x445566:s=1080x1920" \
+            -frames:v 1 ci/still.png
       - name: Render integrated smoke test
         env:
           PYTHONPATH: .
@@ -85,6 +88,19 @@ jobs:
                 "scale": 1,
                 "mute_source_audio": false,
                 "source_gain": 0.10
+              },
+              {
+                "source": "still.png",
+                "kind": "image",
+                "start": 0,
+                "duration": 1,
+                "role": "detail",
+                "x": 0.5,
+                "y": 0.5,
+                "scale": 1,
+                "motion": "slow_zoom",
+                "mute_source_audio": true,
+                "source_gain": 0
               }
             ],
             "texts": [
