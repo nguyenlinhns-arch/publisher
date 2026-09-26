@@ -15,6 +15,8 @@ $Python = Join-Path $Venv "Scripts\python.exe"
 $Ffprobe = Join-Path $Root "bin\ffprobe.exe"
 $Ffmpeg = Join-Path $Root "bin\ffmpeg.exe"
 $Fonts = Join-Path $Root "assets\fonts"
+$Background = Join-Path $Root "assets\nen.png"
+$DefaultSfx = Join-Path $Root "assets\sound.mp3"
 $Entry = Join-Path $Root "linh_edit_launcher.py"
 $Dist = Join-Path $Root "dist"
 $Work = Join-Path $Root "build\linh-edit-pyinstaller"
@@ -44,7 +46,7 @@ if ((-not $SkipFetch) -and ((-not (Test-Path -LiteralPath $Ffmpeg -PathType Leaf
     Assert-NativeSuccess "Tải FFmpeg đã khóa checksum"
 }
 
-foreach ($Required in @($Ffmpeg, $Ffprobe, $Fonts, $Entry)) {
+foreach ($Required in @($Ffmpeg, $Ffprobe, $Fonts, $Background, $DefaultSfx, $Entry)) {
     if (-not (Test-Path -LiteralPath $Required)) {
         throw "Thiếu thành phần build: $Required"
     }
@@ -88,6 +90,8 @@ try {
         "--add-binary", "$Ffprobe;bin",
         "--add-binary", "$Ffmpeg;bin",
         "--add-data", "$Fonts;assets\fonts",
+        "--add-data", "$Background;assets",
+        "--add-data", "$DefaultSfx;assets",
         $Entry
     )
     & $Python -m PyInstaller @Arguments
@@ -105,8 +109,10 @@ if (-not (Test-Path -LiteralPath $Exe -PathType Leaf)) {
 $BundledFfmpeg = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "ffmpeg.exe" -File | Select-Object -First 1
 $BundledFfprobe = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "ffprobe.exe" -File | Select-Object -First 1
 $BundledFont = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "RobotoCondensed-Bold.ttf" -File | Select-Object -First 1
-if ($null -eq $BundledFfmpeg -or $null -eq $BundledFfprobe -or $null -eq $BundledFont) {
-    throw "Bản Linh Edit chưa đóng gói đủ FFmpeg/FFprobe/font."
+$BundledBackground = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "nen.png" -File | Select-Object -First 1
+$BundledSfx = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "sound.mp3" -File | Select-Object -First 1
+if ($null -eq $BundledFfmpeg -or $null -eq $BundledFfprobe -or $null -eq $BundledFont -or $null -eq $BundledBackground -or $null -eq $BundledSfx) {
+    throw "Bản Linh Edit chưa đóng gói đủ FFmpeg/FFprobe/font/nền/SFX."
 }
 
 $Process = Start-Process -FilePath $Exe -ArgumentList "doctor" -Wait -PassThru
