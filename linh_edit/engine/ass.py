@@ -51,9 +51,15 @@ def write_ass(plan: EditPlan, target: Path) -> None:
         font_size = max(16, round(item.size * w / 1080))
         align = _alignment(item)
         body = _escape(item.text)
+        if item.role == "keyword":
+            motion = rf"\move({x-22},{y},{x},{y},0,280)\fad(80,100)"
+        elif item.role == "main":
+            motion = rf"\move({x},{y+6},{x},{y},0,180)\fad(120,100)"
+        else:
+            motion = rf"\pos({x},{y})\fad(165,100)"
         tag = (
-            rf"{{\an{align}\pos({x},{y})\fs{font_size}\b{bold}"
-            rf"\c{color}\bord1.2\shad0\fad(140,120)}}"
+            rf"{{\an{align}{motion}\fs{font_size}\b{bold}"
+            rf"\c{color}\bord1.2\shad0}}"
         )
         events.append(
             f"Dialogue: 0,{_time(item.start)},{_time(item.end)},Default,,0,0,0,,{tag}{body}"
