@@ -15,16 +15,20 @@ ProfileName = Literal[
 @dataclass(frozen=True, slots=True)
 class ClipSpec:
     source: Path
-    start: float
+    kind: Literal["video", "image"] = "video"
+    start: float = 0.0
     duration: float
     role: str = "detail"
     x: float = 0.5
     y: float = 0.5
     scale: float = 1.0
+    motion: Literal["none", "slow_zoom"] = "none"
     mute_source_audio: bool = True
     source_gain: float = 0.10
 
     def validate(self) -> None:
+        if self.kind not in {"video", "image"}:
+            raise ValueError("clip.kind must be video or image")
         if self.start < 0:
             raise ValueError("clip.start must be >= 0")
         if self.duration <= 0:
