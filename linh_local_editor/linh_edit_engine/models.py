@@ -22,6 +22,7 @@ class ClipSpec:
     y: float = 0.5
     scale: float = 1.0
     mute_source_audio: bool = True
+    source_gain: float = 0.10
 
     def validate(self) -> None:
         if self.start < 0:
@@ -32,6 +33,8 @@ class ClipSpec:
             raise ValueError("clip x/y must be normalized to 0..1")
         if self.scale <= 0:
             raise ValueError("clip.scale must be > 0")
+        if self.source_gain < 0 or self.source_gain > 4:
+            raise ValueError("clip.source_gain must be between 0 and 4")
 
 
 @dataclass(frozen=True, slots=True)
