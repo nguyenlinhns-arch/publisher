@@ -15,7 +15,8 @@ def _path(value: str | None, base: Path) -> Path | None:
 
 def load_plan(path: Path) -> EditPlan:
     path = path.expanduser().resolve()
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    # Interop with Windows/legacy hosts: accept BOM-prefixed and plain UTF-8.
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
     base = path.parent
 
     clips = tuple(
