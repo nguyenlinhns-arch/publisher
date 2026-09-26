@@ -42,6 +42,13 @@ class TextItem:
 
 
 @dataclass(slots=True)
+class SfxItem:
+    path: str
+    start: float
+    gain: float = 0.30
+
+
+@dataclass(slots=True)
 class ProjectState:
     name: str = "Dự án mới"
     profile: ProfileName = "TRAVEL_DOCUMENTARY"
@@ -50,6 +57,7 @@ class ProjectState:
     media: list[MediaItem] = field(default_factory=list)
     timeline: list[MediaItem] = field(default_factory=list)
     texts: list[TextItem] = field(default_factory=list)
+    sfx: list[SfxItem] = field(default_factory=list)
     voiceover: str = ""
     music: str = ""
     music_gain: float = 0.14
@@ -71,5 +79,6 @@ class ProjectState:
         media = [MediaItem(**item) for item in payload.pop("media", [])]
         timeline = [MediaItem(**item) for item in payload.pop("timeline", [])]
         texts = [TextItem(**item) for item in payload.pop("texts", [])]
+        sfx = [SfxItem(**item) for item in payload.pop("sfx", [])]
         payload["dirty"] = False
-        return cls(media=media, timeline=timeline, texts=texts, **payload)
+        return cls(media=media, timeline=timeline, texts=texts, sfx=sfx, **payload)
