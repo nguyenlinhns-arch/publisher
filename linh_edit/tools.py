@@ -31,3 +31,11 @@ def resolve_tool(name: str) -> str:
     if resolved:
         return resolved
     raise RuntimeError(f"Không tìm thấy {name}. Linh Edit cần FFmpeg/FFprobe đã đóng gói hoặc có trong PATH.")
+
+
+def resolve_asset(relative: str) -> Path:
+    for root in runtime_roots():
+        candidate = root / relative
+        if candidate.exists():
+            return candidate
+    raise RuntimeError(f"Thiếu tài nguyên Linh Edit: {relative}")
