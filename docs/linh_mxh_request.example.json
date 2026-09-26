@@ -1,0 +1,22 @@
+{
+  "action": "schedule_video_dual_stream",
+  "video_title": "UBND thành phố Quảng Ninh làm việc với Tập đoàn Công nghiệp Than - Khoáng sản Việt Nam",
+  "timezone_name": "Asia/Ho_Chi_Minh",
+  "preferred_time": "09:00",
+  "stream_1_offset_days": 2,
+  "minimum_lead_minutes": 60,
+  "search_horizon_days": 365,
+  "commit": true,
+  "stream_2": {
+    "stream_id": "luong-2",
+    "destinations": {
+      "facebook": "REPLACE_WITH_STREAM_2_PAGE_ID"
+    }
+  },
+  "stream_1": {
+    "stream_id": "luong-1",
+    "destinations": {
+      "facebook": "REPLACE_WITH_STREAM_1_PAGE_ID"
+    }
+  }
+}
