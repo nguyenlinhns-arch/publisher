@@ -14,6 +14,7 @@ from .paths import output_dir
 from .planner import build_rough_cut, import_media
 from .media import probe_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
+from .storyboard import import_storyboard as load_storyboard
 
 APP_VERSION = "1.0.0"
 
@@ -68,6 +69,7 @@ class LinhEditWindow:
         file_menu = tk.Menu(menu, tearoff=False)
         file_menu.add_command(label="Dự án mới", command=self.new_project)
         file_menu.add_command(label="Mở dự án...", command=self.open_project)
+        file_menu.add_command(label="Nhập storyboard JSON...", command=self.import_storyboard_json)
         file_menu.add_separator()
         file_menu.add_command(label="Lưu", command=self.save_project)
         file_menu.add_command(label="Lưu thành...", command=self.save_project_as)
@@ -855,6 +857,31 @@ class LinhEditWindow:
         self.music_var.set(self.project.music)
         self._refresh_all()
         self.status_var.set("Đã mở dự án.")
+
+    def import_storyboard_json(self) -> None:
+        if self.busy:
+            return
+        value = filedialog.askopenfilename(
+            title="Nhập storyboard JSON",
+            filetypes=[("JSON", "*.json"), ("Tất cả tệp", "*.*")],
+        )
+        if not value:
+            return
+        try:
+            load_storyboard(Path(value), self.project)
+        except Exception as exc:
+            messagebox.showerror("Không nhập được storyboard", str(exc))
+            return
+        self.profile_var.set(PROFILE_NAMES.get(self.project.profile, "Tin tức"))
+        self.target_var.set(self.project.target_seconds)
+        self.title_var.set(self.project.title)
+        self.voice_var.set(self.project.voiceover)
+        self.music_var.set(self.project.music)
+        self._refresh_all()
+        self.status_var.set(
+            f"Đã nhập storyboard: {len(self.project.timeline)} cảnh, "
+            f"{len(self.project.media)} media."
+        )
 
     def save_project(self) -> None:
         if self.project_path is None:
