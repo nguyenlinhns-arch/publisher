@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from mxh_publisher.models import Platform
 from mxh_publisher.repository import Repository
@@ -15,7 +14,7 @@ from mxh_publisher.services.linh_mxh_hub import (
 )
 
 
-TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+TZ = timezone(timedelta(hours=7), "Asia/Ho_Chi_Minh")
 
 
 def _video(tmp_path: Path, name: str, payload: bytes) -> tuple[Path, str]:
