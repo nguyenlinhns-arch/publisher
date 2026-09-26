@@ -12,7 +12,6 @@ from zoneinfo import ZoneInfo
 from ..config import AppConfig
 from ..models import Delivery, DeliveryStatus, Platform, Post, PostStatus
 from ..repository import Repository
-from .orchestrator import OrchestrationError, PublishingOrchestrator
 
 
 class LinhMXHError(RuntimeError):
@@ -581,6 +580,8 @@ class OrchestratorDispatcher:
         self.base_config = base_config
 
     def __call__(self, post_id: str, stream: StreamSpec) -> Mapping[str, Any]:
+        from .orchestrator import OrchestrationError, PublishingOrchestrator
+
         destinations = stream.platform_destinations()
         page_id = destinations.get(
             Platform.FACEBOOK, self.base_config.facebook_page_id
