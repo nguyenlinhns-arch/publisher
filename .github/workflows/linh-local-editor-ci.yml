@@ -25,8 +25,12 @@ jobs:
           sudo apt-get install -y ffmpeg
       - name: Unit tests
         env:
-          PYTHONPATH: linh_local_editor
-        run: pytest -q linh_local_editor/tests
+          PYTHONPATH: linh_local_editor:.
+        run: pytest -q linh_local_editor/tests linh_edit/tests
+      - name: Import unified app
+        env:
+          PYTHONPATH: linh_local_editor:.
+        run: python -c "import linh_edit; import linh_edit.ui; print(linh_edit.APP_NAME)"
       - name: Create synthetic media
         run: |
           mkdir -p ci
