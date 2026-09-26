@@ -117,7 +117,7 @@ class LinhEditWindow:
             width=9,
         ).grid(row=1, column=1, sticky=tk.EW, padx=6)
 
-        ttk.Button(quick, text="＋ THÊM VIDEO", command=self.add_videos).grid(
+        ttk.Button(quick, text="＋ THÊM MEDIA", command=self.add_videos).grid(
             row=1, column=2, sticky=tk.EW, padx=6
         )
         ttk.Button(quick, text="🎙 GIỌNG ĐỌC", command=self.choose_voice).grid(
@@ -329,9 +329,11 @@ class LinhEditWindow:
 
     def add_videos(self) -> None:
         selected = filedialog.askopenfilenames(
-            title="Chọn video",
+            title="Chọn video hoặc ảnh",
             filetypes=[
+                ("Media", "*.mp4 *.mov *.m4v *.webm *.jpg *.jpeg *.png *.webp *.bmp"),
                 ("Video", "*.mp4 *.mov *.m4v *.webm"),
+                ("Ảnh", "*.jpg *.jpeg *.png *.webp *.bmp"),
                 ("Tất cả tệp", "*.*"),
             ],
         )
@@ -493,6 +495,7 @@ class LinhEditWindow:
             "x": tk.DoubleVar(value=item.x),
             "y": tk.DoubleVar(value=item.y),
             "scale": tk.DoubleVar(value=item.scale),
+            "motion": tk.StringVar(value=item.motion),
             "keep_audio": tk.BooleanVar(value=item.keep_audio),
             "source_gain": tk.DoubleVar(value=item.source_gain),
         }
@@ -503,6 +506,7 @@ class LinhEditWindow:
             ("Reframe X 0–1", "x"),
             ("Reframe Y 0–1", "y"),
             ("Scale", "scale"),
+            ("Motion", "motion"),
             ("Gain tiếng gốc", "source_gain"),
         ]
         for row, (label, key) in enumerate(rows):
@@ -511,6 +515,13 @@ class LinhEditWindow:
                 ttk.Combobox(win, textvariable=vars_[key], values=ROLES, state="readonly").grid(
                     row=row, column=1, sticky=tk.EW, padx=10, pady=5
                 )
+            elif key == "motion":
+                ttk.Combobox(
+                    win,
+                    textvariable=vars_[key],
+                    values=["none", "slow_zoom"],
+                    state="readonly",
+                ).grid(row=row, column=1, sticky=tk.EW, padx=10, pady=5)
             else:
                 ttk.Entry(win, textvariable=vars_[key]).grid(
                     row=row, column=1, sticky=tk.EW, padx=10, pady=5
@@ -527,6 +538,7 @@ class LinhEditWindow:
                 item.x = min(1.0, max(0.0, float(vars_["x"].get())))
                 item.y = min(1.0, max(0.0, float(vars_["y"].get())))
                 item.scale = max(1.0, float(vars_["scale"].get()))
+                item.motion = vars_["motion"].get()
                 item.keep_audio = bool(vars_["keep_audio"].get())
                 item.source_gain = max(0.0, min(4.0, float(vars_["source_gain"].get())))
             except (ValueError, tk.TclError) as exc:
