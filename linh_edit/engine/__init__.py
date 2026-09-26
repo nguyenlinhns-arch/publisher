@@ -1,11 +1,11 @@
 """Internal local rendering engine for Linh Edit."""
 
-from .models import AudioSpec, ClipSpec, EditPlan, ExportSpec, TextSpec
+from .models import AudioSpec, ClipSpec, EditPlan, ExportSpec, SfxSpec, TextSpec
 from .profiles import EditProfile, get_profile
 from .renderer import render_plan
 from .qa import verify_output
 
 __all__ = [
-    "AudioSpec", "ClipSpec", "EditPlan", "ExportSpec", "TextSpec",
+    "AudioSpec", "ClipSpec", "EditPlan", "ExportSpec", "SfxSpec", "TextSpec",
     "EditProfile", "get_profile", "render_plan", "verify_output",
 ]
