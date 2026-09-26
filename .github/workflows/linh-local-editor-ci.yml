@@ -1,0 +1,108 @@
+name: Linh Local Editor CI
+
+on:
+  push:
+    branches:
+      - linh-local-editor-v2
+    paths:
+      - "linh_local_editor/**"
+      - ".github/workflows/linh-local-editor-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Unit tests
+        env:
+          PYTHONPATH: linh_local_editor
+        run: pytest -q linh_local_editor/tests
+      - name: Create synthetic media
+        run: |
+          mkdir -p ci
+          ffmpeg -y -hide_banner -loglevel error \
+            -f lavfi -i "testsrc=size=1920x1080:rate=30" \
+            -f lavfi -i "sine=frequency=440:sample_rate=48000" \
+            -t 3 -c:v libx264 -pix_fmt yuv420p -c:a aac ci/clip1.mp4
+          ffmpeg -y -hide_banner -loglevel error \
+            -f lavfi -i "testsrc2=size=1080x1920:rate=30" \
+            -f lavfi -i "sine=frequency=550:sample_rate=48000" \
+            -t 3 -c:v libx264 -pix_fmt yuv420p -c:a aac ci/clip2.mp4
+          ffmpeg -y -hide_banner -loglevel error \
+            -f lavfi -i "sine=frequency=220:sample_rate=48000" \
+            -t 4 -c:a mp3 ci/voice.mp3
+          ffmpeg -y -hide_banner -loglevel error \
+            -f lavfi -i "sine=frequency=110:sample_rate=48000" \
+            -t 4 -c:a mp3 ci/music.mp3
+      - name: Render smoke test
+        env:
+          PYTHONPATH: linh_local_editor
+        run: |
+          cat > ci/plan.json <<'JSON'
+          {
+            "profile": "TRAVEL_DOCUMENTARY",
+            "title": "Smoke test",
+            "clips": [
+              {
+                "source": "clip1.mp4",
+                "start": 0,
+                "duration": 2,
+                "role": "visual_hook",
+                "x": 0.5,
+                "y": 0.5,
+                "scale": 1,
+                "mute_source_audio": true
+              },
+              {
+                "source": "clip2.mp4",
+                "start": 0.5,
+                "duration": 2,
+                "role": "road_reset",
+                "x": 0.5,
+                "y": 0.5,
+                "scale": 1,
+                "mute_source_audio": false
+              }
+            ],
+            "texts": [
+              {
+                "start": 0.2,
+                "end": 2.8,
+                "text": "GIA LAI",
+                "role": "keyword",
+                "x": 0.5,
+                "y": 0.3,
+                "size": 120,
+                "weight": 800,
+                "color": "#FFC928",
+                "align": "center"
+              }
+            ],
+            "audio": {
+              "voiceover": "voice.mp3",
+              "music": "music.mp3",
+              "music_gain": 0.05,
+              "source_ambience_gain": 0.05
+            },
+            "export": {
+              "width": 1080,
+              "height": 1920,
+              "fps": 30,
+              "crf": 24,
+              "preset": "veryfast",
+              "audio_bitrate": "128k"
+            }
+          }
+          JSON
+          python -m linh_edit_engine.cli render --plan ci/plan.json --output ci/final.mp4
+          ffprobe -v error -show_entries stream=codec_name,width,height,avg_frame_rate -of json ci/final.mp4
