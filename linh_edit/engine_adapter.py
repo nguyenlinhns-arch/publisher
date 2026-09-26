@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 import sys
 from pathlib import Path
 
@@ -43,7 +44,7 @@ def project_to_plan(project: ProjectState, plan_path: Path, *, preview: bool = F
         "profile": project.profile,
         "title": project.title,
         "clips": clips,
-        "texts": [vars(x) for x in project.texts],
+        "texts": [asdict(x) for x in project.texts],
         "audio": {
             "voiceover": project.voiceover or None,
             "music": project.music or None,
