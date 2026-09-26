@@ -26,3 +26,21 @@ def test_talk_keeps_source_audio():
     timeline = build_rough_cut(project)
     assert timeline[0].keep_audio
     assert timeline[0].source_gain == 1.0
+
+
+def test_news_reuses_image_media_when_scenes_outnumber_assets():
+    project = ProjectState(profile="EXPLAINER_NEWS", target_seconds=20)
+    project.media = [
+        MediaItem(
+            path="news.jpg",
+            kind="image",
+            role="detail",
+            duration=4.0,
+            score=1.0,
+            motion="slow_zoom",
+        )
+    ]
+    timeline = build_rough_cut(project)
+    assert len(timeline) == 5
+    assert all(item.kind == "image" for item in timeline)
+    assert sum(item.duration for item in timeline) == 20.0
