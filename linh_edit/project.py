@@ -77,7 +77,9 @@ class ProjectState:
 
     @classmethod
     def load(cls, path: Path) -> "ProjectState":
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        # Windows PowerShell 5.1 and both legacy Linh video apps may emit
+        # UTF-8 JSON with a BOM. utf-8-sig accepts both BOM and plain UTF-8.
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
         media = [MediaItem(**item) for item in payload.pop("media", [])]
         timeline = [MediaItem(**item) for item in payload.pop("timeline", [])]
         texts = [TextItem(**item) for item in payload.pop("texts", [])]
