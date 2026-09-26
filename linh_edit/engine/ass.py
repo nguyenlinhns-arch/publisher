@@ -47,7 +47,9 @@ def write_ass(plan: EditPlan, target: Path) -> None:
         x = round(item.x * w)
         y = round(item.y * h)
         color = _ass_color(item.color)
-        bold = -1 if item.weight >= 700 else 0
+        weight = max(100, min(900, int(item.weight)))
+        font_name = "Oswald" if item.role in {"caption", "location"} else "Montserrat"
+        outline = 1.4 if item.role in {"context", "main", "keyword"} else 1.2
         font_size = max(16, round(item.size * w / 1080))
         align = _alignment(item)
         body = _escape(item.text)
@@ -58,8 +60,8 @@ def write_ass(plan: EditPlan, target: Path) -> None:
         else:
             motion = rf"\pos({x},{y})\fad(165,100)"
         tag = (
-            rf"{{\an{align}{motion}\fs{font_size}\b{bold}"
-            rf"\c{color}\bord1.2\shad0}}"
+            rf"{{\an{align}{motion}\fn{font_name}\fs{font_size}\b{weight}"
+            rf"\c{color}\bord{outline}\shad0}}"
         )
         events.append(
             f"Dialogue: 0,{_time(item.start)},{_time(item.end)},Default,,0,0,0,,{tag}{body}"
@@ -79,7 +81,7 @@ def write_ass(plan: EditPlan, target: Path) -> None:
             "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
             "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
             "Alignment, MarginL, MarginR, MarginV, Encoding",
-            "Style: Default,Roboto Condensed,72,&H00F4F1E9,&H00F4F1E9,"
+            "Style: Default,Montserrat,72,&H00F4F1E9,&H00F4F1E9,"
             "&H60000000,&H00000000,-1,0,0,0,100,100,0,0,1,1.2,0,2,80,80,80,1",
             "",
             "[Events]",
