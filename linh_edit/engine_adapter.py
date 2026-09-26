@@ -43,6 +43,7 @@ def project_to_plan(project: ProjectState, plan_path: Path, *, preview: bool = F
         "audio": {
             "voiceover": project.voiceover or None,
             "music": project.music or None,
+            "sfx": [asdict(x) for x in project.sfx],
             "music_gain": project.music_gain,
             "source_ambience_gain": 0.10,
             "ending_music_only_seconds": 6.0,
