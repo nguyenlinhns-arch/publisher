@@ -1,0 +1,33 @@
+{
+  "schema": "linh-local-editor-hosts.v1",
+  "production_render": "local",
+  "cloud_render_required": false,
+  "hosts": [
+    {
+      "id": "editorial",
+      "name": "THAY LINH VIDEO APP EDITORIAL 1.7.0 FINAL",
+      "root": "D:\\THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL",
+      "launcher": "MO_UNG_DUNG.bat",
+      "primary": true,
+      "profiles": [
+        "TRAVEL_DOCUMENTARY",
+        "TALKING_HEAD_EXPERT",
+        "DIRECT_RECRUITMENT",
+        "EXPLAINER_NEWS"
+      ]
+    },
+    {
+      "id": "news",
+      "name": "THAY LINH NEWS VIDEO APP 1.0.2",
+      "root": "D:\\THAY_LINH_NEWS_VIDEO_APP_1.0.2\\THAY_LINH_NEWS_VIDEO_APP_1.0.2",
+      "launcher": "MO_UNG_DUNG.bat",
+      "primary": false,
+      "profiles": [
+        "EXPLAINER_NEWS"
+      ]
+    }
+  ],
+  "excluded_roots": [
+    "D:\\MXHVideoTools-1.8.0-Windows-x64"
+  ]
+}
