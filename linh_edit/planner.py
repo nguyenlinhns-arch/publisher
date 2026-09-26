@@ -23,19 +23,48 @@ TRAVEL_SEQUENCE = (
 )
 
 
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+
 def import_media(paths: list[Path]) -> list[MediaItem]:
     items: list[MediaItem] = []
     for path in paths:
-        info = probe(path)
+        path = path.expanduser().resolve()
         role = infer_role(path)
+        if path.suffix.lower() in IMAGE_EXTENSIONS:
+            items.append(
+                MediaItem(
+                    path=str(path),
+                    kind="image",
+                    role=role,
+                    start=0.0,
+                    duration=4.0,
+                    score=0.55,
+                    motion="slow_zoom",
+                    keep_audio=False,
+                    source_gain=0.0,
+                )
+            )
+            continue
+
+        info = probe(path)
         duration = default_segment_duration(role, info.duration)
+        score = 0.50
+        if info.height > info.width:
+            score += 0.10
+        if max(info.width, info.height) >= 2160:
+            score += 0.10
+        if 29.5 <= info.fps <= 30.5:
+            score += 0.05
         items.append(
             MediaItem(
                 path=str(info.path),
+                kind="video",
                 role=role,
                 start=0.0,
                 duration=duration,
-                score=0.5,
+                score=min(1.0, score),
+                motion="none",
                 keep_audio=False,
                 source_gain=0.10,
             )
@@ -92,18 +121,30 @@ def _simple_rough_cut(project: ProjectState) -> list[MediaItem]:
     target = max(10.0, min(90.0, project.target_seconds))
     timeline: list[MediaItem] = []
     total = 0.0
-    for item in sorted(project.media, key=lambda x: x.score, reverse=True):
-        if total >= target:
+    source = sorted(project.media, key=lambda x: x.score, reverse=True)
+    if not source:
+        return timeline
+
+    allow_reuse = project.profile == "EXPLAINER_NEWS"
+    cycle = 0
+    while total < target:
+        made_progress = False
+        for item in source:
+            if total >= target:
+                break
+            copied = MediaItem(**asdict(item))
+            copied.duration = min(copied.duration, target - total)
+            if copied.duration < 0.5:
+                continue
+            if project.profile == "TALKING_HEAD_EXPERT":
+                copied.keep_audio = True
+                copied.source_gain = 1.0
+            timeline.append(copied)
+            total += copied.duration
+            made_progress = True
+        cycle += 1
+        if not allow_reuse or not made_progress or cycle >= 20:
             break
-        copied = MediaItem(**asdict(item))
-        copied.duration = min(copied.duration, target - total)
-        if copied.duration < 0.5:
-            continue
-        if project.profile == "TALKING_HEAD_EXPERT":
-            copied.keep_audio = True
-            copied.source_gain = 1.0
-        timeline.append(copied)
-        total += copied.duration
     return timeline
 
 
