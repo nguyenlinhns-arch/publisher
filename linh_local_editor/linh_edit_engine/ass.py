@@ -48,10 +48,11 @@ def write_ass(plan: EditPlan, target: Path) -> None:
         y = round(item.y * h)
         color = _ass_color(item.color)
         bold = -1 if item.weight >= 700 else 0
+        font_size = max(16, round(item.size * w / 1080))
         align = _alignment(item)
         body = _escape(item.text)
         tag = (
-            rf"{{\an{align}\pos({x},{y})\fs{item.size}\b{bold}"
+            rf"{{\an{align}\pos({x},{y})\fs{font_size}\b{bold}"
             rf"\c{color}\bord1.2\shad0\fad(140,120)}}"
         )
         events.append(
