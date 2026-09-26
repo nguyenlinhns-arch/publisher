@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from ..tools import resolve_tool
+
 from .ass import write_ass
 from .models import EditPlan
 from .qa import verify_output
@@ -16,10 +18,10 @@ class RenderError(RuntimeError):
 
 
 def _tool(name: str) -> str:
-    resolved = shutil.which(name)
-    if not resolved:
-        raise RenderError(f"{name} not found")
-    return resolved
+    try:
+        return resolve_tool(name)
+    except RuntimeError as exc:
+        raise RenderError(str(exc)) from exc
 
 
 def _ffmpeg_path(path: Path) -> str:
