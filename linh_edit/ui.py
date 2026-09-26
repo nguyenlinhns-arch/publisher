@@ -12,6 +12,7 @@ from .cover import extract_cover
 from .engine_adapter import render_project
 from .paths import output_dir
 from .planner import build_rough_cut, import_media
+from .media import probe_duration
 from .project import MediaItem, ProjectState, TextItem
 
 APP_VERSION = "1.0.0"
@@ -354,6 +355,21 @@ class LinhEditWindow:
         )
         if value:
             self.voice_var.set(value)
+            try:
+                voice_seconds = probe_duration(Path(value))
+                profile = PROFILE_LABELS.get(self.profile_var.get(), "TRAVEL_DOCUMENTARY")
+                if profile == "TRAVEL_DOCUMENTARY":
+                    suggested = max(45.0, min(90.0, voice_seconds + 6.0))
+                elif profile == "TALKING_HEAD_EXPERT":
+                    suggested = max(10.0, min(90.0, voice_seconds))
+                else:
+                    suggested = max(20.0, min(90.0, voice_seconds + 1.0))
+                self.target_var.set(round(suggested, 1))
+                self.status_var.set(
+                    f"Đã đọc VO {voice_seconds:.1f}s → gợi ý video {suggested:.1f}s."
+                )
+            except Exception:
+                pass
             self._mark_dirty()
 
     def choose_music(self) -> None:
