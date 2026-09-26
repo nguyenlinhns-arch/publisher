@@ -21,12 +21,14 @@ def load_plan(path: Path) -> EditPlan:
     clips = tuple(
         ClipSpec(
             source=_path(item["source"], base),  # type: ignore[arg-type]
-            start=float(item["start"]),
+            kind=str(item.get("kind", "video")),  # type: ignore[arg-type]
+            start=float(item.get("start", 0.0)),
             duration=float(item["duration"]),
             role=str(item.get("role", "detail")),
             x=float(item.get("x", 0.5)),
             y=float(item.get("y", 0.5)),
             scale=float(item.get("scale", 1.0)),
+            motion=str(item.get("motion", "none")),  # type: ignore[arg-type]
             mute_source_audio=bool(item.get("mute_source_audio", True)),
             source_gain=float(item.get("source_gain", 0.10)),
         )
