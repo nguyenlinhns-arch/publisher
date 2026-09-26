@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+from .tools import resolve_tool
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,10 +22,7 @@ class MediaInfo:
 
 
 def _tool(name: str) -> str:
-    value = shutil.which(name)
-    if not value:
-        raise RuntimeError(f"Không tìm thấy {name}.")
-    return value
+    return resolve_tool(name)
 
 
 def _fraction(value: str | None) -> float:
