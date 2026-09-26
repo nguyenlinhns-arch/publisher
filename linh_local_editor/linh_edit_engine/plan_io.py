@@ -28,6 +28,7 @@ def load_plan(path: Path) -> EditPlan:
             y=float(item.get("y", 0.5)),
             scale=float(item.get("scale", 1.0)),
             mute_source_audio=bool(item.get("mute_source_audio", True)),
+            source_gain=float(item.get("source_gain", 0.10)),
         )
         for item in payload["clips"]
     )
