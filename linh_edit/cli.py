@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from . import APP_NAME, __version__
@@ -46,36 +47,54 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _safe_print(value: str, *, error: bool = False) -> None:
+    stream = sys.stderr if error else sys.stdout
+    if stream is not None:
+        try:
+            print(value, file=stream)
+        except Exception:
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     command = args.command or "gui"
 
-    if command == "capabilities":
-        print(json.dumps(CAPABILITIES, ensure_ascii=False, indent=2))
-        return 0
+    if command == "gui":
+        from .ui import main as gui_main
+        return gui_main()
 
-    if command == "doctor":
-        payload = {
-            **CAPABILITIES,
-            "ffmpeg": resolve_tool("ffmpeg"),
-            "ffprobe": resolve_tool("ffprobe"),
-            "status": "READY",
-        }
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
-        return 0
+    try:
+        if command == "capabilities":
+            _safe_print(json.dumps(CAPABILITIES, ensure_ascii=False, indent=2))
+            return 0
 
-    if command == "render":
-        project = ProjectState.load(args.project.expanduser().resolve())
-        result = render_project(
-            project,
-            args.output.expanduser().resolve(),
-            preview=bool(args.preview),
-        )
-        print(json.dumps({"status": "DONE", "output": str(result)}, ensure_ascii=False))
-        return 0
+        if command == "doctor":
+            payload = {
+                **CAPABILITIES,
+                "ffmpeg": resolve_tool("ffmpeg"),
+                "ffprobe": resolve_tool("ffprobe"),
+                "status": "READY",
+            }
+            _safe_print(json.dumps(payload, ensure_ascii=False, indent=2))
+            return 0
 
-    from .ui import main as gui_main
-    return gui_main()
+        if command == "render":
+            project = ProjectState.load(args.project.expanduser().resolve())
+            result = render_project(
+                project,
+                args.output.expanduser().resolve(),
+                preview=bool(args.preview),
+            )
+            _safe_print(
+                json.dumps({"status": "DONE", "output": str(result)}, ensure_ascii=False)
+            )
+            return 0
+    except Exception as exc:
+        _safe_print(f"ERROR: {exc}", error=True)
+        return 1
+
+    return 2
 
 
 if __name__ == "__main__":
