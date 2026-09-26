@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
+from .tools import resolve_tool
+
 
 def extract_cover(video: Path, target: Path, *, at_seconds: float = 1.5) -> Path:
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        raise RuntimeError("Không tìm thấy ffmpeg.")
+    ffmpeg = resolve_tool("ffmpeg")
     target.parent.mkdir(parents=True, exist_ok=True)
     completed = subprocess.run(
         [
