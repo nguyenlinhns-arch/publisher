@@ -1,0 +1,24 @@
+name: V7 MXH One Shot
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v7-mxh-once.yml'
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call V7 Fast Control health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 30 \
+            'https://xamviatbxufjlpiwhebb.supabase.co/functions/v1/v7-mxh-once' \
+            | tee v7-health.json
+          echo
+          python - <<'PY'
+          import json
+          d=json.load(open('v7-health.json','r',encoding='utf-8'))
+          print(json.dumps(d, ensure_ascii=False, indent=2))
+          PY
