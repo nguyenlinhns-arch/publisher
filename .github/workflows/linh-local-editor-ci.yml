@@ -1,11 +1,11 @@
-name: Linh Local Editor CI
+name: Linh Edit CI
 
 on:
   push:
     branches:
       - linh-local-editor-v2
     paths:
-      - "linh_local_editor/**"
+      - "linh_edit/**"
       - ".github/workflows/linh-local-editor-ci.yml"
   workflow_dispatch:
 
@@ -25,12 +25,12 @@ jobs:
           sudo apt-get install -y ffmpeg
       - name: Unit tests
         env:
-          PYTHONPATH: linh_local_editor:.
-        run: pytest -q linh_local_editor/tests linh_edit/tests
+          PYTHONPATH: .
+        run: pytest -q linh_edit/tests
       - name: Import unified app
         env:
-          PYTHONPATH: linh_local_editor:.
-        run: python -c "import linh_edit; import linh_edit.ui; print(linh_edit.APP_NAME)"
+          PYTHONPATH: .
+        run: python -c "import linh_edit; import linh_edit.ui; import linh_edit.engine; print(linh_edit.APP_NAME)"
       - name: Create synthetic media
         run: |
           mkdir -p ci
@@ -48,9 +48,9 @@ jobs:
           ffmpeg -y -hide_banner -loglevel error \
             -f lavfi -i "sine=frequency=110:sample_rate=48000" \
             -t 4 -c:a mp3 ci/music.mp3
-      - name: Render smoke test
+      - name: Render integrated smoke test
         env:
-          PYTHONPATH: linh_local_editor
+          PYTHONPATH: .
         run: |
           cat > ci/plan.json <<'JSON'
           {
@@ -65,7 +65,8 @@ jobs:
                 "x": 0.5,
                 "y": 0.5,
                 "scale": 1,
-                "mute_source_audio": true
+                "mute_source_audio": true,
+                "source_gain": 0.10
               },
               {
                 "source": "clip2.mp4",
@@ -75,7 +76,8 @@ jobs:
                 "x": 0.5,
                 "y": 0.5,
                 "scale": 1,
-                "mute_source_audio": false
+                "mute_source_audio": false,
+                "source_gain": 0.10
               }
             ],
             "texts": [
@@ -108,5 +110,5 @@ jobs:
             }
           }
           JSON
-          python -m linh_edit_engine.cli render --plan ci/plan.json --output ci/final.mp4
+          python -c "from pathlib import Path; from linh_edit.engine.plan_io import load_plan; from linh_edit.engine.renderer import render_plan; render_plan(load_plan(Path('ci/plan.json')), Path('ci/final.mp4'))"
           ffprobe -v error -show_entries stream=codec_name,width,height,avg_frame_rate -of json ci/final.mp4
