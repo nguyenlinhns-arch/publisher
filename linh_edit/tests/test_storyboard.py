@@ -28,3 +28,20 @@ def test_storyboard_reuses_single_image_and_builds_scene_text(tmp_path):
     assert len(project.texts) == 3
     assert len(project.sfx) == 3
     assert project.target_seconds == 9.0
+
+
+def test_storyboard_accepts_windows_utf8_bom(tmp_path):
+    payload = {
+        "profile": "EXPLAINER_NEWS",
+        "title": "Tin Windows",
+        "images": ["one.jpg"],
+        "scenes": [{"duration": 2.0, "text": "BOM OK"}],
+    }
+    path = tmp_path / "story-bom.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8-sig")
+
+    project = import_storyboard(path, ProjectState())
+
+    assert project.title == "Tin Windows"
+    assert len(project.timeline) == 1
+    assert project.texts[0].text == "BOM OK"
