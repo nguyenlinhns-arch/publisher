@@ -52,6 +52,9 @@ jobs:
           ffmpeg -y -hide_banner -loglevel error \
             -f lavfi -i "sine=frequency=110:sample_rate=48000" \
             -t 4 -c:a mp3 ci/music.mp3
+          ffmpeg -y -hide_banner -loglevel error \
+            -f lavfi -i "sine=frequency=880:sample_rate=48000" \
+            -t 0.25 -c:a mp3 ci/sfx.mp3
       - name: Render integrated smoke test
         env:
           PYTHONPATH: .
@@ -101,6 +104,9 @@ jobs:
             "audio": {
               "voiceover": "voice.mp3",
               "music": "music.mp3",
+              "sfx": [
+                {"path": "sfx.mp3", "start": 1.0, "gain": 0.20}
+              ],
               "music_gain": 0.05,
               "source_ambience_gain": 0.05
             },
