@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+from ..tools import resolve_tool
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,10 +22,7 @@ class QAResult:
 
 
 def _tool(name: str) -> str:
-    resolved = shutil.which(name)
-    if not resolved:
-        raise RuntimeError(f"{name} not found")
-    return resolved
+    return resolve_tool(name)
 
 
 def _fraction(value: str | None) -> float:
