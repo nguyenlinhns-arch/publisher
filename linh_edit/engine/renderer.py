@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from ..tools import resolve_tool
+from ..tools import resolve_asset, resolve_tool
 
 from .ass import write_ass
 from .models import EditPlan
@@ -137,7 +137,11 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
         )
 
         ass_path = _ffmpeg_path(ass)
-        filters.append(f"[basev]ass=filename='{ass_path}',format=yuv420p[outv]")
+        fonts_path = _ffmpeg_path(resolve_asset("assets/fonts"))
+        filters.append(
+            f"[basev]ass=filename='{ass_path}':fontsdir='{fonts_path}',"
+            "format=yuv420p[outv]"
+        )
 
         duration = plan.duration
         mix_labels = ["[basea]"]
