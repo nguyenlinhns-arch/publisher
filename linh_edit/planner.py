@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from pathlib import Path
 
 from .media import default_segment_duration, infer_role, probe
@@ -72,7 +73,7 @@ def _travel_rough_cut(project: ProjectState) -> list[MediaItem]:
             duration = min(picked.duration, remaining)
             if duration < 1.0:
                 continue
-            copied = MediaItem(**vars(picked))
+            copied = MediaItem(**asdict(picked))
             copied.duration = duration
             if role == "visual_hook":
                 copied.role = "visual_hook"
@@ -94,7 +95,7 @@ def _simple_rough_cut(project: ProjectState) -> list[MediaItem]:
     for item in sorted(project.media, key=lambda x: x.score, reverse=True):
         if total >= target:
             break
-        copied = MediaItem(**vars(item))
+        copied = MediaItem(**asdict(item))
         copied.duration = min(copied.duration, target - total)
         if copied.duration < 0.5:
             continue
