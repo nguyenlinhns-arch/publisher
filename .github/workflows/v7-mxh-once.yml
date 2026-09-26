@@ -9,14 +9,18 @@ jobs:
   health:
     runs-on: ubuntu-latest
     steps:
-      - name: Call V7 Fast Control health
+      - name: Call V7 Fast Control health via PostgREST RPC
         shell: bash
         run: |
           set -euo pipefail
           code=$(curl -sS --max-time 30 \
             -o v7-health.txt \
             -w '%{http_code}' \
-            'https://xamviatbxufjlpiwhebb.supabase.co/functions/v1/v7-mxh-once')
+            -X POST \
+            -H 'apikey: sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK' \
+            -H 'Content-Type: application/json' \
+            --data '{}' \
+            'https://xamviatbxufjlpiwhebb.supabase.co/rest/v1/rpc/v7_fast_health')
           echo "HTTP_STATUS=$code"
           cat v7-health.txt
           echo
