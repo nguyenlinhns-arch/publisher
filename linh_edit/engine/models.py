@@ -60,9 +60,23 @@ class TextSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class SfxSpec:
+    path: Path
+    start: float
+    gain: float = 0.30
+
+    def validate(self) -> None:
+        if self.start < 0:
+            raise ValueError("sfx.start must be >= 0")
+        if self.gain < 0 or self.gain > 4:
+            raise ValueError("sfx.gain must be between 0 and 4")
+
+
+@dataclass(frozen=True, slots=True)
 class AudioSpec:
     voiceover: Path | None = None
     music: Path | None = None
+    sfx: tuple[SfxSpec, ...] = ()
     music_gain: float = 0.14
     source_ambience_gain: float = 0.10
     ending_music_only_seconds: float = 6.0
@@ -100,6 +114,8 @@ class EditPlan:
             clip.validate()
         for text in self.texts:
             text.validate()
+        for sfx in self.audio.sfx:
+            sfx.validate()
         self.export.validate()
 
     @property
