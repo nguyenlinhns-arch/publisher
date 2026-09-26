@@ -1,0 +1,37 @@
+name: Linh Edit Acceptance
+
+on:
+  push:
+    branches:
+      - linh-local-editor-v2
+    paths:
+      - ".github/workflows/linh-edit-acceptance.yml"
+  workflow_dispatch:
+
+jobs:
+  acceptance:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch pinned FFmpeg
+        shell: powershell
+        run: .\scripts\fetch_ffprobe.ps1
+      - name: Build and smoke-test LinhEdit.exe
+        shell: powershell
+        run: .\scripts\build_linh_edit_windows.ps1 -SkipFetch
+      - name: Archive accepted portable app
+        shell: powershell
+        run: |
+          Compress-Archive -Path dist\LinhEdit\* -DestinationPath LinhEdit-1.0.0-ACCEPTED-Windows-x64.zip -CompressionLevel Optimal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LinhEdit-1.0.0-ACCEPTED-Windows-x64
+          path: |
+            dist/LinhEdit/**
+            LinhEdit-1.0.0-ACCEPTED-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
