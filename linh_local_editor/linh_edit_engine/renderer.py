@@ -124,7 +124,11 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
                 )
             audio_labels.append(aout)
 
-        concat_inputs = "".join(video_labels + audio_labels)
+        concat_inputs = "".join(
+            label
+            for pair in zip(video_labels, audio_labels)
+            for label in pair
+        )
         filters.append(
             concat_inputs
             + f"concat=n={len(plan.clips)}:v=1:a=1[basev][basea]"
