@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import threading
 import tkinter as tk
@@ -8,15 +9,17 @@ from copy import deepcopy
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from .article_ingest import apply_article, fetch_article
 from .cover import extract_cover
 from .engine_adapter import render_project
 from .paths import output_dir
 from .planner import build_rough_cut, import_media
 from .media import probe_duration
+from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
 from .storyboard import import_storyboard as load_storyboard
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 
 PROFILE_LABELS = {
     "Travel / Công tác": "TRAVEL_DOCUMENTARY",
@@ -137,6 +140,32 @@ class LinhEditWindow:
 
         self.export_button = ttk.Button(quick, text="XUẤT VIDEO", command=self.export_final)
         self.export_button.grid(row=1, column=7, sticky=tk.EW, padx=(6, 0))
+
+        ttk.Label(quick, text="Nguồn nội dung").grid(
+            row=2, column=0, sticky=tk.W, pady=(8, 0)
+        )
+        self.news_button = ttk.Button(
+            quick, text="DÁN NEWS / JSON", command=self.paste_news_clipboard
+        )
+        self.news_button.grid(
+            row=2, column=1, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0)
+        )
+        self.article_button = ttk.Button(
+            quick, text="VIDEO TỪ LINK BÀI VIẾT", command=self.article_from_url
+        )
+        self.article_button.grid(
+            row=2, column=3, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0)
+        )
+        self.transcript_button = ttk.Button(
+            quick, text="MỞ TRANSCRIPT", command=self.open_transcript
+        )
+        self.transcript_button.grid(
+            row=2, column=5, sticky=tk.EW, padx=6, pady=(8, 0)
+        )
+        self.source_label = ttk.Label(quick, text="Nguồn: thủ công", anchor=tk.W)
+        self.source_label.grid(
+            row=2, column=6, columnspan=2, sticky=tk.EW, padx=(6, 0), pady=(8, 0)
+        )
 
         titlebar = ttk.Frame(outer)
         titlebar.pack(fill=tk.X, pady=(0, 8))
@@ -295,6 +324,11 @@ class LinhEditWindow:
         self.duration_label.configure(
             text=f"{sum(x.duration for x in self.project.timeline):.1f}s"
         )
+        if hasattr(self, "source_label"):
+            source = self.project.source_mode or "thủ công"
+            if self.project.source_url:
+                source += " • URL"
+            self.source_label.configure(text=f"Nguồn: {source}")
         self._update_title()
 
     def _refresh_media(self) -> None:
@@ -354,9 +388,123 @@ class LinhEditWindow:
                 errors.append(f"{Path(value).name}: {exc}")
         self.project.dirty = True
         self._refresh_all()
-        self.status_var.set(f"Đã thêm {added} video.")
+        self.status_var.set(f"Đã thêm {added} media.")
         if errors:
             messagebox.showwarning("Một số file chưa đọc được", "\n".join(errors[:8]))
+
+    def _select_news_images(self) -> list[str]:
+        existing = [item.path for item in self.project.media if item.kind == "image"]
+        if existing:
+            return existing
+        selected = filedialog.askopenfilenames(
+            title="Chọn ảnh cho News / Editorial",
+            filetypes=[
+                ("Ảnh", "*.jpg *.jpeg *.png *.webp *.bmp"),
+                ("Tất cả tệp", "*.*"),
+            ],
+        )
+        return list(selected)
+
+    def paste_news_clipboard(self) -> None:
+        if self.busy:
+            return
+        try:
+            content = self.root.clipboard_get().strip()
+        except tk.TclError:
+            content = ""
+        if not content:
+            messagebox.showinfo("Clipboard trống", "Hãy sao chép bài viết hoặc JSON rồi thử lại.")
+            return
+        images = self._select_news_images()
+        if not images:
+            messagebox.showinfo("Chưa có ảnh", "News/Editorial cần ít nhất một ảnh.")
+            return
+
+        try:
+            # Content changed: never silently reuse a voice made for an older transcript.
+            self.voice_var.set("")
+            self.project.voiceover = ""
+            apply_news_content(
+                self.project,
+                content,
+                images=images,
+                minimum_scenes=3,
+            )
+        except Exception as exc:
+            messagebox.showerror("Không tạo được News", str(exc))
+            return
+
+        self.profile_var.set("Tin tức")
+        self.target_var.set(self.project.target_seconds)
+        self.title_var.set(self.project.title)
+        self._refresh_all()
+        self.status_var.set(
+            f"Đã hợp nhất News: {len(self.project.timeline)} cảnh • "
+            f"{self.project.target_seconds:.1f}s. Chọn giọng đọc để căn lại đúng VO."
+        )
+
+    def article_from_url(self) -> None:
+        if self.busy:
+            return
+        value = simpledialog.askstring(
+            "Video từ link bài viết",
+            "Dán URL bài viết công khai:",
+            parent=self.root,
+        )
+        if not value or not value.strip():
+            return
+        url = value.strip()
+        digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:12]
+        workspace = Path(self.project.output_dir or output_dir()) / "_article_sources" / digest
+        workspace.mkdir(parents=True, exist_ok=True)
+        self._set_busy(True, "Đang lấy bài viết và ảnh nguồn...")
+
+        future = self.executor.submit(fetch_article, url, workspace)
+
+        def poll() -> None:
+            if not future.done():
+                self.root.after(150, poll)
+                return
+            self._set_busy(False)
+            try:
+                article = future.result()
+                if not article.local_images:
+                    raise ValueError("Không tải được ảnh hợp lệ từ bài viết.")
+                self.voice_var.set("")
+                self.project.voiceover = ""
+                apply_article(self.project, article)
+            except Exception as exc:
+                self.status_var.set("Không lấy được bài viết.")
+                messagebox.showerror("Video từ link chưa thành công", str(exc))
+                return
+
+            self.profile_var.set("Tin tức")
+            self.target_var.set(self.project.target_seconds)
+            self.title_var.set(self.project.title)
+            self._refresh_all()
+            self.status_var.set(
+                f"Đã biên tập URL → {len(self.project.timeline)} cảnh, "
+                f"{len(article.local_images)} ảnh nguồn. Hãy chọn giọng đọc."
+            )
+
+        self.root.after(150, poll)
+
+    def open_transcript(self) -> None:
+        transcript = self.project.transcript.strip()
+        if not transcript:
+            messagebox.showinfo(
+                "Chưa có transcript",
+                "Hãy dùng DÁN NEWS / JSON hoặc VIDEO TỪ LINK BÀI VIẾT trước.",
+            )
+            return
+        if self.project_path:
+            target = self.project_path.with_name(self.project_path.stem + "_transcript.txt")
+        else:
+            folder = Path(self.project.output_dir or output_dir()) / "_sources"
+            folder.mkdir(parents=True, exist_ok=True)
+            target = folder / "linh_edit_transcript.txt"
+        target.write_text(transcript + "\n", encoding="utf-8")
+        self._open_path(target)
 
     def choose_voice(self) -> None:
         value = filedialog.askopenfilename(
@@ -365,19 +513,29 @@ class LinhEditWindow:
         )
         if value:
             self.voice_var.set(value)
+            self.project.voiceover = value
             try:
                 voice_seconds = probe_duration(Path(value))
                 profile = PROFILE_LABELS.get(self.profile_var.get(), "TRAVEL_DOCUMENTARY")
-                if profile == "TRAVEL_DOCUMENTARY":
-                    suggested = max(45.0, min(90.0, voice_seconds + 6.0))
-                elif profile == "TALKING_HEAD_EXPERT":
-                    suggested = max(10.0, min(90.0, voice_seconds))
+                if profile == "EXPLAINER_NEWS" and self.project.story_scenes:
+                    resync_story_to_duration(self.project, voice_seconds)
+                    suggested = self.project.target_seconds
+                    self.target_var.set(round(suggested, 1))
+                    self.status_var.set(
+                        f"Đã căn {len(self.project.story_scenes)} cảnh theo VO {voice_seconds:.1f}s."
+                    )
+                    self._refresh_all()
                 else:
-                    suggested = max(20.0, min(90.0, voice_seconds + 1.0))
-                self.target_var.set(round(suggested, 1))
-                self.status_var.set(
-                    f"Đã đọc VO {voice_seconds:.1f}s → gợi ý video {suggested:.1f}s."
-                )
+                    if profile == "TRAVEL_DOCUMENTARY":
+                        suggested = max(45.0, min(90.0, voice_seconds + 6.0))
+                    elif profile == "TALKING_HEAD_EXPERT":
+                        suggested = max(10.0, min(90.0, voice_seconds))
+                    else:
+                        suggested = max(20.0, min(90.0, voice_seconds + 1.0))
+                    self.target_var.set(round(suggested, 1))
+                    self.status_var.set(
+                        f"Đã đọc VO {voice_seconds:.1f}s → gợi ý video {suggested:.1f}s."
+                    )
             except Exception:
                 pass
             self._mark_dirty()
@@ -741,6 +899,10 @@ class LinhEditWindow:
         self.auto_button.configure(state=state)
         self.preview_button.configure(state=state)
         self.export_button.configure(state=state)
+        if hasattr(self, "news_button"):
+            self.news_button.configure(state=state)
+            self.article_button.configure(state=state)
+            self.transcript_button.configure(state=state)
         if message:
             self.status_var.set(message)
 
