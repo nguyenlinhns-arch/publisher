@@ -16,6 +16,7 @@ ProfileName = Literal[
 @dataclass(slots=True)
 class MediaItem:
     path: str
+    kind: str = "video"
     role: str = "detail"
     start: float = 0.0
     duration: float = 3.4
@@ -23,6 +24,7 @@ class MediaItem:
     x: float = 0.5
     y: float = 0.5
     scale: float = 1.0
+    motion: str = "none"
     keep_audio: bool = False
     source_gain: float = 0.10
 
