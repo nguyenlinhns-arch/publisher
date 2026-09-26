@@ -2,15 +2,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-import sys
 from pathlib import Path
 
-ENGINE_ROOT = Path(__file__).resolve().parents[1] / "linh_local_editor"
-if str(ENGINE_ROOT) not in sys.path:
-    sys.path.insert(0, str(ENGINE_ROOT))
-
-from linh_edit_engine.plan_io import load_plan  # noqa: E402
-from linh_edit_engine.renderer import render_plan  # noqa: E402
+from .engine.plan_io import load_plan
+from .engine.renderer import render_plan
 
 from .project import ProjectState
 
