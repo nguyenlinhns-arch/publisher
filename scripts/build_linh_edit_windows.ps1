@@ -114,6 +114,56 @@ if ($Process.ExitCode -ne 0) {
     throw "LinhEdit.exe doctor thất bại với mã $($Process.ExitCode)."
 }
 
+$SmokeDir = Join-Path $Root "build\linh-edit-smoke"
+New-Item -ItemType Directory -Force -Path $SmokeDir | Out-Null
+$SmokeVideo = Join-Path $SmokeDir "clip.mp4"
+$SmokeProject = Join-Path $SmokeDir "project.linhedit.json"
+$SmokeOutput = Join-Path $SmokeDir "final.mp4"
+
+& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "testsrc2=size=1080x1920:rate=30" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 2 -c:v libx264 -pix_fmt yuv420p -c:a aac $SmokeVideo
+Assert-NativeSuccess "Tạo media smoke test Windows"
+
+$Clip = @{
+    path = $SmokeVideo
+    kind = "video"
+    role = "human"
+    start = 0.0
+    duration = 2.0
+    score = 1.0
+    x = 0.5
+    y = 0.5
+    scale = 1.0
+    motion = "none"
+    keep_audio = $true
+    source_gain = 1.0
+}
+$ProjectPayload = @{
+    name = "Windows smoke"
+    profile = "TALKING_HEAD_EXPERT"
+    target_seconds = 2.0
+    title = "Smoke"
+    media = @($Clip)
+    timeline = @($Clip)
+    texts = @()
+    sfx = @()
+    voiceover = ""
+    music = ""
+    music_gain = 0.14
+    output_dir = $SmokeDir
+    dirty = $false
+}
+$ProjectPayload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SmokeProject -Encoding utf8
+
+$RenderProcess = Start-Process -FilePath $Exe -ArgumentList @("render", "--project", $SmokeProject, "--output", $SmokeOutput) -Wait -PassThru
+if ($RenderProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe render smoke test thất bại với mã $($RenderProcess.ExitCode)."
+}
+if (-not (Test-Path -LiteralPath $SmokeOutput -PathType Leaf)) {
+    throw "LinhEdit.exe không tạo video smoke output."
+}
+& $BundledFfprobe.FullName -v error -select_streams v:0 -show_entries "stream=codec_name,width,height,avg_frame_rate" -of json $SmokeOutput
+Assert-NativeSuccess "ffprobe smoke output từ LinhEdit.exe"
+
 Copy-Item -LiteralPath (Join-Path $Root "linh_edit\README.md") -Destination (Join-Path $AppDir "README.txt") -Force
 if (Test-Path -LiteralPath (Join-Path $Root "THIRD_PARTY_NOTICES.md")) {
     Copy-Item -LiteralPath (Join-Path $Root "THIRD_PARTY_NOTICES.md") -Destination (Join-Path $AppDir "THIRD_PARTY_NOTICES.md") -Force
