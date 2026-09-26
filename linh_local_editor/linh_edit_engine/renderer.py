@@ -114,7 +114,7 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
                     f"[{index}:a:0]atrim=start={clip.start:.3f}:end={end:.3f},"
                     f"asetpts=PTS-STARTPTS,aresample=48000,"
                     f"aformat=sample_fmts=fltp:channel_layouts=stereo,"
-                    f"volume={plan.audio.source_ambience_gain:.6f}{aout}"
+                    f"volume={clip.source_gain:.6f}{aout}"
                 )
             else:
                 aout = f"[a{index}]"
