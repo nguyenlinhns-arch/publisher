@@ -15,9 +15,9 @@ ProfileName = Literal[
 @dataclass(frozen=True, slots=True)
 class ClipSpec:
     source: Path
-    kind: Literal["video", "image"] = "video"
-    start: float = 0.0
+    start: float
     duration: float
+    kind: Literal["video", "image"] = "video"
     role: str = "detail"
     x: float = 0.5
     y: float = 0.5
