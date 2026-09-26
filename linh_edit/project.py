@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 ProfileName = Literal[
     "TRAVEL_DOCUMENTARY",
@@ -64,6 +64,11 @@ class ProjectState:
     music: str = ""
     music_gain: float = 0.14
     output_dir: str = ""
+    source_mode: str = ""
+    source_text: str = ""
+    source_url: str = ""
+    transcript: str = ""
+    story_scenes: list[dict[str, Any]] = field(default_factory=list)
     dirty: bool = False
 
     def save(self, path: Path) -> None:
