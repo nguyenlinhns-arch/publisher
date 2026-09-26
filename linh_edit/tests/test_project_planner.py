@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from linh_edit.planner import build_rough_cut
@@ -44,3 +45,44 @@ def test_news_reuses_image_media_when_scenes_outnumber_assets():
     assert len(timeline) == 5
     assert all(item.kind == "image" for item in timeline)
     assert sum(item.duration for item in timeline) == 20.0
+
+
+def test_project_load_accepts_windows_utf8_bom(tmp_path: Path):
+    payload = {
+        "name": "Windows smoke",
+        "profile": "TALKING_HEAD_EXPERT",
+        "target_seconds": 2.0,
+        "title": "Smoke",
+        "media": [],
+        "timeline": [
+            {
+                "path": "clip.mp4",
+                "kind": "video",
+                "role": "human",
+                "start": 0.0,
+                "duration": 2.0,
+                "score": 1.0,
+                "x": 0.5,
+                "y": 0.5,
+                "scale": 1.0,
+                "motion": "none",
+                "keep_audio": True,
+                "source_gain": 1.0,
+            }
+        ],
+        "texts": [],
+        "sfx": [],
+        "voiceover": "",
+        "music": "",
+        "music_gain": 0.14,
+        "output_dir": "",
+        "dirty": False,
+    }
+    path = tmp_path / "project.linhedit.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8-sig")
+
+    project = ProjectState.load(path)
+
+    assert project.title == "Smoke"
+    assert len(project.timeline) == 1
+    assert project.timeline[0].keep_audio
