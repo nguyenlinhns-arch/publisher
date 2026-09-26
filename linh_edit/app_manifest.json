@@ -1,0 +1,27 @@
+{
+  "schema": "thaylinh.local-app.v1",
+  "id": "linh_edit",
+  "name": "Linh Edit",
+  "version": "1.0.0",
+  "kind": "video_editor",
+  "target_root": "D:\\LINH_EDIT",
+  "launcher": "LinhEdit.exe",
+  "health_command": ["LinhEdit.exe", "doctor"],
+  "capabilities_command": ["LinhEdit.exe", "capabilities"],
+  "render_mode": "local",
+  "cloud_required": false,
+  "profiles": [
+    "TRAVEL_DOCUMENTARY",
+    "TALKING_HEAD_EXPERT",
+    "EXPLAINER_NEWS",
+    "DIRECT_RECRUITMENT"
+  ],
+  "legacy_sources": [
+    "D:\\THAY_LINH_NEWS_VIDEO_APP_1.0.2\\THAY_LINH_NEWS_VIDEO_APP_1.0.2",
+    "D:\\THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL"
+  ],
+  "excluded_roots": [
+    "D:\\MXHVideoTools-1.8.0-Windows-x64"
+  ],
+  "rollback_policy": "keep_legacy_apps_untouched_until_acceptance_pass"
+}
