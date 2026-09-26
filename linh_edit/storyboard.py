@@ -96,6 +96,14 @@ def import_storyboard(path: Path, project: ProjectState) -> ProjectState:
             )
         cursor += duration
 
+    seen: set[str] = set()
+    project.media = []
+    for item in project.timeline:
+        if item.path in seen:
+            continue
+        seen.add(item.path)
+        project.media.append(MediaItem(**{field: getattr(item, field) for field in item.__dataclass_fields__}))
+
     project.target_seconds = cursor
     project.dirty = True
     return project
