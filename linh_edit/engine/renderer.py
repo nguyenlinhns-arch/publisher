@@ -74,7 +74,18 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
         command: list[str] = [_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-y"]
         input_index: dict[str, int] = {}
         for index, clip in enumerate(plan.clips):
-            command.extend(["-i", str(clip.source.expanduser().resolve())])
+            source_path = str(clip.source.expanduser().resolve())
+            if clip.kind == "image":
+                command.extend(
+                    [
+                        "-loop", "1",
+                        "-framerate", str(plan.export.fps),
+                        "-t", f"{clip.duration:.3f}",
+                        "-i", source_path,
+                    ]
+                )
+            else:
+                command.extend(["-i", source_path])
             input_index[f"clip_{index}"] = index
 
         next_input = len(plan.clips)
@@ -104,21 +115,30 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
             vin = f"[{input_index[f'clip_{index}']}:v:0]"
             vout = f"[v{index}]"
             scale = max(1.0, clip.scale)
-            filters.append(
-                vin
-                + f"trim=start={clip.start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,"
+            if clip.kind == "image":
+                head = f"trim=duration={clip.duration:.3f},setpts=PTS-STARTPTS,"
+            else:
+                head = f"trim=start={clip.start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,"
+            visual = (
+                head
                 + f"scale={w}:{h}:force_original_aspect_ratio=increase,"
                 + f"scale=iw*{scale:.6f}:ih*{scale:.6f},"
                 + f"crop={w}:{h}:"
                 + f"x='max(0,min(iw-{w},(iw-{w})*{clip.x:.6f}))':"
                 + f"y='max(0,min(ih-{h},(ih-{h})*{clip.y:.6f}))',"
-                + f"fps={fps},setsar=1,format=yuv420p"
-                + vout
             )
+            if clip.kind == "image" and clip.motion == "slow_zoom":
+                visual += (
+                    f"zoompan=z='min(max(zoom,pzoom)+0.0007,1.045)':"
+                    f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+                    f"d=1:s={w}x{h}:fps={fps},"
+                )
+            visual += f"fps={fps},setsar=1,format=yuv420p"
+            filters.append(vin + visual + vout)
             video_labels.append(vout)
 
             source = clip.source.expanduser().resolve()
-            if not clip.mute_source_audio and _probe_has_audio(source):
+            if clip.kind == "video" and not clip.mute_source_audio and _probe_has_audio(source):
                 aout = f"[a{index}]"
                 filters.append(
                     f"[{index}:a:0]atrim=start={clip.start:.3f}:end={end:.3f},"
