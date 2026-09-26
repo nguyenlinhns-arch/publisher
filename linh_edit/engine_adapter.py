@@ -24,12 +24,14 @@ def project_to_plan(project: ProjectState, plan_path: Path, *, preview: bool = F
         clips.append(
             {
                 "source": item.path,
+                "kind": item.kind,
                 "start": item.start,
                 "duration": item.duration,
                 "role": item.role,
                 "x": item.x,
                 "y": item.y,
                 "scale": item.scale,
+                "motion": item.motion,
                 "mute_source_audio": not item.keep_audio,
                 "source_gain": item.source_gain,
             }
