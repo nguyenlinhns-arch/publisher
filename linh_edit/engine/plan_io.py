@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .models import AudioSpec, ClipSpec, EditPlan, ExportSpec, TextSpec
+from .models import AudioSpec, ClipSpec, EditPlan, ExportSpec, SfxSpec, TextSpec
 
 
 def _path(value: str | None, base: Path) -> Path | None:
@@ -48,9 +48,18 @@ def load_plan(path: Path) -> EditPlan:
         for item in payload.get("texts", [])
     )
     audio_payload = payload.get("audio", {})
+    sfx = tuple(
+        SfxSpec(
+            path=_path(item["path"], base),  # type: ignore[arg-type]
+            start=float(item["start"]),
+            gain=float(item.get("gain", 0.30)),
+        )
+        for item in audio_payload.get("sfx", [])
+    )
     audio = AudioSpec(
         voiceover=_path(audio_payload.get("voiceover"), base),
         music=_path(audio_payload.get("music"), base),
+        sfx=sfx,
         music_gain=float(audio_payload.get("music_gain", 0.14)),
         source_ambience_gain=float(audio_payload.get("source_ambience_gain", 0.10)),
         ending_music_only_seconds=float(audio_payload.get("ending_music_only_seconds", 6.0)),
