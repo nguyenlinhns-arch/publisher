@@ -5,8 +5,15 @@ on:
     branches:
       - linh-local-editor-v2
     paths:
+      - "linh_edit/**"
+      - "linh_edit_launcher.py"
+      - "scripts/build_linh_edit_windows.ps1"
       - ".github/workflows/linh-edit-acceptance.yml"
   workflow_dispatch:
+
+concurrency:
+  group: linh-edit-acceptance-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   acceptance:
