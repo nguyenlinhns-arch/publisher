@@ -101,3 +101,29 @@ def default_segment_duration(role: str, available: float) -> float:
         "visual_hook": 3.2,
     }.get(role, 3.4)
     return max(1.0, min(target, available))
+
+
+def probe_duration(path: Path) -> float:
+    path = path.expanduser().resolve()
+    completed = subprocess.run(
+        [
+            _tool("ffprobe"),
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "json",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=30,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(completed.stderr.strip() or f"Không đọc được thời lượng {path.name}.")
+    payload = json.loads(completed.stdout)
+    duration = float(payload.get("format", {}).get("duration") or 0)
+    if duration <= 0:
+        raise RuntimeError(f"Thời lượng không hợp lệ: {path.name}")
+    return duration
