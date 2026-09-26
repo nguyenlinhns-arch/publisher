@@ -6,14 +6,14 @@ import tkinter as tk
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from .cover import extract_cover
 from .engine_adapter import render_project
 from .paths import output_dir
 from .planner import build_rough_cut, import_media
 from .media import probe_duration
-from .project import MediaItem, ProjectState, TextItem
+from .project import MediaItem, ProjectState, SfxItem, TextItem
 
 APP_VERSION = "1.0.0"
 
@@ -255,8 +255,13 @@ class LinhEditWindow:
         ttk.Entry(audio, textvariable=self.music_var, state="readonly").grid(
             row=0, column=3, sticky=tk.EW, padx=6
         )
+        ttk.Button(audio, text="SFX…", command=self.manage_sfx).grid(
+            row=0, column=4, sticky=tk.EW, padx=(4, 4)
+        )
+        self.sfx_count_label = ttk.Label(audio, text="0 SFX")
+        self.sfx_count_label.grid(row=0, column=5, sticky=tk.E, padx=(0, 8))
         self.text_count_label = ttk.Label(audio, text="0 text")
-        self.text_count_label.grid(row=0, column=4, sticky=tk.E)
+        self.text_count_label.grid(row=0, column=6, sticky=tk.E)
 
         status = ttk.Label(outer, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
         status.pack(fill=tk.X, pady=(8, 0))
@@ -284,6 +289,7 @@ class LinhEditWindow:
         self._refresh_media()
         self._refresh_timeline()
         self.text_count_label.configure(text=f"{len(self.project.texts)} text")
+        self.sfx_count_label.configure(text=f"{len(self.project.sfx)} SFX")
         self.duration_label.configure(
             text=f"{sum(x.duration for x in self.project.timeline):.1f}s"
         )
@@ -614,6 +620,96 @@ class LinhEditWindow:
             row=3, column=0, columnspan=2, sticky=tk.EW, padx=10, pady=10
         )
         win.columnconfigure(1, weight=1)
+
+    def manage_sfx(self) -> None:
+        win = tk.Toplevel(self.root)
+        win.title("SFX")
+        win.geometry("720x360")
+        win.transient(self.root)
+        win.grab_set()
+
+        frame = ttk.Frame(win, padding=10)
+        frame.pack(fill=tk.BOTH, expand=True)
+        frame.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=1)
+
+        tree = ttk.Treeview(
+            frame,
+            columns=("start", "gain"),
+            show="tree headings",
+            selectmode="browse",
+        )
+        tree.heading("#0", text="File")
+        tree.heading("start", text="Thời điểm")
+        tree.heading("gain", text="Gain")
+        tree.column("#0", width=450)
+        tree.column("start", width=90, anchor=tk.CENTER)
+        tree.column("gain", width=80, anchor=tk.CENTER)
+        tree.grid(row=0, column=0, columnspan=3, sticky=tk.NSEW)
+
+        def refresh() -> None:
+            for iid in tree.get_children():
+                tree.delete(iid)
+            for index, item in enumerate(self.project.sfx):
+                tree.insert(
+                    "",
+                    tk.END,
+                    iid=str(index),
+                    text=Path(item.path).name,
+                    values=(f"{item.start:.2f}s", f"{item.gain:.2f}"),
+                )
+
+        def add() -> None:
+            path = filedialog.askopenfilename(
+                title="Chọn SFX",
+                parent=win,
+                filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac"), ("Tất cả tệp", "*.*")],
+            )
+            if not path:
+                return
+            start = simpledialog.askfloat(
+                "Thời điểm",
+                "SFX bắt đầu tại giây:",
+                initialvalue=1.0,
+                minvalue=0.0,
+                parent=win,
+            )
+            if start is None:
+                return
+            gain = simpledialog.askfloat(
+                "Gain",
+                "Mức âm SFX (0.10–1.00 thường đủ):",
+                initialvalue=0.30,
+                minvalue=0.0,
+                maxvalue=4.0,
+                parent=win,
+            )
+            if gain is None:
+                return
+            self.project.sfx.append(SfxItem(path=path, start=start, gain=gain))
+            self.project.dirty = True
+            refresh()
+            self._refresh_all()
+
+        def remove() -> None:
+            selection = tree.selection()
+            if not selection:
+                return
+            self.project.sfx.pop(int(selection[0]))
+            self.project.dirty = True
+            refresh()
+            self._refresh_all()
+
+        ttk.Button(frame, text="＋ Thêm SFX", command=add).grid(
+            row=1, column=0, sticky=tk.EW, pady=(8, 0)
+        )
+        ttk.Button(frame, text="Bỏ SFX", command=remove).grid(
+            row=1, column=1, sticky=tk.EW, padx=6, pady=(8, 0)
+        )
+        ttk.Button(frame, text="Đóng", command=win.destroy).grid(
+            row=1, column=2, sticky=tk.EW, pady=(8, 0)
+        )
+        refresh()
 
     def _ensure_timeline(self) -> bool:
         self._sync_project()
