@@ -398,3 +398,84 @@ def test_candidates_from_shots_preserve_shot_bounds():
     assert candidates[1].end <= 7.0
     assert candidates[2].start >= 7.0
     assert candidates[2].end <= 11.0
+
+
+def test_review_cache_reuses_analysis_when_parameters_match(tmp_path):
+    frame = tmp_path / "frame.jpg"
+    Image.new("RGB", (270, 480), "gray").save(frame)
+    item = source_review.SourceReviewItem(
+        source=str(tmp_path / "clip.mp4"),
+        contact_sheet=str(tmp_path / "sheet.jpg"),
+        duration=6.0,
+        width=1080,
+        height=1920,
+        fps=30.0,
+        audit_score=0.9,
+        audit_reject=False,
+        audit_reasons=(),
+        audit_warnings=(),
+        candidates=(
+            source_review.CandidateWindow(
+                index=1,
+                center=2.0,
+                start=0.3,
+                end=3.7,
+                duration=3.4,
+                frame=str(frame),
+                technical_score=0.8,
+            ),
+        ),
+    )
+    manifest = tmp_path / "review.json"
+    source_review._atomic_json_write(
+        manifest,
+        {
+            "schema": source_review.REVIEW_SCHEMA,
+            "engine_version": source_review.REVIEW_ENGINE_VERSION,
+            "parameters": {
+                "tiles": 12,
+                "columns": 4,
+                "candidate_seconds": 3.4,
+            },
+            **source_review.asdict(item),
+        },
+    )
+
+    cached = source_review._cached_review_item(
+        manifest,
+        tiles=12,
+        columns=4,
+        candidate_seconds=3.4,
+    )
+
+    assert cached is not None
+    assert cached.candidates[0].technical_score == 0.8
+
+
+def test_preserved_decisions_survive_review_rebuild():
+    existing = {
+        "items": [
+            {
+                "source": "C:/video/clip.mp4",
+                "candidates": [
+                    {
+                        "start": 1.0,
+                        "end": 4.4,
+                        "decision": "KEEP",
+                        "review_role": "human",
+                        "review_note": "Cảnh tốt",
+                        "status": "VISUAL_REVIEWED",
+                    }
+                ],
+            }
+        ]
+    }
+
+    preserved = source_review._preserved_decisions(existing)
+
+    key = source_review._decision_key(
+        "C:/video/clip.mp4",
+        {"start": 1.0, "end": 4.4},
+    )
+    assert preserved[key]["decision"] == "KEEP"
+    assert preserved[key]["review_role"] == "human"
