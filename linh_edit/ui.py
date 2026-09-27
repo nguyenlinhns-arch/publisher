@@ -18,8 +18,10 @@ from .contact_sheet import extract_contact_sheet
 from .cover import extract_cover
 from .engine_adapter import render_project
 from .paths import output_dir
+from .pipeline import run_optimized_pipeline
 from .planner import build_rough_cut, import_media
 from .legacy_import import import_legacy_script
+from .loudness import auto_balance_project
 from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectConflictError, ProjectState, SfxItem, TextItem
@@ -253,6 +255,11 @@ class LinhEditWindow:
             text="REVIEW 3 PASS",
             command=self.review_gate_dialog,
         ).grid(row=4, column=5, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
+        ttk.Button(
+            quick,
+            text="TỐI ƯU TOÀN BỘ",
+            command=self.optimize_all_ui,
+        ).grid(row=4, column=7, sticky=tk.EW, padx=(6, 0), pady=(8, 0))
 
         titlebar = ttk.Frame(outer)
         titlebar.pack(fill=tk.X, pady=(0, 8))
@@ -1146,6 +1153,55 @@ class LinhEditWindow:
         target.write_text(transcript + "\n", encoding="utf-8")
         self._open_path(target)
 
+    def optimize_all_ui(self) -> None:
+        if self.busy:
+            return
+        if self.project_path is None:
+            self.save_project_as()
+            if self.project_path is None:
+                return
+        self._sync_project()
+        if self.project.dirty:
+            self.save_project()
+            if self.project.dirty:
+                return
+
+        project_path = self.project_path
+        self._set_busy(True, "Đang tối ưu toàn bộ story • VO • text • audio...")
+        future = self.executor.submit(
+            run_optimized_pipeline,
+            project_path,
+            render=False,
+            preview=False,
+            output=None,
+        )
+
+        def poll() -> None:
+            if not future.done():
+                self.root.after(180, poll)
+                return
+            self._set_busy(False)
+            try:
+                result = future.result()
+                self.project = ProjectState.load(project_path)
+            except Exception as exc:
+                self.status_var.set("Tối ưu toàn bộ chưa hoàn tất.")
+                messagebox.showerror("Tối ưu toàn bộ lỗi", str(exc))
+                return
+            self._apply_project_to_ui()
+            completed = [
+                step["step"]
+                for step in result.get("steps", [])
+                if step.get("status") in {"DONE", "OPTIMIZED"}
+            ]
+            self.status_var.set(
+                f"Đã tối ưu {len(completed)} phase • "
+                f"content rev {self.project.content_revision}. "
+                "Hãy XEM THỬ và Review 3 Pass."
+            )
+
+        self.root.after(180, poll)
+
     def story_optimize_ui(self) -> None:
         if self.busy:
             return
@@ -1399,10 +1455,14 @@ class LinhEditWindow:
         music_gain = tk.DoubleVar(value=self.project.music_gain)
         voice_gain = tk.DoubleVar(value=self.project.voice_gain)
         auto_duck = tk.BooleanVar(value=self.project.auto_duck_music)
+        auto_master = tk.BooleanVar(value=self.project.auto_master_audio)
         threshold = tk.DoubleVar(value=self.project.duck_threshold)
         ratio = tk.DoubleVar(value=self.project.duck_ratio)
         attack = tk.DoubleVar(value=self.project.duck_attack_ms)
         release = tk.DoubleVar(value=self.project.duck_release_ms)
+        master_lufs = tk.DoubleVar(value=self.project.master_lufs)
+        master_true_peak = tk.DoubleVar(value=self.project.master_true_peak)
+        master_lra = tk.DoubleVar(value=self.project.master_lra)
         coverage = tk.DoubleVar(value=self.project.caption_coverage_target)
 
         rows = [
@@ -1412,6 +1472,9 @@ class LinhEditWindow:
             ("Duck ratio", ratio),
             ("Duck attack ms", attack),
             ("Duck release ms", release),
+            ("Master LUFS", master_lufs),
+            ("Master True Peak", master_true_peak),
+            ("Master LRA", master_lra),
             ("Caption coverage", coverage),
         ]
         for row, (label, var) in enumerate(rows):
@@ -1432,7 +1495,7 @@ class LinhEditWindow:
 
         ttk.Checkbutton(
             win,
-            text="Tự duck nhạc khi có VO",
+            text="Tự duck nhạc/ambience khi có VO",
             variable=auto_duck,
         ).grid(
             row=len(rows),
@@ -1440,7 +1503,19 @@ class LinhEditWindow:
             columnspan=2,
             sticky=tk.W,
             padx=10,
-            pady=6,
+            pady=4,
+        )
+        ttk.Checkbutton(
+            win,
+            text="Tự master loudness final",
+            variable=auto_master,
+        ).grid(
+            row=len(rows) + 1,
+            column=0,
+            columnspan=2,
+            sticky=tk.W,
+            padx=10,
+            pady=4,
         )
 
         def save() -> None:
@@ -1452,6 +1527,9 @@ class LinhEditWindow:
                     "duck_ratio": max(1.0, min(20.0, float(ratio.get()))),
                     "duck_attack_ms": max(1.0, min(2000.0, float(attack.get()))),
                     "duck_release_ms": max(1.0, min(5000.0, float(release.get()))),
+                    "master_lufs": max(-24.0, min(-8.0, float(master_lufs.get()))),
+                    "master_true_peak": max(-6.0, min(-0.1, float(master_true_peak.get()))),
+                    "master_lra": max(1.0, min(20.0, float(master_lra.get()))),
                     "caption_coverage_target": max(0.10, min(1.0, float(coverage.get()))),
                 }
             except (ValueError, tk.TclError) as exc:
@@ -1461,6 +1539,7 @@ class LinhEditWindow:
             for key, value in values.items():
                 setattr(self.project, key, value)
             self.project.auto_duck_music = bool(auto_duck.get())
+            self.project.auto_master_audio = bool(auto_master.get())
             self.project.dirty = True
             self._refresh_all()
             self.status_var.set(
@@ -1470,7 +1549,7 @@ class LinhEditWindow:
             win.destroy()
 
         ttk.Button(win, text="Lưu audio settings", command=save).grid(
-            row=len(rows) + 1,
+            row=len(rows) + 2,
             column=0,
             columnspan=2,
             sticky=tk.EW,
