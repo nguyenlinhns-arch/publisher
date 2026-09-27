@@ -33,15 +33,15 @@ jobs:
       - name: Package portable build
         shell: powershell
         run: |
-          if (Test-Path LinhEdit-1.2.0-Windows-x64.zip) {
-            Remove-Item LinhEdit-1.2.0-Windows-x64.zip -Force
+          if (Test-Path LinhEdit-1.3.0-Windows-x64.zip) {
+            Remove-Item LinhEdit-1.3.0-Windows-x64.zip -Force
           }
-          Compress-Archive -Path dist\LinhEdit\* -DestinationPath LinhEdit-1.2.0-Windows-x64.zip -CompressionLevel Optimal
+          Compress-Archive -Path dist\LinhEdit\* -DestinationPath LinhEdit-1.3.0-Windows-x64.zip -CompressionLevel Optimal
       - uses: actions/upload-artifact@v4
         with:
-          name: LinhEdit-1.2.0-Windows-x64
+          name: LinhEdit-1.3.0-Windows-x64
           path: |
             dist/LinhEdit/**
-            LinhEdit-1.2.0-Windows-x64.zip
+            LinhEdit-1.3.0-Windows-x64.zip
           if-no-files-found: error
           retention-days: 14
