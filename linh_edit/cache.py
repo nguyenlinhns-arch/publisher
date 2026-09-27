@@ -106,3 +106,51 @@ def cache_summary() -> dict[str, int]:
         "files": files,
         "bytes": bytes_total,
     }
+
+
+
+def prune_cache(*, max_bytes: int = 20 * 1024**3) -> dict[str, int]:
+    root = cache_root()
+    max_bytes = max(256 * 1024**2, int(max_bytes))
+    entries: list[tuple[float, Path, int]] = []
+    total = 0
+
+    for item in root.iterdir():
+        if not item.is_dir():
+            continue
+        size = 0
+        latest = 0.0
+        for child in item.rglob("*"):
+            if not child.is_file():
+                continue
+            try:
+                stat = child.stat()
+            except OSError:
+                continue
+            size += stat.st_size
+            latest = max(latest, stat.st_mtime)
+        entries.append((latest, item, size))
+        total += size
+
+    removed_entries = 0
+    removed_bytes = 0
+    if total > max_bytes:
+        import shutil
+
+        for _latest, item, size in sorted(entries, key=lambda value: value[0]):
+            if total <= max_bytes:
+                break
+            try:
+                shutil.rmtree(item)
+            except OSError:
+                continue
+            total -= size
+            removed_entries += 1
+            removed_bytes += size
+
+    return {
+        "max_bytes": max_bytes,
+        "remaining_bytes": total,
+        "removed_entries": removed_entries,
+        "removed_bytes": removed_bytes,
+    }
