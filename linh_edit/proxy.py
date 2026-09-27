@@ -71,6 +71,17 @@ def ensure_proxy(
     width, height = _proxy_dimensions(info)
     fps = min(float(max_fps), info.fps or float(max_fps))
     temp = target.with_suffix(".partial.mp4")
+    hdr = info.color_transfer.lower() in {"smpte2084", "arib-std-b67"}
+    prefilter = ""
+    if hdr:
+        prefilter = (
+            "zscale=t=linear:npl=100,"
+            "format=gbrpf32le,"
+            "zscale=p=bt709,"
+            "tonemap=tonemap=hable:desat=0,"
+            "zscale=t=bt709:m=bt709:r=tv,"
+            "format=yuv420p,"
+        )
     command = [
         resolve_tool("ffmpeg"),
         "-hide_banner",
@@ -84,7 +95,8 @@ def ensure_proxy(
         "-an",
         "-vf",
         (
-            f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
+            prefilter
+            + f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
             f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,"
             f"fps={fps:.6f}"
         ),
@@ -128,6 +140,7 @@ def ensure_proxy(
         "width": width,
         "height": height,
         "fps": round(fps, 6),
+        "hdr_tonemapped": hdr,
     }
     write_json_atomic(manifest, payload)
     return ProxyResult(
