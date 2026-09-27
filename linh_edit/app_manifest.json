@@ -2,7 +2,7 @@
   "schema": "thaylinh.local-app.v1",
   "id": "linh_edit",
   "name": "Linh Edit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "video_editor",
   "target_root": "D:\\LINH_EDIT",
   "launcher": "LinhEdit.exe",
@@ -16,12 +16,19 @@
     "EXPLAINER_NEWS",
     "DIRECT_RECRUITMENT"
   ],
+  "source_modes": [
+    "DIRECT_MEDIA",
+    "NEWS_TEXT",
+    "ARTICLE_URL",
+    "LEGACY_NEWS",
+    "LEGACY_EDITORIAL"
+  ],
   "legacy_sources": [
-    "D:\\THAY_LINH_NEWS_VIDEO_APP_1.0.2\\THAY_LINH_NEWS_VIDEO_APP_1.0.2",
-    "D:\\THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL"
+    "D:\\2 THAY_LINH_NEWS_VIDEO_APP_1.0.2\\THAY_LINH_NEWS_VIDEO_APP_1.0.2",
+    "D:\\3 THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL"
   ],
   "excluded_roots": [
-    "D:\\MXHVideoTools-1.8.0-Windows-x64"
+    "D:\\1 MXHVideoTools-1.8.0-Windows-x64"
   ],
-  "rollback_policy": "keep_legacy_apps_untouched_until_acceptance_pass"
+  "rollback_policy": "keep_legacy_apps_untouched_until_local_acceptance_pass"
 }
