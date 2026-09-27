@@ -10,7 +10,7 @@ from .article_ingest import apply_article, fetch_article
 from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .engine_adapter import render_project
 from .legacy_import import import_legacy_script
-from .media import probe_duration
+from .media import audit_video, probe_duration
 from .news_ingest import apply_news_content
 from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
@@ -49,6 +49,7 @@ CAPABILITIES = {
         "project-checkpoint",
         "checkpoint-list",
         "checkpoint-restore",
+        "media-audit",
     ],
     "output_default": {
         "width": 1080,
@@ -130,6 +131,9 @@ def build_parser() -> argparse.ArgumentParser:
     checkpoint_restore = sub.add_parser("checkpoint-restore")
     checkpoint_restore.add_argument("--project", type=Path, required=True)
     checkpoint_restore.add_argument("--checkpoint", type=Path, required=True)
+
+    media_audit = sub.add_parser("media-audit")
+    media_audit.add_argument("--media", type=Path, action="append", required=True)
     return parser
 
 
@@ -382,6 +386,36 @@ def main(argv: list[str] | None = None) -> int:
                             sum(item.duration for item in restored.timeline),
                             3,
                         ),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "media-audit":
+            reports = []
+            rejected = 0
+            for raw in args.media:
+                audit = audit_video(raw.expanduser().resolve())
+                reports.append(
+                    {
+                        "path": str(audit.path),
+                        "score": audit.score,
+                        "reject": audit.reject,
+                        "reasons": list(audit.reasons),
+                        "warnings": list(audit.warnings),
+                        "needs_visual_review": audit.needs_visual_review,
+                    }
+                )
+                if audit.reject:
+                    rejected += 1
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "PASS" if rejected == 0 else "FILTERED",
+                        "count": len(reports),
+                        "rejected": rejected,
+                        "items": reports,
                     },
                     ensure_ascii=False,
                 )
