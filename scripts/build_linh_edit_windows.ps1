@@ -184,6 +184,38 @@ if (-not (Test-Path -LiteralPath $SmokeOutput -PathType Leaf)) {
 & $BundledFfprobe.FullName -v error -select_streams v:0 -show_entries "stream=codec_name,width,height,avg_frame_rate" -of json $SmokeOutput
 Assert-NativeSuccess "ffprobe smoke output từ LinhEdit.exe"
 
+$ProxyProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "proxy-build",
+    "--media", $SmokeVideo
+) -Wait -PassThru
+if ($ProxyProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe proxy-build smoke test thất bại với mã $($ProxyProcess.ExitCode)."
+}
+
+$ShotProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "shot-detect",
+    "--media", $SmokeVideo
+) -Wait -PassThru
+if ($ShotProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe shot-detect smoke test thất bại với mã $($ShotProcess.ExitCode)."
+}
+
+$ReviewDir = Join-Path $SmokeDir "source-review"
+$ReviewProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "source-review",
+    "--media", $SmokeVideo,
+    "--output-dir", $ReviewDir,
+    "--tiles", "4",
+    "--columns", "4"
+) -Wait -PassThru
+if ($ReviewProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe source-review smoke test thất bại với mã $($ReviewProcess.ExitCode)."
+}
+$ReviewManifest = Join-Path $ReviewDir "source_review_manifest.json"
+if (-not (Test-Path -LiteralPath $ReviewManifest -PathType Leaf)) {
+    throw "LinhEdit.exe không tạo source review manifest."
+}
+
 $VisualOutput = Join-Path $SmokeDir "visual_master_no_audio.mp4"
 $VisualProcess = Start-Process -FilePath $Exe -ArgumentList @(
     "render",
