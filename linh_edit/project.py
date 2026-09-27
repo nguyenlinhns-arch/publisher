@@ -80,6 +80,28 @@ class ProjectState:
         temp = path.with_suffix(path.suffix + ".partial")
         temp.write_text(text, encoding="utf-8")
         temp.replace(path)
+
+        sidecar_stem = path.name
+        if sidecar_stem.endswith(".linhedit.json"):
+            sidecar_stem = sidecar_stem[: -len(".linhedit.json")]
+        else:
+            sidecar_stem = path.stem
+        if self.transcript.strip():
+            transcript_path = path.with_name(sidecar_stem + "_transcript.txt")
+            transcript_temp = transcript_path.with_suffix(
+                transcript_path.suffix + ".partial"
+            )
+            transcript_temp.write_text(
+                self.transcript.strip() + "\n",
+                encoding="utf-8",
+            )
+            transcript_temp.replace(transcript_path)
+        if self.source_text.strip():
+            source_path = path.with_name(sidecar_stem + "_source.txt")
+            source_temp = source_path.with_suffix(source_path.suffix + ".partial")
+            source_temp.write_text(self.source_text, encoding="utf-8")
+            source_temp.replace(source_path)
+
         self.dirty = False
 
     @classmethod
