@@ -531,7 +531,7 @@ class LinhEditWindow:
     def choose_voice(self) -> None:
         value = filedialog.askopenfilename(
             title="Chọn giọng đọc",
-            filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac"), ("Tất cả tệp", "*.*")],
+            filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac *.ogg *.flac *.mp4"), ("Tất cả tệp", "*.*")],
         )
         if value:
             self.voice_var.set(value)
@@ -565,7 +565,7 @@ class LinhEditWindow:
     def choose_music(self) -> None:
         value = filedialog.askopenfilename(
             title="Chọn nhạc nền",
-            filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac"), ("Tất cả tệp", "*.*")],
+            filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac *.ogg *.flac *.mp4"), ("Tất cả tệp", "*.*")],
         )
         if value:
             self.music_var.set(value)
@@ -874,7 +874,7 @@ class LinhEditWindow:
             path = filedialog.askopenfilename(
                 title="Chọn SFX",
                 parent=win,
-                filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac"), ("Tất cả tệp", "*.*")],
+                filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac *.ogg *.flac *.mp4"), ("Tất cả tệp", "*.*")],
             )
             if not path:
                 return
