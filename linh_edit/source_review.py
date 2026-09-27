@@ -25,7 +25,7 @@ from .visual_layout import analyze_layout
 from .visual_metrics import analyze_frame, annotate_duplicate_groups
 
 REVIEW_SCHEMA = "linh-edit.source-review.v2"
-REVIEW_ENGINE_VERSION = 3
+REVIEW_ENGINE_VERSION = 4
 REVIEW_DECISIONS = {"PENDING", "SHORTLIST", "KEEP", "REJECT"}
 
 
@@ -40,6 +40,8 @@ class CandidateWindow:
     native_frame: str = ""
     subject_x: float = 0.5
     subject_y: float = 0.5
+    subject_kind: str = "saliency"
+    subject_confidence: float = 0.0
     reframe_x: float = 0.5
     reframe_y: float = 0.5
     negative_space: str = ""
@@ -234,6 +236,8 @@ def _enrich_candidates(
                 native_frame=str(layout_frames[index]) if index < len(layout_frames) else str(frames[index]),
                 subject_x=layout.subject_x,
                 subject_y=layout.subject_y,
+                subject_kind=layout.subject_kind,
+                subject_confidence=layout.subject_confidence,
                 reframe_x=layout.reframe_x,
                 reframe_y=layout.reframe_y,
                 negative_space=layout.negative_space,
