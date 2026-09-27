@@ -23,7 +23,10 @@ from .legacy_import import import_legacy_script
 from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectConflictError, ProjectState, SfxItem, TextItem
+from .review_gate import reset_review, review_status, set_review_stage
 from .semantic_match import apply_text_shot_matching
+from .speech_rhythm import apply_talk_rhythm
+from .story_optimizer import optimize_story
 from .source_review import (
     apply_candidate_hook_layout,
     apply_kept_candidates,
@@ -110,6 +113,8 @@ class LinhEditWindow:
             command=self.restore_latest_checkpoint,
         )
         file_menu.add_command(label="Kiểm tra project", command=self.validate_current_project)
+        file_menu.add_separator()
+        file_menu.add_command(label="Review 3 pass...", command=self.review_gate_dialog)
         file_menu.add_separator()
         file_menu.add_command(label="Mở thư mục thành phẩm", command=self.open_output_folder)
         file_menu.add_command(label="Mở contact sheet gần nhất", command=self.open_contact_sheet)
@@ -229,6 +234,25 @@ class LinhEditWindow:
             text="DÁN VO SCRIPT",
             command=self.paste_transcript,
         ).grid(row=3, column=7, sticky=tk.EW, padx=(6, 0), pady=(8, 0))
+
+        ttk.Label(quick, text="Nhịp / Story").grid(
+            row=4, column=0, sticky=tk.W, pady=(8, 0)
+        )
+        ttk.Button(
+            quick,
+            text="STORY OPTIMIZE",
+            command=self.story_optimize_ui,
+        ).grid(row=4, column=1, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
+        ttk.Button(
+            quick,
+            text="TALK RHYTHM",
+            command=self.talk_rhythm_ui,
+        ).grid(row=4, column=3, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
+        ttk.Button(
+            quick,
+            text="REVIEW 3 PASS",
+            command=self.review_gate_dialog,
+        ).grid(row=4, column=5, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
 
         titlebar = ttk.Frame(outer)
         titlebar.pack(fill=tk.X, pady=(0, 8))
@@ -1121,6 +1145,175 @@ class LinhEditWindow:
             target = folder / "linh_edit_transcript.txt"
         target.write_text(transcript + "\n", encoding="utf-8")
         self._open_path(target)
+
+    def story_optimize_ui(self) -> None:
+        if self.busy:
+            return
+        self._sync_project()
+        if self.project.profile != "TRAVEL_DOCUMENTARY":
+            messagebox.showinfo(
+                "Story Optimizer",
+                "Story Optimizer 1.7 hiện áp dụng cho Travel / Công tác.",
+            )
+            return
+        self._checkpoint_if_saved("before-story-optimize")
+        try:
+            result = optimize_story(self.project)
+        except Exception as exc:
+            messagebox.showerror("Story Optimizer lỗi", str(exc))
+            return
+        self._refresh_all()
+        self.status_var.set(
+            f"Story tối ưu: {result['scenes']} cảnh • "
+            f"{result['duration']:.1f}s • work {result['work_ratio']*100:.0f}%"
+        )
+
+    def talk_rhythm_ui(self) -> None:
+        if self.busy:
+            return
+        self._sync_project()
+        if self.project.profile != "TALKING_HEAD_EXPERT":
+            messagebox.showinfo(
+                "Talk Rhythm",
+                "Punch-in/punch-out theo nhịp câu chỉ áp dụng cho Talk / Chuyên gia.",
+            )
+            return
+        self._checkpoint_if_saved("before-talk-rhythm")
+        try:
+            result = apply_talk_rhythm(
+                self.project,
+                minimum_segment=1.2,
+                punch_scale=1.035,
+            )
+        except Exception as exc:
+            messagebox.showerror("Talk Rhythm lỗi", str(exc))
+            return
+        self._refresh_all()
+        if result["status"] == "DONE":
+            self.status_var.set(
+                f"Talk Rhythm: {result['segments']} đoạn • "
+                f"{result['punches']} điểm punch."
+            )
+        else:
+            self.status_var.set("Talk Rhythm: chưa tìm thấy điểm ngắt phù hợp.")
+
+    def review_gate_dialog(self) -> None:
+        if self.project_path is None:
+            messagebox.showinfo(
+                "Review 3 pass",
+                "Hãy lưu project trước khi ghi trạng thái review.",
+            )
+            return
+        self._sync_project()
+        if self.project.dirty:
+            self.save_project()
+            if self.project.dirty:
+                return
+
+        win = tk.Toplevel(self.root)
+        win.title("Review 3 Pass")
+        win.transient(self.root)
+        win.grab_set()
+        win.geometry("520x300")
+
+        visual_var = tk.StringVar()
+        audio_var = tk.StringVar()
+        full_var = tk.StringVar()
+        summary_var = tk.StringVar()
+
+        def reload_state() -> None:
+            latest = ProjectState.load(self.project_path)
+            state = review_status(latest)
+            visual_var.set(state["visual"])
+            audio_var.set(state["audio"])
+            full_var.set(state["full_playback"])
+            if state["ready_to_publish"]:
+                summary_var.set(
+                    f"READY TO PUBLISH • content rev {state['content_revision']}"
+                )
+            elif not state["review_current"]:
+                summary_var.set(
+                    "Review cũ đã stale vì nội dung project thay đổi."
+                )
+            else:
+                summary_var.set(
+                    f"PENDING REVIEW • content rev {state['content_revision']}"
+                )
+            self.project = latest
+            self._apply_project_to_ui()
+
+        def set_stage(stage: str, value: str) -> None:
+            try:
+                set_review_stage(
+                    self.project_path,
+                    stage=stage,
+                    value=value,
+                )
+            except Exception as exc:
+                messagebox.showerror("Không cập nhật được review", str(exc), parent=win)
+                return
+            reload_state()
+
+        rows = [
+            ("VISUAL ONLY", "visual", visual_var),
+            ("AUDIO ONLY", "audio", audio_var),
+            ("FULL PLAYBACK", "full", full_var),
+        ]
+        for row, (label, stage, var) in enumerate(rows):
+            ttk.Label(win, text=label, width=18).grid(
+                row=row,
+                column=0,
+                sticky=tk.W,
+                padx=10,
+                pady=10,
+            )
+            ttk.Label(win, textvariable=var, width=10).grid(
+                row=row,
+                column=1,
+                sticky=tk.W,
+                padx=6,
+            )
+            ttk.Button(
+                win,
+                text="PASS",
+                command=lambda s=stage: set_stage(s, "PASS"),
+            ).grid(row=row, column=2, padx=4)
+            ttk.Button(
+                win,
+                text="FAIL",
+                command=lambda s=stage: set_stage(s, "FAIL"),
+            ).grid(row=row, column=3, padx=4)
+            ttk.Button(
+                win,
+                text="PENDING",
+                command=lambda s=stage: set_stage(s, "PENDING"),
+            ).grid(row=row, column=4, padx=4)
+
+        ttk.Separator(win, orient=tk.HORIZONTAL).grid(
+            row=3, column=0, columnspan=5, sticky=tk.EW, padx=10, pady=8
+        )
+        ttk.Label(
+            win,
+            textvariable=summary_var,
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=4, column=0, columnspan=5, sticky=tk.W, padx=10, pady=8)
+
+        def reset_all() -> None:
+            try:
+                reset_review(self.project_path)
+            except Exception as exc:
+                messagebox.showerror("Không reset được review", str(exc), parent=win)
+                return
+            reload_state()
+
+        ttk.Button(win, text="RESET 3 PASS", command=reset_all).grid(
+            row=5, column=0, columnspan=2, sticky=tk.EW, padx=10, pady=8
+        )
+        ttk.Button(win, text="Đóng", command=win.destroy).grid(
+            row=5, column=3, columnspan=2, sticky=tk.EW, padx=10, pady=8
+        )
+        win.columnconfigure(0, weight=1)
+        reload_state()
 
     def paste_transcript(self) -> None:
         try:
