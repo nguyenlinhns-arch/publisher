@@ -5,6 +5,7 @@ from PIL import Image
 import linh_edit.source_review as source_review
 from linh_edit.media import MediaAudit, MediaInfo
 from linh_edit.project import ProjectState
+from linh_edit.visual_metrics import FrameMetrics
 
 
 def test_candidate_windows_cover_clip_without_exceeding_bounds():
@@ -246,10 +247,7 @@ def test_enriched_candidates_receive_technical_rank(tmp_path, monkeypatch):
 
     def fake_metrics(path):
         index = int(path.stem.split("-")[-1])
-        return source_review.analyze_frame.__annotations__ and __import__(
-            "linh_edit.visual_metrics",
-            fromlist=["FrameMetrics"],
-        ).FrameMetrics(
+        return FrameMetrics(
             brightness=0.5,
             contrast=0.5,
             edge_energy=0.5,
