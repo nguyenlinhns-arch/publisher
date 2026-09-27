@@ -64,6 +64,12 @@ def load_plan(path: Path) -> EditPlan:
         music=_path(audio_payload.get("music"), base),
         sfx=sfx,
         music_gain=float(audio_payload.get("music_gain", 0.14)),
+        voice_gain=float(audio_payload.get("voice_gain", 1.0)),
+        auto_duck_music=bool(audio_payload.get("auto_duck_music", True)),
+        duck_threshold=float(audio_payload.get("duck_threshold", 0.025)),
+        duck_ratio=float(audio_payload.get("duck_ratio", 8.0)),
+        duck_attack_ms=float(audio_payload.get("duck_attack_ms", 25.0)),
+        duck_release_ms=float(audio_payload.get("duck_release_ms", 450.0)),
         source_ambience_gain=float(audio_payload.get("source_ambience_gain", 0.10)),
         ending_music_only_seconds=float(audio_payload.get("ending_music_only_seconds", 6.0)),
     )
