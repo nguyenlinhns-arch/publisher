@@ -224,6 +224,11 @@ class LinhEditWindow:
             text="AUDIO / DUCKING",
             command=self.audio_settings,
         ).grid(row=3, column=5, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
+        ttk.Button(
+            quick,
+            text="DÁN VO SCRIPT",
+            command=self.paste_transcript,
+        ).grid(row=3, column=7, sticky=tk.EW, padx=(6, 0), pady=(8, 0))
 
         titlebar = ttk.Frame(outer)
         titlebar.pack(fill=tk.X, pady=(0, 8))
@@ -1116,6 +1121,25 @@ class LinhEditWindow:
             target = folder / "linh_edit_transcript.txt"
         target.write_text(transcript + "\n", encoding="utf-8")
         self._open_path(target)
+
+    def paste_transcript(self) -> None:
+        try:
+            value = self.root.clipboard_get().strip()
+        except tk.TclError:
+            value = ""
+        if not value:
+            messagebox.showinfo(
+                "Clipboard trống",
+                "Hãy sao chép VO script/transcript rồi thử lại.",
+            )
+            return
+        self._checkpoint_if_saved("before-transcript-set")
+        self.project.transcript = value
+        self.project.dirty = True
+        self._refresh_all()
+        self.status_var.set(
+            f"Đã nạp VO script: {len(value)} ký tự."
+        )
 
     def auto_selective_captions(self) -> None:
         if self.busy:
