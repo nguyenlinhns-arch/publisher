@@ -90,3 +90,38 @@ def test_apply_news_builds_story_timeline_hook_and_transcript(tmp_path):
     resync_story_to_duration(project, 24.0)
     assert project.target_seconds == 24.0
     assert round(sum(item.duration for item in project.timeline), 3) == 24.0
+
+
+def test_editorial_hero_and_card_display_text_survives_normalization():
+    payload = {
+        "scenes": [
+            {
+                "type": "hero",
+                "badge": "GIẢI ĐÁP",
+                "title": "35–40 TUỔI CÒN HỌC NGHỀ MỎ?",
+                "voice_text": "Đây là phần lời đọc của cảnh hero.",
+                "subtitle": "Đừng tự loại mình khi chưa kiểm tra",
+                "chips": [
+                    {"label": "Độ tuổi", "value": "35–40 TUỔI"},
+                    {"label": "Việc cần làm", "value": "KIỂM TRA ĐIỀU KIỆN"},
+                ],
+            },
+            {
+                "type": "card",
+                "title": "ĐỪNG TỰ CHO RẰNG ĐÃ MUỘN",
+                "voice_text": "Đây là phần lời đọc của card.",
+                "card": {
+                    "items": [
+                        {"text": "Suy nghĩ", "accent": "MÌNH ĐÃ LỚN TUỔI"},
+                        {"text": "Lo ngại", "accent": "CHỈ ƯU TIÊN NGƯỜI TRẺ"},
+                    ],
+                    "closing": "Hãy kiểm tra điều kiện thực tế trước khi kết luận.",
+                },
+            },
+        ]
+    }
+
+    scenes = parse_news_content(json.dumps(payload, ensure_ascii=False))
+
+    assert scenes[0].summary == "Đừng tự loại mình khi chưa kiểm tra"
+    assert scenes[1].summary == "Hãy kiểm tra điều kiện thực tế trước khi kết luận."
