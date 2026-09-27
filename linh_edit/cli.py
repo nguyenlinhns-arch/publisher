@@ -15,6 +15,7 @@ from .legacy_import import import_legacy_script
 from .media import audit_video, probe_duration
 from .proxy import ensure_proxy
 from .news_ingest import apply_news_content
+from .normalization import build_normalization_plan
 from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
@@ -67,6 +68,7 @@ CAPABILITIES = {
         "proxy-build",
         "shot-detect",
         "cache-status",
+        "normalization-plan",
     ],
     "output_default": {
         "width": 1080,
@@ -195,6 +197,9 @@ def build_parser() -> argparse.ArgumentParser:
     shot_detect.add_argument("--force", action="store_true")
 
     sub.add_parser("cache-status")
+
+    normalization_plan = sub.add_parser("normalization-plan")
+    normalization_plan.add_argument("--media", type=Path, required=True)
     return parser
 
 
@@ -606,6 +611,16 @@ def main(argv: list[str] | None = None) -> int:
             _safe_print(
                 json.dumps(
                     {"status": "READY", **cache_summary()},
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "normalization-plan":
+            plan = build_normalization_plan(args.media.expanduser().resolve())
+            _safe_print(
+                json.dumps(
+                    {"status": "READY", **plan.to_dict()},
                     ensure_ascii=False,
                 )
             )
