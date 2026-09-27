@@ -29,6 +29,13 @@ class MediaInfo:
     has_audio: bool
     video_codec: str
     audio_codec: str | None
+    r_fps: float = 0.0
+    is_vfr: bool = False
+    rotation: int = 0
+    pixel_format: str = ""
+    color_transfer: str = ""
+    color_space: str = ""
+    color_primaries: str = ""
 
 
 def _tool(name: str) -> str:
@@ -70,15 +77,37 @@ def probe(path: Path) -> MediaInfo:
     if not video:
         raise RuntimeError(f"{path.name} không có video stream.")
     audio = next((x for x in streams if x.get("codec_type") == "audio"), None)
+    avg_fps = _fraction(video.get("avg_frame_rate") or video.get("r_frame_rate"))
+    r_fps = _fraction(video.get("r_frame_rate") or video.get("avg_frame_rate"))
+    rotation = 0
+    tags = video.get("tags") or {}
+    try:
+        rotation = int(float(tags.get("rotate") or 0))
+    except (TypeError, ValueError):
+        rotation = 0
+    for side_data in video.get("side_data_list") or []:
+        if "rotation" in side_data:
+            try:
+                rotation = int(round(float(side_data.get("rotation") or 0)))
+            except (TypeError, ValueError):
+                pass
+
     return MediaInfo(
         path=path,
         duration=float(payload.get("format", {}).get("duration") or video.get("duration") or 0),
         width=int(video.get("width") or 0),
         height=int(video.get("height") or 0),
-        fps=_fraction(video.get("avg_frame_rate") or video.get("r_frame_rate")),
+        fps=avg_fps,
         has_audio=audio is not None,
         video_codec=str(video.get("codec_name") or ""),
         audio_codec=str(audio.get("codec_name") or "") if audio else None,
+        r_fps=r_fps,
+        is_vfr=bool(avg_fps and r_fps and abs(avg_fps - r_fps) > 0.01),
+        rotation=rotation,
+        pixel_format=str(video.get("pix_fmt") or ""),
+        color_transfer=str(video.get("color_transfer") or ""),
+        color_space=str(video.get("color_space") or ""),
+        color_primaries=str(video.get("color_primaries") or ""),
     )
 
 
@@ -142,6 +171,13 @@ def audit_media_info(info: MediaInfo) -> MediaAudit:
         score += 0.03
     else:
         warnings.append("unusual_video_codec")
+
+    if info.is_vfr:
+        warnings.append("variable_frame_rate")
+    if info.rotation % 360:
+        warnings.append(f"rotation_metadata_{info.rotation}")
+    if info.color_transfer.lower() in {"smpte2084", "arib-std-b67"}:
+        warnings.append("hdr_source")
 
     return MediaAudit(
         path=info.path,
