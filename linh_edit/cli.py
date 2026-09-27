@@ -15,12 +15,15 @@ from .caption_planner import (
 )
 from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .engine_adapter import render_project
+from .final_qa import analyze_render
 from .legacy_import import import_legacy_script
+from .loudness import auto_balance_project_file, measure_loudness
 from .media import audit_video, probe_duration
 from .proxy import ensure_proxy
 from .news_ingest import apply_news_content
 from .normalization import build_normalization_plan
 from .patches import apply_patch, load_patch
+from .pipeline import run_optimized_pipeline
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
 from .review_gate import reset_review, review_status, set_review_stage
@@ -93,6 +96,10 @@ CAPABILITIES = {
         "review-status",
         "review-set",
         "review-reset",
+        "audio-analyze",
+        "audio-auto-master",
+        "qa-analyze",
+        "optimize-all",
     ],
     "output_default": {
         "width": 1080,
@@ -277,6 +284,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     review_reset = sub.add_parser("review-reset")
     review_reset.add_argument("--project", type=Path, required=True)
+
+    audio_analyze = sub.add_parser("audio-analyze")
+    audio_analyze.add_argument("--file", type=Path, required=True)
+
+    audio_master = sub.add_parser("audio-auto-master")
+    audio_master.add_argument("--project", type=Path, required=True)
+
+    qa_analyze = sub.add_parser("qa-analyze")
+    qa_analyze.add_argument("--project", type=Path, required=True)
+    qa_analyze.add_argument("--output", type=Path, required=True)
+    qa_analyze.add_argument("--preview", action="store_true")
+
+    optimize_all = sub.add_parser("optimize-all")
+    optimize_all.add_argument("--project", type=Path, required=True)
+    optimize_all.add_argument("--output", type=Path)
+    optimize_all.add_argument("--preview", action="store_true")
+    optimize_all.add_argument("--no-render", action="store_true")
     return parser
 
 
@@ -870,6 +894,46 @@ def main(argv: list[str] | None = None) -> int:
         if command == "review-reset":
             result = reset_review(
                 args.project.expanduser().resolve(),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "audio-analyze":
+            result = measure_loudness(
+                args.file.expanduser().resolve(),
+            )
+            _safe_print(
+                json.dumps(
+                    {"status": "READY", **result.to_dict()},
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "audio-auto-master":
+            result = auto_balance_project_file(
+                args.project.expanduser().resolve(),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "qa-analyze":
+            project_path = args.project.expanduser().resolve()
+            project = ProjectState.load(project_path)
+            result = analyze_render(
+                args.output.expanduser().resolve(),
+                project,
+                preview=bool(args.preview),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "optimize-all":
+            result = run_optimized_pipeline(
+                args.project.expanduser().resolve(),
+                render=not bool(args.no_render),
+                preview=bool(args.preview),
+                output=args.output.expanduser().resolve() if args.output else None,
             )
             _safe_print(json.dumps(result, ensure_ascii=False))
             return 0
