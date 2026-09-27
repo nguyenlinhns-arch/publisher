@@ -9,7 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from .analysis_frames import compose_contact_sheet, extract_candidate_frames
+from .analysis_frames import (
+    compose_contact_sheet,
+    extract_candidate_frames,
+    extract_native_candidate_frames,
+)
 from .cache import prune_cache, source_signature
 from .checkpoint import create_checkpoint
 from .media import MediaAudit, audit_media_info, infer_role, probe
@@ -17,6 +21,7 @@ from .proxy import ensure_proxy
 from .shot_detection import ShotSpan, detect_shots
 from .planner import build_rough_cut
 from .project import MediaItem, ProjectState
+from .visual_layout import analyze_layout
 from .visual_metrics import analyze_frame, annotate_duplicate_groups
 
 REVIEW_SCHEMA = "linh-edit.source-review.v2"
@@ -32,6 +37,18 @@ class CandidateWindow:
     end: float
     duration: float
     frame: str = ""
+    native_frame: str = ""
+    subject_x: float = 0.5
+    subject_y: float = 0.5
+    reframe_x: float = 0.5
+    reframe_y: float = 0.5
+    negative_space: str = ""
+    hook_layout: str = ""
+    hook_style: str = ""
+    hook_x: float = 0.5
+    hook_y: float = 0.25
+    hook_align: str = "center"
+    layout_confidence: float = 0.0
     brightness: float = 0.0
     contrast: float = 0.0
     edge_energy: float = 0.0
@@ -187,8 +204,11 @@ def candidates_from_shots(
 def _enrich_candidates(
     base: tuple[CandidateWindow, ...],
     frames: tuple[Path, ...],
+    layout_frames: tuple[Path, ...] | None = None,
 ) -> tuple[CandidateWindow, ...]:
     metrics = tuple(analyze_frame(path) for path in frames)
+    layout_frames = layout_frames or frames
+    layouts = tuple(analyze_layout(path) for path in layout_frames)
     duplicate_map = annotate_duplicate_groups(metrics)
     result: list[CandidateWindow] = []
     for index, item in enumerate(base):
@@ -196,6 +216,7 @@ def _enrich_candidates(
             result.append(item)
             continue
         metric = metrics[index]
+        layout = layouts[index] if index < len(layouts) else analyze_layout(frames[index])
         duplicate_of = duplicate_map[index]
         score = metric.technical_score
         warnings = list(metric.warnings)
@@ -210,6 +231,18 @@ def _enrich_candidates(
                 end=item.end,
                 duration=item.duration,
                 frame=str(frames[index]),
+                native_frame=str(layout_frames[index]) if index < len(layout_frames) else str(frames[index]),
+                subject_x=layout.subject_x,
+                subject_y=layout.subject_y,
+                reframe_x=layout.reframe_x,
+                reframe_y=layout.reframe_y,
+                negative_space=layout.negative_space,
+                hook_layout=layout.hook_layout,
+                hook_style=layout.hook_style,
+                hook_x=layout.hook_x,
+                hook_y=layout.hook_y,
+                hook_align=layout.hook_align,
+                layout_confidence=layout.confidence,
                 brightness=metric.brightness,
                 contrast=metric.contrast,
                 edge_energy=metric.edge_energy,
@@ -402,9 +435,15 @@ def review_video(
             segment_seconds=candidate_seconds,
         )
 
+    timestamps = [candidate.center for candidate in base_candidates]
     frames = extract_candidate_frames(
         analysis_source,
-        [candidate.center for candidate in base_candidates],
+        timestamps,
+        target_dir / "candidates",
+    )
+    native_frames = extract_native_candidate_frames(
+        analysis_source,
+        timestamps,
         target_dir / "candidates",
     )
     sheet = target_dir / "source_contact_sheet.jpg"
@@ -413,7 +452,11 @@ def review_video(
         sheet,
         columns=columns,
     )
-    candidates = _enrich_candidates(base_candidates, frames)
+    candidates = _enrich_candidates(
+        base_candidates,
+        frames,
+        native_frames,
+    )
 
     audit_warnings = list(audit.warnings)
     if proxy_warning:
@@ -647,6 +690,8 @@ def apply_kept_candidates(
                             ),
                         ),
                     ),
+                    x=float(candidate.get("reframe_x") or 0.5),
+                    y=float(candidate.get("reframe_y") or 0.5),
                     motion="none",
                     keep_audio=keep_audio,
                     source_gain=1.0 if keep_audio else 0.10,
@@ -739,6 +784,8 @@ def promote_review_candidate(
         start=float(candidate["start"]),
         duration=float(candidate["duration"]),
         score=max(0.0, min(1.0, score)),
+        x=float(candidate.get("reframe_x") or 0.5),
+        y=float(candidate.get("reframe_y") or 0.5),
         motion="none",
         keep_audio=keep_audio,
         source_gain=1.0 if keep_audio else 0.10,
