@@ -212,7 +212,6 @@ def _enrich_candidates(
 ) -> tuple[CandidateWindow, ...]:
     metrics = tuple(analyze_frame(path) for path in frames)
     layout_frames = layout_frames or frames
-    layouts = tuple(analyze_layout(path) for path in layout_frames)
     duplicate_map = annotate_duplicate_groups(metrics)
     result: list[CandidateWindow] = []
     for index, item in enumerate(base):
