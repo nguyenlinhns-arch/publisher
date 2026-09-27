@@ -1,4 +1,4 @@
-# Linh Edit 1.6
+# Linh Edit 1.7
 
 Linh Edit is the single local Windows editor for Linh video workflows.
 
@@ -12,117 +12,150 @@ Linh Edit is the single local Windows editor for Linh video workflows.
 Legacy News and Editorial apps remain untouched as rollback/migration sources.
 MXH publishing stays separate.
 
-## 1.6 — VO/Text/Audio Intelligence + safe live control
+## 1.7 — Story Rhythm + Three-Pass Review Gate
 
-Version 1.6 builds on the proxy/shot/smart-layout engine from 1.5 and upgrades
-the narration/text/audio layer while making direct ChatGPT edits safer when the
-desktop app is open.
+Version 1.7 builds on the 1.6 VO/Text/Audio layer and makes story rhythm and
+final editorial review first-class project state.
 
-### Selective captions from VO script
+### Constraint-based Travel Story Optimizer
 
-Linh Edit now turns a transcript/VO script into selective body captions rather
-than full subtitles.
+Travel rough cuts now use a deterministic story optimizer instead of a simple
+role loop.
 
-- Hook 0–3s keeps ownership of opening text
-- narration is split into compact 2–12 word blocks
-- blocks are timed from the actual VO duration when a voice file is present
-- only the more informative blocks are selected toward a configurable coverage
-  target (default 65%)
-- body captions stay lower-third and keep the Oswald caption style
-- existing Hook layers are preserved when captions are regenerated
+It targets the Linh documentary arc:
+
+- visual hook
+- human
+- work
+- road reset
+- place
+- detail / life
+- emotion
+- lingering ending
+
+The optimizer:
+
+- caps work/admin footage as a minority of total runtime
+- rewards source diversity and avoids needless repeated snippets
+- preserves road resets when source footage is available
+- gives human/emotion shots longer holds than work/admin shots
+- keeps hard-cut structure
+- pushes an ending shot to the tail when available
+- reports work ratio, road-reset count, source diversity and final role order
 
 UI:
-- **DÁN VO SCRIPT**
-- **AUTO CAPTION VO**
+- **STORY OPTIMIZE**
 
 CLI:
-- `transcript-set`
-- `caption-plan`
-- `caption-apply`
+- `story-optimize`
 
-### Text → Shot semantic matching
+Travel **AUTO EDIT** is routed through this optimizer.
 
-Caption text is classified into visual roles such as:
+### Talk Rhythm — punch-in / punch-out at phrase boundaries
 
-- road / travel → `road_reset`
-- people / meetings → `human`
-- work / administration → `work`
-- place / landscape → `place`
-- village / daily life → `life`
-- kitchen / coffee / detail → `detail`
-- emotional language → `emotion`
+Talk / Expert projects can now use sentence-aware rhythm without continuous
+zoom effects.
 
-The apply path is deliberately conservative. It only swaps nearby timeline
-slots when both source snippets are long enough to preserve the original slot
-durations. This improves text–shot relevance without changing total runtime.
+Linh Edit:
+
+- detects VO silence with FFmpeg when a voice track is available
+- falls back to transcript punctuation timing when silence detection has no
+  useful boundary
+- splits the existing source clip without changing total runtime
+- alternates a subtle 1.0 / 1.035 punch scale at phrase boundaries
+- keeps original source time continuity and audio
 
 UI:
-- **MATCH TEXT → SHOT**
+- **TALK RHYTHM**
 
 CLI:
-- `text-shot-report`
-- `text-shot-apply`
+- `talk-rhythm-apply`
 
-### VO-first audio hierarchy
+### Three-Pass Review Gate
 
-The local renderer now supports:
+Visual-only, Audio-only and Full Playback are now stored as project review
+state instead of only being notes in a QA file.
 
-- independent VO gain
-- automatic sidechain ducking of music under narration
-- automatic ducking of retained source ambience under narration
-- configurable threshold, ratio, attack and release
-- existing SFX, music fades and limiter retained
+States:
+
+- PENDING
+- PASS
+- FAIL
+
+A project becomes **READY_TO_PUBLISH** only when all three passes are PASS for
+the current content revision.
+
+If the edit changes later:
+
+- `content_revision` increments
+- earlier review approvals automatically become stale
+- the project is no longer READY_TO_PUBLISH until reviewed again
 
 UI:
-- **AUDIO / DUCKING**
+- **REVIEW 3 PASS**
+- File menu → Review 3 pass
 
-The Windows smoke test renders real synthetic VO + music through the sidechain
-pipeline.
+CLI:
+- `review-status`
+- `review-set`
+- `review-reset`
 
-### Project revision safety + live reload
+### Safer live ChatGPT + desktop editing
 
-Project schema v4 adds an optimistic revision counter.
+Project schema v5 separates:
 
-- every successful project save increments the revision
-- stale saves are rejected instead of silently overwriting a newer project
-- checkpoint restore keeps revision history monotonic
-- the desktop app polls for external project changes
-- when the UI has no unsaved local edits, newer ChatGPT/CLI changes reload
-  automatically
-- when local edits are dirty, Linh Edit warns instead of overwriting either side
+- save revision — protects against simultaneous writers
+- content revision — tracks editorial changes
+- review content revision — binds review approval to the exact edit
 
-This is the foundation for stable:
-`ChatGPT → command → checkpoint → mutate → save revision → UI live reload`.
+Stale cross-process saves remain blocked. Checkpoint restore now counts as a
+content change, so restoring an older edit automatically invalidates stale
+review approvals.
+
+### 1.6 intelligence retained
+
+- selective captions from VO script
+- DÁN VO SCRIPT / AUTO CAPTION VO
+- conservative text-to-shot matching
+- VO-first music ducking
+- retained source ambience ducking under VO
+- configurable threshold / ratio / attack / release
+- project live reload after safe external edits
 
 ### 1.5 performance/visual intelligence retained
 
-- reusable analysis proxies for heavy 4K/8K, HEVC, VFR/rotation/HDR footage
-- bounded derived-data cache
-- cached shot-boundary detection
-- Source Review with KEEP / SHORTLIST / REJECT
-- technical rank and duplicate warnings
+- 4K/8K/HEVC/VFR/HDR analysis proxies
+- reusable bounded cache
+- shot-boundary Source Review
+- KEEP / SHORTLIST / REJECT
+- perceptual duplicate warnings
 - smart 9:16 reframe suggestions
-- negative-space Hook placement
+- negative-space Hook layout suggestions
 - reviewed-only rough-cut building
-- normalization planning while final render stays on original footage
+- final render always uses original source footage
 
 ## Direct ChatGPT / Hub commands
 
-Important automation commands now include:
+The deterministic command layer includes:
 
-- `proxy-build`
-- `shot-detect`
+- `story-optimize`
+- `talk-rhythm-apply`
+- `review-status`
+- `review-set`
+- `review-reset`
+- `transcript-set`
+- `caption-plan`
+- `caption-apply`
+- `text-shot-report`
+- `text-shot-apply`
 - `source-review`
 - `review-mark`
 - `review-promote`
 - `review-build`
-- `normalization-plan`
 - `hook-layout-apply`
-- `transcript-set`
-- `caption-plan`
-- `caption-apply`
-- `text-shot-report`
-- `text-shot-apply`
+- `proxy-build`
+- `shot-detect`
+- `normalization-plan`
 - `project-patch`
 - `project-checkpoint`
 - `checkpoint-restore`
@@ -131,15 +164,15 @@ Important automation commands now include:
 
 ## Review policy
 
-Technical render completion is never treated as final editorial approval.
+A successful render means technical render/QA passed.
 
-Final review remains:
+Publication readiness still requires:
 
-1. Visual-only
-2. Audio-only
-3. Full playback without stopping
+1. Visual-only PASS
+2. Audio-only PASS
+3. Full Playback PASS
 
-Exports remain `PENDING_PLAYBACK` until those checks are actually completed.
+Any later content edit invalidates those approvals automatically.
 
 ## Windows app
 
