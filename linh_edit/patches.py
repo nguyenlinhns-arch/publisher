@@ -18,6 +18,13 @@ PROJECT_FIELDS = {
     "voiceover",
     "music",
     "music_gain",
+    "voice_gain",
+    "auto_duck_music",
+    "duck_threshold",
+    "duck_ratio",
+    "duck_attack_ms",
+    "duck_release_ms",
+    "caption_coverage_target",
     "output_dir",
     "source_mode",
     "source_text",
@@ -197,7 +204,17 @@ def _apply_one(project: ProjectState, op: dict[str, Any]) -> None:
         values = op.get("values")
         if not isinstance(values, dict):
             raise ValueError("set_audio.values phải là object.")
-        allowed = {"voiceover", "music", "music_gain"}
+        allowed = {
+            "voiceover",
+            "music",
+            "music_gain",
+            "voice_gain",
+            "auto_duck_music",
+            "duck_threshold",
+            "duck_ratio",
+            "duck_attack_ms",
+            "duck_release_ms",
+        }
         unknown = set(values) - allowed
         if unknown:
             raise ValueError("Audio field không được phép: " + ", ".join(sorted(unknown)))
