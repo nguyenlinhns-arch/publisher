@@ -84,6 +84,7 @@ CAPABILITIES = {
         "caption-apply",
         "text-shot-report",
         "text-shot-apply",
+        "transcript-set",
     ],
     "output_default": {
         "width": 1080,
@@ -241,6 +242,10 @@ def build_parser() -> argparse.ArgumentParser:
     text_shot_apply.add_argument("--project", type=Path, required=True)
     text_shot_apply.add_argument("--coverage", type=float)
     text_shot_apply.add_argument("--max-distance", type=int, default=3)
+
+    transcript_set = sub.add_parser("transcript-set")
+    transcript_set.add_argument("--project", type=Path, required=True)
+    transcript_set.add_argument("--source", type=Path, required=True)
     return parser
 
 
@@ -763,6 +768,35 @@ def main(argv: list[str] | None = None) -> int:
                 max_distance=max(1, min(8, int(args.max_distance))),
             )
             _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "transcript-set":
+            project_path = args.project.expanduser().resolve()
+            source = args.source.expanduser().resolve()
+            transcript = source.read_text(encoding="utf-8-sig").strip()
+            if not transcript:
+                raise ValueError("Transcript đang trống.")
+            project = ProjectState.load(project_path)
+            checkpoint = create_checkpoint(
+                project,
+                project_path,
+                label="before-transcript-set",
+            )
+            project.transcript = transcript
+            project.dirty = True
+            project.save(project_path)
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "DONE",
+                        "project": str(project_path),
+                        "checkpoint": str(checkpoint),
+                        "revision": project.revision,
+                        "characters": len(transcript),
+                    },
+                    ensure_ascii=False,
+                )
+            )
             return 0
     except Exception as exc:
         _safe_print(f"ERROR: {exc}", error=True)
