@@ -1,6 +1,6 @@
-# Linh Edit 1.2
+# Linh Edit 1.3
 
-Linh Edit is the single local Windows editor for the Linh video workflows.
+Linh Edit is the single local Windows editor for Linh video workflows.
 
 ## One app, four profiles
 
@@ -9,56 +9,57 @@ Linh Edit is the single local Windows editor for the Linh video workflows.
 - Tin tức / Editorial
 - Tuyển dụng
 
-The two older video apps remain untouched as rollback/migration sources.
+The two legacy video apps remain untouched as rollback/migration sources.
 MXH publishing stays separate.
 
-## 1.2: safer, more controllable local editing
+## 1.3 — Footage review + safe direct editing
 
-Linh Edit 1.2 keeps the 1.1 unified engine and adds a control/safety layer for
-daily work and direct ChatGPT/Hub operation:
+Version 1.3 keeps the unified local engine from 1.2 and adds a dedicated
+source-review stage before rough cut.
 
-- versioned project schema with backward migration
-- atomic project saves plus source/transcript sidecars
-- durable checkpoints with restore
-- automatic checkpoints before rough cut, text, audio, SFX, destructive timeline edits and export
-- safe deterministic JSON project patches for remote/ChatGPT editing
+### Source Review
+
+For selected video footage, Linh Edit can now create a **Source Review Pack**:
+
+- a 12-frame source contact sheet
+- deterministic tile-to-time candidate windows
+- technical audit score/warnings
+- a JSON review manifest
+- every candidate starts as `PENDING_VISUAL_REVIEW`
+- visual quality is never auto-approved from metadata
+
+Use the **DUYỆT FOOTAGE** button in the Media panel or the CLI command:
+
+`source-review --media <video> --output-dir <folder>`
+
+This is designed for the next selection pass: inspect shake, motion blur, face
+crop, action quality, repeated visuals and emotional moments before promoting a
+candidate into the timeline.
+
+## Safety/control core retained from 1.2
+
+- project schema v2 with backward loading
+- atomic saves + source/transcript sidecars
+- durable checkpoints and restore
+- automatic checkpoints before destructive edit phases
+- deterministic JSON project patches for ChatGPT/Hub
 - project preflight validation before render
-- technical media audit before rough cut
-- hard rejection of technically unusable footage while leaving blur/shake/composition for visual review
-- explicit TECHNICAL_DONE vs playback-review PENDING state
-- contact sheet review
-- true visual master without an audio stream
-- Windows local render, QA and versioned outputs
-
-## Unified source workflows
-
-### Direct footage
-
-Use Travel, Talk or Recruitment profiles with normal footage/media import.
-The rough-cut planner preserves the Linh Edit story DNA and scores technical
-suitability before selection.
-
-### News / Editorial
-
-Use either:
-
-- **DÁN NEWS / JSON**
-- **VIDEO TỪ LINK BÀI VIẾT**
-- **Tệp -> Nhập dự án app cũ (script.json)...**
-
-Linh Edit creates or preserves the canonical transcript, scene order, image
-order and selected audio. News/Editorial timelines can be re-timed to the real
-voice duration.
+- technical footage audit before rough cut
+- local FFmpeg/FFprobe rendering
+- contact-sheet review
+- true no-audio visual master
+- technical render completion kept separate from playback review
 
 ## Direct control / automation
 
-The local CLI exposes deterministic commands that do not require GUI clicking:
+The local CLI exposes:
 
 - `media-import`
 - `news-import`
 - `article-import`
 - `legacy-import`
 - `media-audit`
+- `source-review`
 - `project-status`
 - `project-validate`
 - `project-patch`
@@ -67,32 +68,32 @@ The local CLI exposes deterministic commands that do not require GUI clicking:
 - `checkpoint-restore`
 - `render`
 
-Every project patch creates a checkpoint first and validates the resulting
-project before committing it.
+Project patches are checkpointed first and rejected if they produce an invalid
+project.
 
 ## Review policy
 
-A successful render means the technical render/QA passed. It does **not** mean
-the edit has passed playback review.
+A successful render means only **technical render/QA passed**.
 
-Final review remains:
+Final review still requires:
 
 1. Visual-only review
 2. Audio-only review
 3. Full playback without stopping
 
-QA files therefore keep visual/audio/style review states as pending until those
-passes are completed.
+Therefore final exports remain `PENDING_PLAYBACK` until those review passes are
+actually completed.
 
 ## Legacy migration
 
-Known rollback sources on the workstation:
+Rollback source roots on the workstation:
 
 - `D:\2 THAY_LINH_NEWS_VIDEO_APP_1.0.2\THAY_LINH_NEWS_VIDEO_APP_1.0.2`
 - `D:\3 THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL`
 
-Target unified install root:
+Unified source root:
 
 - `D:\LINH_EDIT`
 
-The legacy source folders are not modified.
+Portable Windows builds include `LinhEdit.exe` and do not require a separate
+Python installation for normal use.
