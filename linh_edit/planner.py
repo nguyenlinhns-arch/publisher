@@ -151,5 +151,7 @@ def _simple_rough_cut(project: ProjectState) -> list[MediaItem]:
 
 def build_rough_cut(project: ProjectState) -> list[MediaItem]:
     if project.profile == "TRAVEL_DOCUMENTARY":
-        return _travel_rough_cut(project)
+        from .story_optimizer import optimize_travel_story
+
+        return optimize_travel_story(project)
     return _simple_rough_cut(project)
