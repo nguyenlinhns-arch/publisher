@@ -23,6 +23,7 @@ from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
 from .source_review import (
+    apply_candidate_hook_layout,
     apply_kept_candidates,
     build_source_review,
     load_review_manifest,
@@ -691,10 +692,15 @@ class LinhEditWindow:
             text="ROUGH CUT TỪ TẤT CẢ KEEP",
             command=lambda: build_from_keeps(),
         ).grid(row=3, column=0, columnspan=3, sticky=tk.EW, padx=(0, 4), pady=(8, 0))
+        ttk.Button(
+            outer,
+            text="ÁP BỐ CỤC HOOK TỪ FRAME KEEP",
+            command=lambda: apply_hook_layout_selected(),
+        ).grid(row=4, column=0, columnspan=3, sticky=tk.EW, padx=(0, 4), pady=(8, 0))
 
         status = tk.StringVar(value="")
         ttk.Label(outer, textvariable=status, anchor=tk.W).grid(
-            row=4, column=0, columnspan=6, sticky=tk.EW, pady=(8, 0)
+            row=5, column=0, columnspan=6, sticky=tk.EW, pady=(8, 0)
         )
 
         def selected_ref() -> tuple[int, int] | None:
@@ -793,6 +799,15 @@ class LinhEditWindow:
                 f"score {float(candidate.get('technical_score', 0)):.2f}\n"
                 f"Decision: {candidate.get('decision') or 'PENDING'}"
                 + (f" • trùng {duplicate}" if duplicate else "")
+                + (
+                    f"\nReframe: x={float(candidate.get('reframe_x', 0.5)):.2f}, "
+                    f"y={float(candidate.get('reframe_y', 0.5)):.2f}"
+                )
+                + (
+                    f"\nHook: {candidate.get('hook_layout') or '-'} / "
+                    f"{candidate.get('hook_style') or '-'}"
+                )
+                + (f" • space {candidate.get('negative_space')}" if candidate.get('negative_space') else "")
                 + (f"\nGhi chú: {note}" if note else "")
             )
 
@@ -883,6 +898,41 @@ class LinhEditWindow:
             status.set(
                 f"Đã promote candidate {candidate_index}: "
                 f"{float(result['start']):.1f}s + {float(result['duration']):.1f}s"
+            )
+
+        def apply_hook_layout_selected() -> None:
+            ref = selected_ref()
+            if ref is None:
+                status.set("Chưa chọn candidate.")
+                return
+            if self.project_path is None:
+                messagebox.showinfo(
+                    "Cần lưu project",
+                    "Hãy lưu project trước khi áp bố cục Hook.",
+                    parent=win,
+                )
+                return
+            self._sync_project()
+            if self.project.dirty:
+                self.save_project()
+                if self.project.dirty:
+                    return
+            item_index, candidate_index = ref
+            try:
+                result = apply_candidate_hook_layout(
+                    manifest,
+                    self.project_path,
+                    item_index=item_index,
+                    candidate_index=candidate_index,
+                )
+                self.project = ProjectState.load(self.project_path)
+            except Exception as exc:
+                messagebox.showerror("Chưa áp được Hook layout", str(exc), parent=win)
+                return
+            self._refresh_all()
+            status.set(
+                f"Hook → {result['hook_layout']} / {result['hook_style']} • "
+                f"negative space {result['negative_space']}"
             )
 
         def build_from_keeps() -> None:
