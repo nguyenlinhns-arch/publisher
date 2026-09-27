@@ -113,7 +113,8 @@ def _validate_public_http_url(value: str) -> str:
         raise ValueError("URL bài viết phải dùng http/https và có tên miền hợp lệ.")
     host = parsed.hostname
     try:
-        addresses = {info[4][0] for info in socket.getaddrinfo(host, parsed.port or 443)}
+        default_port = 443 if parsed.scheme == "https" else 80
+        addresses = {info[4][0] for info in socket.getaddrinfo(host, parsed.port or default_port)}
     except OSError as exc:
         raise ValueError(f"Không phân giải được tên miền: {host}") from exc
     for address in addresses:
