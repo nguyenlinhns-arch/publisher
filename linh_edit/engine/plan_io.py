@@ -32,6 +32,7 @@ def load_plan(path: Path) -> EditPlan:
             motion=str(item.get("motion", "none")),  # type: ignore[arg-type]
             mute_source_audio=bool(item.get("mute_source_audio", True)),
             source_gain=float(item.get("source_gain", 0.10)),
+            hdr_to_sdr=bool(item.get("hdr_to_sdr", False)),
         )
         for item in payload["clips"]
     )
@@ -70,6 +71,10 @@ def load_plan(path: Path) -> EditPlan:
         duck_ratio=float(audio_payload.get("duck_ratio", 8.0)),
         duck_attack_ms=float(audio_payload.get("duck_attack_ms", 25.0)),
         duck_release_ms=float(audio_payload.get("duck_release_ms", 450.0)),
+        auto_master_audio=bool(audio_payload.get("auto_master_audio", True)),
+        master_lufs=float(audio_payload.get("master_lufs", -14.0)),
+        master_true_peak=float(audio_payload.get("master_true_peak", -1.5)),
+        master_lra=float(audio_payload.get("master_lra", 11.0)),
         source_ambience_gain=float(audio_payload.get("source_ambience_gain", 0.10)),
         ending_music_only_seconds=float(audio_payload.get("ending_music_only_seconds", 6.0)),
     )
