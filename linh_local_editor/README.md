@@ -1,16 +1,18 @@
-# Linh Edit Engine — local add-on
+# Linh local editor transition notes
 
-This directory is an add-on module intended to be embedded into the existing
-THAY LINH VIDEO APP EDITORIAL application. It is not a standalone application
-and must not replace the existing launcher or project state.
+This directory is historical integration documentation.
 
-Goals:
-- local-only render path (FFmpeg/FFprobe)
-- deterministic edit plans
-- profile routing: travel documentary, talking head, explainer/news, recruitment
-- preserve existing host UI and manual editing
-- no cloud credit dependency for rendering
-- no coupling to MXH Video Editor / publishing flows
+The current architecture is one standalone Windows application: **Linh Edit**.
+The old News and Editorial programs are migration/rollback sources, not hosts for
+new Linh Edit code.
 
-Host integration is intentionally thin: the existing Editorial app should call
-linh_edit_engine.api from its own menu/button/action layer.
+Current principles:
+
+- one local editor for Travel, Talk, News/Editorial and Recruitment
+- deterministic local FFmpeg/FFprobe render
+- one project/timeline model
+- legacy project import without mutating legacy folders
+- no cloud rendering dependency
+- no coupling to MXH Video Editor or social publishing
+
+New implementation work belongs under `linh_edit/`.
