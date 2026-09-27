@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import APP_NAME, __version__
 from .article_ingest import apply_article, fetch_article
-from .cache import cache_summary
+from .cache import cache_summary, prune_cache
 from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .engine_adapter import render_project
 from .legacy_import import import_legacy_script
@@ -69,6 +69,7 @@ CAPABILITIES = {
         "shot-detect",
         "cache-status",
         "normalization-plan",
+        "cache-prune",
     ],
     "output_default": {
         "width": 1080,
@@ -200,6 +201,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     normalization_plan = sub.add_parser("normalization-plan")
     normalization_plan.add_argument("--media", type=Path, required=True)
+
+    cache_prune = sub.add_parser("cache-prune")
+    cache_prune.add_argument("--max-gb", type=float, default=20.0)
     return parser
 
 
@@ -621,6 +625,17 @@ def main(argv: list[str] | None = None) -> int:
             _safe_print(
                 json.dumps(
                     {"status": "READY", **plan.to_dict()},
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "cache-prune":
+            max_bytes = max(0.25, float(args.max_gb)) * 1024**3
+            result = prune_cache(max_bytes=int(max_bytes))
+            _safe_print(
+                json.dumps(
+                    {"status": "DONE", **result},
                     ensure_ascii=False,
                 )
             )
