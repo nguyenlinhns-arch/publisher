@@ -2,7 +2,7 @@
   "schema": "thaylinh.local-app.v1",
   "id": "linh_edit",
   "name": "Linh Edit",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "kind": "video_editor",
   "target_root": "D:\\LINH_EDIT",
   "launcher": "LinhEdit.exe",
