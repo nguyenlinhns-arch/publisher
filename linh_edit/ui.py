@@ -127,6 +127,17 @@ class LinhEditWindow:
         file_menu.add_separator()
         file_menu.add_command(label="Thoát", command=self.close)
         menu.add_cascade(label="Tệp", menu=file_menu)
+
+        advanced_menu = tk.Menu(menu, tearoff=False)
+        advanced_menu.add_command(label="Rough Cut / Auto Edit", command=self.auto_edit)
+        advanced_menu.add_command(label="Selective Caption VO", command=self.auto_selective_captions)
+        advanced_menu.add_command(label="Match Text → Shot", command=self.auto_text_shot_match)
+        advanced_menu.add_command(label="Audio / Ducking / Master", command=self.audio_settings)
+        advanced_menu.add_separator()
+        advanced_menu.add_command(label="Story Optimize (Travel)", command=self.story_optimize_ui)
+        advanced_menu.add_command(label="Talk Rhythm", command=self.talk_rhythm_ui)
+        advanced_menu.add_command(label="Review 3 Pass", command=self.review_gate_dialog)
+        menu.add_cascade(label="Nâng cao", menu=advanced_menu)
         self.root.configure(menu=menu)
 
     def _build(self) -> None:
@@ -178,7 +189,11 @@ class LinhEditWindow:
             row=1, column=4, sticky=tk.EW, padx=6
         )
 
-        self.auto_button = ttk.Button(quick, text="AUTO EDIT", command=self.auto_edit)
+        self.auto_button = ttk.Button(
+            quick,
+            text="TỐI ƯU TOÀN BỘ",
+            command=self.optimize_all_ui,
+        )
         self.auto_button.grid(row=1, column=5, sticky=tk.EW, padx=6)
 
         self.preview_button = ttk.Button(quick, text="XEM THỬ", command=self.render_preview)
@@ -213,53 +228,11 @@ class LinhEditWindow:
             row=2, column=6, columnspan=2, sticky=tk.EW, padx=(6, 0), pady=(8, 0)
         )
 
-        ttk.Label(quick, text="AI local / tự động").grid(
-            row=3, column=0, sticky=tk.W, pady=(8, 0)
-        )
-        ttk.Button(
-            quick,
-            text="AUTO CAPTION VO",
-            command=self.auto_selective_captions,
-        ).grid(row=3, column=1, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
-        ttk.Button(
-            quick,
-            text="MATCH TEXT → SHOT",
-            command=self.auto_text_shot_match,
-        ).grid(row=3, column=3, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
-        ttk.Button(
-            quick,
-            text="AUDIO / DUCKING",
-            command=self.audio_settings,
-        ).grid(row=3, column=5, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
         ttk.Button(
             quick,
             text="DÁN VO SCRIPT",
             command=self.paste_transcript,
-        ).grid(row=3, column=7, sticky=tk.EW, padx=(6, 0), pady=(8, 0))
-
-        ttk.Label(quick, text="Nhịp / Story").grid(
-            row=4, column=0, sticky=tk.W, pady=(8, 0)
-        )
-        ttk.Button(
-            quick,
-            text="STORY OPTIMIZE",
-            command=self.story_optimize_ui,
-        ).grid(row=4, column=1, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
-        ttk.Button(
-            quick,
-            text="TALK RHYTHM",
-            command=self.talk_rhythm_ui,
-        ).grid(row=4, column=3, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
-        ttk.Button(
-            quick,
-            text="REVIEW 3 PASS",
-            command=self.review_gate_dialog,
-        ).grid(row=4, column=5, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
-        ttk.Button(
-            quick,
-            text="TỐI ƯU TOÀN BỘ",
-            command=self.optimize_all_ui,
-        ).grid(row=4, column=7, sticky=tk.EW, padx=(6, 0), pady=(8, 0))
+        ).grid(row=2, column=7, sticky=tk.EW, padx=(6, 0), pady=(8, 0))
 
         titlebar = ttk.Frame(outer)
         titlebar.pack(fill=tk.X, pady=(0, 8))
