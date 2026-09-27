@@ -96,6 +96,7 @@ try {
         "--specpath", $Spec,
         "--paths", $Root,
         "--hidden-import", "cv2",
+        "--hidden-import", "cv2.data",
         "--add-data", "$Cv2Data;cv2\data",
         "--add-binary", "$Ffprobe;bin",
         "--add-binary", "$Ffmpeg;bin",
