@@ -9,6 +9,8 @@ from copy import deepcopy
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from PIL import Image, ImageTk
+
 from .article_ingest import apply_article, fetch_article
 from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .contact_sheet import extract_contact_sheet
@@ -572,7 +574,7 @@ class LinhEditWindow:
 
         win = tk.Toplevel(self.root)
         win.title("Linh Edit — Duyệt footage")
-        win.geometry("1180x620")
+        win.geometry("1480x720")
         win.transient(self.root)
 
         outer = ttk.Frame(win, padding=10)
@@ -591,7 +593,15 @@ class LinhEditWindow:
         tree = ttk.Treeview(
             outer,
             columns=(
-                "source", "time", "score", "light", "sharp", "dup", "decision", "warnings"
+                "source",
+                "time",
+                "rank",
+                "score",
+                "light",
+                "sharp",
+                "dup",
+                "decision",
+                "warnings",
             ),
             show="headings",
             selectmode="browse",
@@ -599,6 +609,7 @@ class LinhEditWindow:
         headings = {
             "source": "Footage",
             "time": "Đoạn",
+            "rank": "#",
             "score": "Tech",
             "light": "Sáng",
             "sharp": "Chi tiết",
@@ -607,14 +618,15 @@ class LinhEditWindow:
             "warnings": "Cảnh báo",
         }
         widths = {
-            "source": 230,
-            "time": 110,
-            "score": 65,
-            "light": 65,
-            "sharp": 70,
-            "dup": 55,
-            "decision": 90,
-            "warnings": 300,
+            "source": 210,
+            "time": 100,
+            "rank": 38,
+            "score": 55,
+            "light": 50,
+            "sharp": 55,
+            "dup": 72,
+            "decision": 82,
+            "warnings": 245,
         }
         for key, label in headings.items():
             tree.heading(key, text=label)
@@ -623,6 +635,28 @@ class LinhEditWindow:
         scroll = ttk.Scrollbar(outer, orient=tk.VERTICAL, command=tree.yview)
         scroll.grid(row=1, column=6, sticky=tk.NS)
         tree.configure(yscrollcommand=scroll.set)
+
+        preview_frame = ttk.LabelFrame(outer, text="Preview candidate", padding=8)
+        preview_frame.grid(
+            row=1,
+            column=7,
+            rowspan=4,
+            sticky=tk.NSEW,
+            padx=(10, 0),
+        )
+        preview_label = ttk.Label(
+            preview_frame,
+            text="Chọn một candidate để xem nhanh",
+            anchor=tk.CENTER,
+        )
+        preview_label.pack(fill=tk.BOTH, expand=True)
+        preview_meta = tk.StringVar(value="")
+        ttk.Label(
+            preview_frame,
+            textvariable=preview_meta,
+            justify=tk.LEFT,
+            wraplength=250,
+        ).pack(fill=tk.X, pady=(8, 0))
 
         role_var = tk.StringVar(value="detail")
         ttk.Label(outer, text="Role promote").grid(row=2, column=0, sticky=tk.W, pady=(8, 0))
@@ -691,10 +725,15 @@ class LinhEditWindow:
                             source_name,
                             f"{float(candidate.get('start', 0)):.1f}–"
                             f"{float(candidate.get('end', 0)):.1f}s",
+                            str(candidate.get("technical_rank") or ""),
                             f"{float(candidate.get('technical_score', 0)):.2f}",
                             f"{float(candidate.get('brightness', 0)):.2f}",
                             f"{float(candidate.get('edge_energy', 0)):.2f}",
-                            str(duplicate or ""),
+                            str(
+                                candidate.get("global_duplicate_of")
+                                or duplicate
+                                or ""
+                            ),
                             str(candidate.get("decision") or "PENDING"),
                             warnings,
                         ),
@@ -712,6 +751,49 @@ class LinhEditWindow:
                 return payload["items"][item_index - 1]["candidates"][candidate_index - 1]
             except Exception:
                 return None
+
+        def update_candidate_preview() -> None:
+            candidate = candidate_payload()
+            if not candidate:
+                preview_label.configure(
+                    image="",
+                    text="Chọn một candidate để xem nhanh",
+                )
+                preview_label.image = None
+                preview_meta.set("")
+                return
+            frame = Path(str(candidate.get("frame") or ""))
+            if not frame.is_file():
+                preview_label.configure(image="", text="Frame chưa sẵn sàng")
+                preview_label.image = None
+            else:
+                try:
+                    with Image.open(frame) as opened:
+                        image = opened.convert("RGB")
+                        image.thumbnail((240, 430), Image.Resampling.LANCZOS)
+                        photo = ImageTk.PhotoImage(image)
+                    preview_label.configure(image=photo, text="")
+                    preview_label.image = photo
+                except Exception as exc:
+                    preview_label.configure(image="", text=f"Không mở preview: {exc}")
+                    preview_label.image = None
+
+            note = str(candidate.get("review_note") or "").strip()
+            duplicate = str(
+                candidate.get("global_duplicate_of")
+                or candidate.get("duplicate_of")
+                or ""
+            )
+            preview_meta.set(
+                f"Candidate {candidate.get('index', '')} • "
+                f"{float(candidate.get('start', 0)):.1f}–"
+                f"{float(candidate.get('end', 0)):.1f}s\n"
+                f"Tech rank: {candidate.get('technical_rank') or '-'} • "
+                f"score {float(candidate.get('technical_score', 0)):.2f}\n"
+                f"Decision: {candidate.get('decision') or 'PENDING'}"
+                + (f" • trùng {duplicate}" if duplicate else "")
+                + (f"\nGhi chú: {note}" if note else "")
+            )
 
         def open_selected_frame() -> None:
             candidate = candidate_payload()
@@ -752,6 +834,8 @@ class LinhEditWindow:
                 messagebox.showerror("Không cập nhật được review", str(exc), parent=win)
                 return
             refresh()
+            tree.selection_set(f"{item_index}:{candidate_index}")
+            update_candidate_preview()
             status.set(f"Candidate {candidate_index}: {decision}")
 
         def promote_selected() -> None:
@@ -792,12 +876,15 @@ class LinhEditWindow:
             self.music_var.set(self.project.music)
             self._refresh_all()
             refresh()
+            tree.selection_set(f"{item_index}:{candidate_index}")
+            update_candidate_preview()
             status.set(
                 f"Đã promote candidate {candidate_index}: "
                 f"{float(result['start']):.1f}s + {float(result['duration']):.1f}s"
             )
 
         tree.bind("<Double-1>", lambda _event: open_selected_frame())
+        tree.bind("<<TreeviewSelect>>", lambda _event: update_candidate_preview())
         refresh()
 
     def _select_news_images(self) -> list[str]:
