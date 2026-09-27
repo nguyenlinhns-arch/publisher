@@ -4,7 +4,7 @@ import pytest
 
 from linh_edit.checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from linh_edit.patches import apply_patch
-from linh_edit.project import MediaItem, ProjectState
+from linh_edit.project import MediaItem, ProjectConflictError, ProjectState
 from linh_edit.validation import validate_project
 
 
@@ -145,3 +145,37 @@ def test_checkpoint_create_list_and_restore(tmp_path):
     assert restored.title == "Original"
     assert ProjectState.load(project_path).title == "Original"
     assert list_checkpoints(project_path)
+
+
+def test_project_revision_blocks_stale_cross_process_save(tmp_path):
+    path = tmp_path / "shared.linhedit.json"
+    original = ProjectState(title="A")
+    original.save(path)
+
+    first = ProjectState.load(path)
+    second = ProjectState.load(path)
+
+    first.title = "First"
+    first.save(path)
+
+    second.title = "Second"
+    with pytest.raises(ProjectConflictError):
+        second.save(path)
+
+    saved = ProjectState.load(path)
+    assert saved.title == "First"
+    assert saved.revision == first.revision
+
+
+def test_project_revision_increments_monotonically(tmp_path):
+    path = tmp_path / "revision.linhedit.json"
+    project = ProjectState()
+
+    project.save(path)
+    first = project.revision
+    project.title = "Updated"
+    project.save(path)
+
+    assert first == 1
+    assert project.revision == 2
+    assert ProjectState.disk_revision(path) == 2
