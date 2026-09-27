@@ -88,3 +88,26 @@ def test_review_gate_becomes_stale_after_content_edit(tmp_path: Path):
     state = review_gate.review_status(changed)
     assert not state["review_current"]
     assert not state["ready_to_publish"]
+
+
+def test_story_optimizer_prefers_existing_reviewed_timeline():
+    project = ProjectState(
+        profile="TRAVEL_DOCUMENTARY",
+        target_seconds=45.0,
+        media=[
+            MediaItem("unreviewed.mp4", role="human", duration=5.0, score=1.0),
+        ],
+        timeline=[
+            MediaItem("kept-hook.mp4", role="visual_hook", duration=3.0, score=0.9),
+            MediaItem("kept-human.mp4", role="human", duration=5.0, score=0.9),
+            MediaItem("kept-road.mp4", role="road_reset", duration=4.0, score=0.9),
+            MediaItem("kept-place.mp4", role="place", duration=4.0, score=0.9),
+            MediaItem("kept-detail.mp4", role="detail", duration=4.0, score=0.9),
+            MediaItem("kept-ending.mp4", role="ending", duration=5.0, score=0.9),
+        ],
+    )
+
+    story.optimize_story(project)
+
+    assert all(item.path != "unreviewed.mp4" for item in project.timeline)
+    assert any(item.path == "kept-human.mp4" for item in project.timeline)
