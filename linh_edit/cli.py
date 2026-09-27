@@ -61,6 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--project", type=Path, required=True)
     render.add_argument("--output", type=Path, required=True)
     render.add_argument("--preview", action="store_true")
+    render.add_argument("--visual-master", action="store_true")
 
     legacy = sub.add_parser("legacy-import")
     legacy.add_argument("--script", type=Path, required=True)
@@ -138,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
                 project,
                 args.output.expanduser().resolve(),
                 preview=bool(args.preview),
+                include_audio=not bool(args.visual_master),
             )
             _safe_print(
                 json.dumps({"status": "DONE", "output": str(result)}, ensure_ascii=False)
