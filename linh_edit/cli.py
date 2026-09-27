@@ -11,6 +11,7 @@ from .engine_adapter import render_project
 from .legacy_import import import_legacy_script
 from .media import probe_duration
 from .news_ingest import apply_news_content
+from .planner import build_rough_cut, import_media
 from .project import ProjectState
 from .tools import resolve_tool
 
@@ -38,6 +39,8 @@ CAPABILITIES = {
         "legacy-import",
         "news-import",
         "article-import",
+        "media-import",
+        "project-status",
     ],
     "output_default": {
         "width": 1080,
@@ -79,6 +82,27 @@ def build_parser() -> argparse.ArgumentParser:
     article.add_argument("--workspace", type=Path, required=True)
     article.add_argument("--voice", type=Path)
     article.add_argument("--project", type=Path, required=True)
+
+    media = sub.add_parser("media-import")
+    media.add_argument("--media", type=Path, action="append", required=True)
+    media.add_argument(
+        "--profile",
+        choices=[
+            "TRAVEL_DOCUMENTARY",
+            "TALKING_HEAD_EXPERT",
+            "EXPLAINER_NEWS",
+            "DIRECT_RECRUITMENT",
+        ],
+        default="TRAVEL_DOCUMENTARY",
+    )
+    media.add_argument("--target-seconds", type=float, default=60.0)
+    media.add_argument("--title", default="")
+    media.add_argument("--voice", type=Path)
+    media.add_argument("--music", type=Path)
+    media.add_argument("--project", type=Path, required=True)
+
+    status = sub.add_parser("project-status")
+    status.add_argument("--project", type=Path, required=True)
     return parser
 
 
@@ -184,6 +208,60 @@ def main(argv: list[str] | None = None) -> int:
                 project.voiceover = str(voice)
             apply_article(project, article, total_seconds=voice_duration)
             return _save_result(project, args.project, project.source_mode)
+
+        if command == "media-import":
+            project = ProjectState(
+                profile=args.profile,
+                target_seconds=max(10.0, float(args.target_seconds)),
+                title=str(args.title or "").strip(),
+                source_mode="DIRECT_MEDIA",
+            )
+            media_paths = [path.expanduser().resolve() for path in args.media]
+            project.media = import_media(media_paths)
+            if args.voice:
+                voice = args.voice.expanduser().resolve()
+                project.voiceover = str(voice)
+                voice_seconds = probe_duration(voice)
+                if args.profile == "TRAVEL_DOCUMENTARY":
+                    project.target_seconds = max(
+                        45.0,
+                        min(90.0, voice_seconds + 6.0),
+                    )
+                elif args.profile == "TALKING_HEAD_EXPERT":
+                    project.target_seconds = max(10.0, min(90.0, voice_seconds))
+            if args.music:
+                project.music = str(args.music.expanduser().resolve())
+            project.timeline = build_rough_cut(project)
+            if not project.timeline:
+                raise ValueError("Không tạo được rough cut từ media đã chọn.")
+            project.dirty = True
+            return _save_result(project, args.project, project.source_mode)
+
+        if command == "project-status":
+            project = ProjectState.load(args.project.expanduser().resolve())
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "READY",
+                        "project": str(args.project.expanduser().resolve()),
+                        "profile": project.profile,
+                        "source_mode": project.source_mode or "DIRECT_MEDIA",
+                        "media": len(project.media),
+                        "scenes": len(project.timeline),
+                        "texts": len(project.texts),
+                        "sfx": len(project.sfx),
+                        "duration": round(
+                            sum(item.duration for item in project.timeline),
+                            3,
+                        ),
+                        "voiceover": bool(project.voiceover),
+                        "music": bool(project.music),
+                        "title": project.title,
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
     except Exception as exc:
         _safe_print(f"ERROR: {exc}", error=True)
         return 1
