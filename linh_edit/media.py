@@ -97,8 +97,7 @@ def infer_role(path: Path) -> str:
     return "detail"
 
 
-def audit_video(path: Path) -> MediaAudit:
-    info = probe(path)
+def audit_media_info(info: MediaInfo) -> MediaAudit:
     reasons: list[str] = []
     warnings: list[str] = []
     score = 0.50
@@ -152,6 +151,10 @@ def audit_video(path: Path) -> MediaAudit:
         warnings=tuple(warnings),
         needs_visual_review=True,
     )
+
+
+def audit_video(path: Path) -> MediaAudit:
+    return audit_media_info(probe(path))
 
 
 def default_segment_duration(role: str, available: float) -> float:
