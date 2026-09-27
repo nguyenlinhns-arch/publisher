@@ -1,4 +1,4 @@
-# Linh Edit 1.4
+# Linh Edit 1.5
 
 Linh Edit is the single local Windows editor for Linh video workflows.
 
@@ -12,78 +12,134 @@ Linh Edit is the single local Windows editor for Linh video workflows.
 Legacy News and Editorial apps remain untouched as rollback/migration sources.
 MXH publishing stays separate.
 
-## 1.4 — Visual Selection Loop
+## 1.5 — Performance + Shot Intelligence + Smart Layout
 
-Version 1.4 upgrades the footage-selection stage from a technical file audit to
-a reviewable visual workflow.
+Version 1.5 keeps the reviewed-selection loop from 1.4 and makes it practical
+for large phone/camera footage libraries.
 
-### Source Review Pack
+### Proxy + analysis cache
 
-For selected footage Linh Edit creates:
+Heavy footage no longer needs to be re-decoded at full quality for every review.
 
-- a 12-frame source contact sheet
-- individual candidate frames
-- brightness / contrast / edge-detail metrics
-- per-source technical rank
-- perceptual-hash duplicate warnings inside and across footage
-- deterministic candidate time windows
-- an auditable JSON review manifest
+- 4K/8K, HEVC, VFR, rotated and HDR-sensitive sources can use a local analysis proxy
+- proxies are H.264, analysis-only, muted and capped at 30fps
+- final render continues to use the original source
+- cache keys include source path + size + mtime
+- unchanged sources reuse cached proxies and shot analysis
+- Source Review analysis is cached and manual KEEP/SHORTLIST/REJECT decisions survive rebuilds
+- derived cache is bounded and can be pruned without touching original footage
 
-The metrics are only **technical heuristics**. They never automatically approve
-a shot. Face crop, shake, motion blur, action quality, emotion and composition
-still require visual review.
+CLI:
+- `proxy-build`
+- `cache-status`
+- `cache-prune`
 
-### Integrated review UI
+### Shot-boundary review
 
-The **DUYỆT FOOTAGE** flow now opens a review window inside Linh Edit with:
+Source Review now prefers actual scene/shot boundaries instead of only uniform
+time sampling.
 
-- candidate thumbnail preview
-- source/time/rank/technical-score readback
-- duplicate flags and warnings
-- KEEP / SHORTLIST / REJECT decisions
-- role assignment before promotion
-- one-candidate promotion into the timeline
-- **ROUGH CUT TỪ TẤT CẢ KEEP** to build a reviewed-only rough cut
+- FFmpeg scene detection is cached
+- candidate windows stay inside detected shot boundaries
+- review still falls back safely to uniform sampling if scene detection fails
+- the contact sheet is therefore more likely to represent genuinely different shots
 
-Only candidates explicitly marked **KEEP** can be promoted by the review
-automation path.
+CLI:
+- `shot-detect`
+- `source-review`
 
-### ChatGPT / Hub direct workflow
+### VFR / rotation / HDR awareness
 
-The CLI exposes the same deterministic flow without GUI clicking:
+Linh Edit now reads:
 
+- average and nominal frame rate
+- VFR status
+- rotation metadata
+- pixel format
+- color transfer / space / primaries
+
+The app produces a normalization plan rather than destructively transcoding
+source footage. Original media remains the final-render source.
+
+CLI:
+- `normalization-plan`
+
+### Smart 9:16 reframe
+
+Candidate analysis now estimates a local visual-saliency center and stores
+9:16 crop suggestions.
+
+- landscape footage gets a suggested x/y crop
+- portrait-native footage stays centered when no crop is needed
+- the suggestion is carried into KEEP promotion and reviewed-only rough cuts
+- this is a visual heuristic, not face/person recognition, so it never bypasses review
+
+### Hook layout intelligence
+
+For each reviewed candidate Linh Edit estimates:
+
+- negative-space region
+- CENTER / UPPER-CENTER / CENTER-LEFT placement
+- CLEAN vs HIGH_CONTRAST recommendation
+- Hook x/y/alignment
+- layout confidence
+
+The review UI shows the suggested reframe and Hook layout. A KEEP candidate can
+apply its placement to existing Context/Main/Keyword Hook layers with a
+checkpoint first.
+
+CLI:
+- `hook-layout-apply`
+
+### Review loop retained from 1.4
+
+- individual candidate thumbnails
+- technical rank
+- brightness / contrast / edge-detail hints
+- perceptual duplicate warnings across footage
+- KEEP / SHORTLIST / REJECT
+- role assignment
+- candidate promotion
+- **ROUGH CUT TỪ TẤT CẢ KEEP**
+
+Only explicit KEEP candidates enter the reviewed automation path.
+
+## Direct ChatGPT / Hub commands
+
+- `media-import`
+- `media-audit`
+- `proxy-build`
+- `shot-detect`
 - `source-review`
 - `review-mark`
 - `review-promote`
 - `review-build`
+- `hook-layout-apply`
+- `normalization-plan`
+- `cache-status`
+- `cache-prune`
+- `project-status`
+- `project-validate`
 - `project-patch`
 - `project-checkpoint`
+- `checkpoint-list`
 - `checkpoint-restore`
-- `project-validate`
+- `news-import`
+- `article-import`
+- `legacy-import`
 - `render`
 
-This allows ChatGPT to create review packs, inspect/mark selected candidates,
-promote only approved footage, build a rough cut, patch text/audio/timeline and
-render through the same Linh Edit project model.
+## Safety / review policy
 
-## Safety core retained
-
-- project schema v2 with backward loading
-- atomic project saves
+- project schema v2
+- atomic saves
 - source/transcript sidecars
 - durable checkpoints
-- automatic checkpoints before destructive phases
 - preflight validation before render
-- technical footage rejection for unusable sources
-- local FFmpeg/FFprobe render
-- contact-sheet review
-- versioned outputs
-- true no-audio visual master
-
-## Review policy
-
-A successful render means **technical render/QA passed**, not that the edit is
-finished.
+- original footage is never replaced by proxies
+- cache contains only disposable derived data
+- technical scoring never auto-approves visual quality
+- technical render completion is not playback approval
 
 Final review remains:
 
@@ -91,27 +147,18 @@ Final review remains:
 2. Audio-only
 3. Full playback without stopping
 
-Exports remain `PENDING_PLAYBACK` until those passes are actually completed.
-
 ## Windows app
 
 The portable Windows build contains:
 
 - `LinhEdit.exe`
-- bundled FFmpeg / FFprobe
-- Montserrat + Oswald typography assets
-- Pillow visual-review runtime
-- Hub manifest / launcher / health check
+- FFmpeg / FFprobe
+- Montserrat + Oswald
+- Pillow visual-analysis runtime
+- Hub lifecycle files
 
 Normal use does not require a separate Python installation.
-
-## Local roots
 
 Unified source root:
 
 - `D:\LINH_EDIT`
-
-Legacy rollback sources:
-
-- `D:\2 THAY_LINH_NEWS_VIDEO_APP_1.0.2\THAY_LINH_NEWS_VIDEO_APP_1.0.2`
-- `D:\3 THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL`
