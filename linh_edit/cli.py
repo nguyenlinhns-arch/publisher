@@ -23,11 +23,14 @@ from .normalization import build_normalization_plan
 from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
+from .review_gate import reset_review, review_status, set_review_stage
 from .semantic_match import (
     apply_text_shot_matching_to_file,
     build_text_shot_report,
 )
 from .shot_detection import detect_shots
+from .speech_rhythm import apply_talk_rhythm_to_file
+from .story_optimizer import optimize_story_to_file
 from .source_review import (
     apply_candidate_hook_layout,
     apply_kept_candidates,
@@ -85,6 +88,11 @@ CAPABILITIES = {
         "text-shot-report",
         "text-shot-apply",
         "transcript-set",
+        "story-optimize",
+        "talk-rhythm-apply",
+        "review-status",
+        "review-set",
+        "review-reset",
     ],
     "output_default": {
         "width": 1080,
@@ -246,6 +254,29 @@ def build_parser() -> argparse.ArgumentParser:
     transcript_set = sub.add_parser("transcript-set")
     transcript_set.add_argument("--project", type=Path, required=True)
     transcript_set.add_argument("--source", type=Path, required=True)
+
+    story_optimize = sub.add_parser("story-optimize")
+    story_optimize.add_argument("--project", type=Path, required=True)
+
+    talk_rhythm = sub.add_parser("talk-rhythm-apply")
+    talk_rhythm.add_argument("--project", type=Path, required=True)
+    talk_rhythm.add_argument("--minimum-segment", type=float, default=1.2)
+    talk_rhythm.add_argument("--punch-scale", type=float, default=1.035)
+
+    review_status_parser = sub.add_parser("review-status")
+    review_status_parser.add_argument("--project", type=Path, required=True)
+
+    review_set = sub.add_parser("review-set")
+    review_set.add_argument("--project", type=Path, required=True)
+    review_set.add_argument("--stage", choices=["visual", "audio", "full"], required=True)
+    review_set.add_argument(
+        "--value",
+        choices=["PENDING", "PASS", "FAIL"],
+        required=True,
+    )
+
+    review_reset = sub.add_parser("review-reset")
+    review_reset.add_argument("--project", type=Path, required=True)
     return parser
 
 
@@ -797,6 +828,47 @@ def main(argv: list[str] | None = None) -> int:
                     ensure_ascii=False,
                 )
             )
+            return 0
+
+        if command == "story-optimize":
+            result = optimize_story_to_file(
+                args.project.expanduser().resolve(),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "talk-rhythm-apply":
+            result = apply_talk_rhythm_to_file(
+                args.project.expanduser().resolve(),
+                minimum_segment=max(0.8, float(args.minimum_segment)),
+                punch_scale=max(1.0, min(1.08, float(args.punch_scale))),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "review-status":
+            project_path = args.project.expanduser().resolve()
+            project = ProjectState.load(project_path)
+            result = review_status(project)
+            result["project"] = str(project_path)
+            result["revision"] = project.revision
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "review-set":
+            result = set_review_stage(
+                args.project.expanduser().resolve(),
+                stage=str(args.stage),
+                value=str(args.value),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "review-reset":
+            result = reset_review(
+                args.project.expanduser().resolve(),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
             return 0
     except Exception as exc:
         _safe_print(f"ERROR: {exc}", error=True)
