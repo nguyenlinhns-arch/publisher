@@ -225,7 +225,7 @@ class LinhEditWindow:
         )
         self.source_label = ttk.Label(quick, text="Nguồn: thủ công", anchor=tk.W)
         self.source_label.grid(
-            row=2, column=6, columnspan=2, sticky=tk.EW, padx=(6, 0), pady=(8, 0)
+            row=2, column=6, sticky=tk.EW, padx=(6, 0), pady=(8, 0)
         )
 
         ttk.Button(
