@@ -32,6 +32,28 @@ def _escape(value: str) -> str:
     )
 
 
+def _wrap_for_mobile(text: TextSpec) -> str:
+    value = " ".join(text.text.split())
+    if not value:
+        return value
+    words = value.split()
+    if text.role in {"caption", "location"}:
+        per_line, max_lines = 6, 2
+    elif text.role == "keyword":
+        per_line, max_lines = 3, 2
+    elif text.role == "main":
+        per_line, max_lines = 4, 2
+    else:
+        per_line, max_lines = 5, 2
+    if len(words) <= per_line:
+        return value
+    lines = [
+        " ".join(words[start : start + per_line])
+        for start in range(0, min(len(words), per_line * max_lines), per_line)
+    ]
+    return "\n".join(lines)
+
+
 def _alignment(text: TextSpec) -> int:
     if text.align == "left":
         return 1
@@ -52,7 +74,7 @@ def write_ass(plan: EditPlan, target: Path) -> None:
         outline = 1.4 if item.role in {"context", "main", "keyword"} else 1.2
         font_size = max(16, round(item.size * w / 1080))
         align = _alignment(item)
-        body = _escape(item.text)
+        body = _escape(_wrap_for_mobile(item))
         if item.role == "keyword":
             motion = rf"\move({x-22},{y},{x},{y},0,280)\fad(80,100)"
         elif item.role == "main":
