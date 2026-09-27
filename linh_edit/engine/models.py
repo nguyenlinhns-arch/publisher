@@ -25,6 +25,7 @@ class ClipSpec:
     motion: Literal["none", "slow_zoom"] = "none"
     mute_source_audio: bool = True
     source_gain: float = 0.10
+    hdr_to_sdr: bool = False
 
     def validate(self) -> None:
         if self.kind not in {"video", "image"}:
@@ -88,6 +89,10 @@ class AudioSpec:
     duck_ratio: float = 8.0
     duck_attack_ms: float = 25.0
     duck_release_ms: float = 450.0
+    auto_master_audio: bool = True
+    master_lufs: float = -14.0
+    master_true_peak: float = -1.5
+    master_lra: float = 11.0
     source_ambience_gain: float = 0.10
     ending_music_only_seconds: float = 6.0
 
@@ -104,6 +109,12 @@ class AudioSpec:
             raise ValueError("audio.duck_attack_ms out of range")
         if not 1 <= self.duck_release_ms <= 5000:
             raise ValueError("audio.duck_release_ms out of range")
+        if not -24 <= self.master_lufs <= -8:
+            raise ValueError("audio.master_lufs out of range")
+        if not -6 <= self.master_true_peak <= -0.1:
+            raise ValueError("audio.master_true_peak out of range")
+        if not 1 <= self.master_lra <= 20:
+            raise ValueError("audio.master_lra out of range")
 
 
 @dataclass(frozen=True, slots=True)
