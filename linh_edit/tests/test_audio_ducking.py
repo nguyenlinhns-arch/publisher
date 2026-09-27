@@ -26,10 +26,13 @@ def test_project_schema_v2_migrates_audio_defaults(tmp_path: Path):
 
     project = ProjectState.load(path)
 
-    assert project.schema_version == 5
+    assert project.schema_version == 6
     assert project.auto_duck_music is True
     assert project.voice_gain == 1.0
     assert project.caption_coverage_target == 0.65
+    assert project.auto_master_audio is True
+    assert project.master_lufs == -14.0
+    assert project.auto_hdr_to_sdr is True
     assert project.revision == 0
 
 
@@ -55,6 +58,10 @@ def test_project_to_plan_carries_ducking_settings(tmp_path: Path):
         duck_ratio=7.0,
         duck_attack_ms=30.0,
         duck_release_ms=500.0,
+        auto_master_audio=True,
+        master_lufs=-14.0,
+        master_true_peak=-1.5,
+        master_lra=11.0,
     )
     plan_path = tmp_path / "plan.json"
 
@@ -68,3 +75,7 @@ def test_project_to_plan_carries_ducking_settings(tmp_path: Path):
     assert plan.audio.duck_ratio == 7.0
     assert plan.audio.duck_attack_ms == 30.0
     assert plan.audio.duck_release_ms == 500.0
+    assert plan.audio.auto_master_audio is True
+    assert plan.audio.master_lufs == -14.0
+    assert plan.audio.master_true_peak == -1.5
+    assert plan.audio.master_lra == 11.0
