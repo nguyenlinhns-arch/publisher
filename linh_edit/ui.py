@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from PIL import Image, ImageTk
 
 from .article_ingest import apply_article, fetch_article
+from .caption_planner import apply_selective_captions
 from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .contact_sheet import extract_contact_sheet
 from .cover import extract_cover
@@ -22,6 +23,7 @@ from .legacy_import import import_legacy_script
 from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
+from .semantic_match import apply_text_shot_matching
 from .source_review import (
     apply_candidate_hook_layout,
     apply_kept_candidates,
@@ -197,6 +199,25 @@ class LinhEditWindow:
         self.source_label.grid(
             row=2, column=6, columnspan=2, sticky=tk.EW, padx=(6, 0), pady=(8, 0)
         )
+
+        ttk.Label(quick, text="AI local / tự động").grid(
+            row=3, column=0, sticky=tk.W, pady=(8, 0)
+        )
+        ttk.Button(
+            quick,
+            text="AUTO CAPTION VO",
+            command=self.auto_selective_captions,
+        ).grid(row=3, column=1, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
+        ttk.Button(
+            quick,
+            text="MATCH TEXT → SHOT",
+            command=self.auto_text_shot_match,
+        ).grid(row=3, column=3, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
+        ttk.Button(
+            quick,
+            text="AUDIO / DUCKING",
+            command=self.audio_settings,
+        ).grid(row=3, column=5, columnspan=2, sticky=tk.EW, padx=6, pady=(8, 0))
 
         titlebar = ttk.Frame(outer)
         titlebar.pack(fill=tk.X, pady=(0, 8))
@@ -1089,6 +1110,151 @@ class LinhEditWindow:
             target = folder / "linh_edit_transcript.txt"
         target.write_text(transcript + "\n", encoding="utf-8")
         self._open_path(target)
+
+    def auto_selective_captions(self) -> None:
+        if self.busy:
+            return
+        self._sync_project()
+        if not self.project.transcript.strip():
+            messagebox.showinfo(
+                "Chưa có transcript",
+                "Selective caption cần transcript/VO script trước.",
+            )
+            return
+        self._checkpoint_if_saved("before-selective-captions")
+        try:
+            result = apply_selective_captions(
+                self.project,
+                coverage_target=self.project.caption_coverage_target,
+                replace_existing=True,
+            )
+        except Exception as exc:
+            messagebox.showerror("Không tạo được selective caption", str(exc))
+            return
+        self.project.dirty = True
+        self._refresh_all()
+        self.status_var.set(
+            f"Selective caption: {result['caption_blocks']} block • "
+            f"{result['display_seconds']:.1f}s hiển thị."
+        )
+
+    def auto_text_shot_match(self) -> None:
+        if self.busy:
+            return
+        self._sync_project()
+        if not self.project.transcript.strip():
+            messagebox.showinfo(
+                "Chưa có transcript",
+                "Text–shot matching cần transcript trước.",
+            )
+            return
+        if not self.project.timeline:
+            messagebox.showinfo("Timeline trống", "Hãy tạo rough cut trước.")
+            return
+        self._checkpoint_if_saved("before-text-shot-match")
+        try:
+            result = apply_text_shot_matching(
+                self.project,
+                coverage_target=self.project.caption_coverage_target,
+                max_distance=3,
+            )
+        except Exception as exc:
+            messagebox.showerror("Text–shot matching lỗi", str(exc))
+            return
+        self.project.dirty = bool(result["swap_count"]) or self.project.dirty
+        self._refresh_all()
+        self.status_var.set(
+            f"Text–shot matching: {result['swap_count']} hoán đổi an toàn."
+        )
+
+    def audio_settings(self) -> None:
+        win = tk.Toplevel(self.root)
+        win.title("Audio / Music Ducking")
+        win.transient(self.root)
+        win.grab_set()
+
+        music_gain = tk.DoubleVar(value=self.project.music_gain)
+        voice_gain = tk.DoubleVar(value=self.project.voice_gain)
+        auto_duck = tk.BooleanVar(value=self.project.auto_duck_music)
+        threshold = tk.DoubleVar(value=self.project.duck_threshold)
+        ratio = tk.DoubleVar(value=self.project.duck_ratio)
+        attack = tk.DoubleVar(value=self.project.duck_attack_ms)
+        release = tk.DoubleVar(value=self.project.duck_release_ms)
+        coverage = tk.DoubleVar(value=self.project.caption_coverage_target)
+
+        rows = [
+            ("Music gain", music_gain),
+            ("Voice gain", voice_gain),
+            ("Duck threshold", threshold),
+            ("Duck ratio", ratio),
+            ("Duck attack ms", attack),
+            ("Duck release ms", release),
+            ("Caption coverage", coverage),
+        ]
+        for row, (label, var) in enumerate(rows):
+            ttk.Label(win, text=label).grid(
+                row=row,
+                column=0,
+                sticky=tk.W,
+                padx=10,
+                pady=5,
+            )
+            ttk.Entry(win, textvariable=var, width=18).grid(
+                row=row,
+                column=1,
+                sticky=tk.EW,
+                padx=10,
+                pady=5,
+            )
+
+        ttk.Checkbutton(
+            win,
+            text="Tự duck nhạc khi có VO",
+            variable=auto_duck,
+        ).grid(
+            row=len(rows),
+            column=0,
+            columnspan=2,
+            sticky=tk.W,
+            padx=10,
+            pady=6,
+        )
+
+        def save() -> None:
+            try:
+                values = {
+                    "music_gain": max(0.0, min(4.0, float(music_gain.get()))),
+                    "voice_gain": max(0.0, min(4.0, float(voice_gain.get()))),
+                    "duck_threshold": max(0.0001, min(1.0, float(threshold.get()))),
+                    "duck_ratio": max(1.0, min(20.0, float(ratio.get()))),
+                    "duck_attack_ms": max(1.0, min(2000.0, float(attack.get()))),
+                    "duck_release_ms": max(1.0, min(5000.0, float(release.get()))),
+                    "caption_coverage_target": max(0.10, min(1.0, float(coverage.get()))),
+                }
+            except (ValueError, tk.TclError) as exc:
+                messagebox.showerror("Thông số chưa hợp lệ", str(exc), parent=win)
+                return
+            self._checkpoint_if_saved("before-audio-settings")
+            for key, value in values.items():
+                setattr(self.project, key, value)
+            self.project.auto_duck_music = bool(auto_duck.get())
+            self.project.dirty = True
+            self._refresh_all()
+            self.status_var.set(
+                "Audio: "
+                + ("auto duck ON" if self.project.auto_duck_music else "auto duck OFF")
+            )
+            win.destroy()
+
+        ttk.Button(win, text="Lưu audio settings", command=save).grid(
+            row=len(rows) + 1,
+            column=0,
+            columnspan=2,
+            sticky=tk.EW,
+            padx=10,
+            pady=10,
+        )
+        win.columnconfigure(1, weight=1)
 
     def choose_voice(self) -> None:
         value = filedialog.askopenfilename(
