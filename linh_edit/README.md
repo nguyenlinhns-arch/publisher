@@ -1,4 +1,4 @@
-# Linh Edit 1.1
+# Linh Edit 1.2
 
 Linh Edit is the single local Windows editor for the Linh video workflows.
 
@@ -9,65 +9,84 @@ Linh Edit is the single local Windows editor for the Linh video workflows.
 - Tin tức / Editorial
 - Tuyển dụng
 
-The two older video apps remain untouched as rollback/migration sources until
-local Windows acceptance is complete. MXH publishing stays separate.
+The two older video apps remain untouched as rollback/migration sources.
+MXH publishing stays separate.
 
-## What 1.1 consolidates
+## 1.2: safer, more controllable local editing
 
-### From THAY LINH NEWS VIDEO APP
+Linh Edit 1.2 keeps the 1.1 unified engine and adds a control/safety layer for
+daily work and direct ChatGPT/Hub operation:
 
-- paste ordinary Vietnamese news text or legacy JSON
-- deterministic scene splitting and canonical transcript
-- reuse one or many selected images across scenes
-- allocate scene duration from narration weight
-- resync the whole story to the real selected voice duration
-- preview/final local render and versioned output
-- import an existing legacy `script.json`
+- versioned project schema with backward migration
+- atomic project saves plus source/transcript sidecars
+- durable checkpoints with restore
+- automatic checkpoints before rough cut, text, audio, SFX, destructive timeline edits and export
+- safe deterministic JSON project patches for remote/ChatGPT editing
+- project preflight validation before render
+- technical media audit before rough cut
+- hard rejection of technically unusable footage while leaving blur/shake/composition for visual review
+- explicit TECHNICAL_DONE vs playback-review PENDING state
+- contact sheet review
+- true visual master without an audio stream
+- Windows local render, QA and versioned outputs
 
-### From THAY LINH VIDEO APP EDITORIAL
+## Unified source workflows
 
-- create video from a public article URL
-- extract source title/description/paragraphs and real article images locally
-- reject private/loopback/internal URL targets
-- deterministic, source-grounded storyboard
-- transcript-first workflow; the app does not create TTS
-- import legacy Editorial `hero/card` projects into the same Linh Edit timeline
+### Direct footage
 
-### Linh Edit DNA
+Use Travel, Talk or Recruitment profiles with normal footage/media import.
+The rough-cut planner preserves the Linh Edit story DNA and scores technical
+suitability before selection.
 
-- Hook 3 layers: Context / Main / Keyword
-- Montserrat for hook hierarchy
-- Oswald for selective body captions
-- local FFmpeg/FFprobe rendering
-- 1080x1920 / 30fps output by default
-- render to temporary output -> QA -> atomic final
-- no cloud render credits required
-- final export creates a JPG cover
-- existing final files are versioned instead of overwritten
+### News / Editorial
 
-## Unified workflow
+Use either:
 
-1. Choose one source:
-   - add footage/media directly,
-   - **DÁN NEWS / JSON**, or
-   - **VIDEO TỪ LINK BÀI VIẾT**.
-2. For News/Editorial, open the generated transcript if a voice track is needed.
-3. Create/select the voice file externally, then choose it in Linh Edit.
-4. Linh Edit re-times News/Editorial scenes to the real voice duration.
-5. Review the timeline, Hook and selective captions.
-6. Preview.
-7. Export final.
+- **DÁN NEWS / JSON**
+- **VIDEO TỪ LINK BÀI VIẾT**
+- **Tệp -> Nhập dự án app cũ (script.json)...**
+
+Linh Edit creates or preserves the canonical transcript, scene order, image
+order and selected audio. News/Editorial timelines can be re-timed to the real
+voice duration.
+
+## Direct control / automation
+
+The local CLI exposes deterministic commands that do not require GUI clicking:
+
+- `media-import`
+- `news-import`
+- `article-import`
+- `legacy-import`
+- `media-audit`
+- `project-status`
+- `project-validate`
+- `project-patch`
+- `project-checkpoint`
+- `checkpoint-list`
+- `checkpoint-restore`
+- `render`
+
+Every project patch creates a checkpoint first and validates the resulting
+project before committing it.
+
+## Review policy
+
+A successful render means the technical render/QA passed. It does **not** mean
+the edit has passed playback review.
+
+Final review remains:
+
+1. Visual-only review
+2. Audio-only review
+3. Full playback without stopping
+
+QA files therefore keep visual/audio/style review states as pending until those
+passes are completed.
 
 ## Legacy migration
 
-Use **Tệp -> Nhập dự án app cũ (script.json)...** and select the old
-`script.json`.
-
-Linh Edit reads both UTF-8 and Windows UTF-8 BOM files. It also reuses a legacy
-voice only when the old `transcript.txt` still matches the imported narration.
-The legacy source folders are not modified.
-
-Known legacy roots on the workstation:
+Known rollback sources on the workstation:
 
 - `D:\2 THAY_LINH_NEWS_VIDEO_APP_1.0.2\THAY_LINH_NEWS_VIDEO_APP_1.0.2`
 - `D:\3 THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL`
@@ -75,3 +94,5 @@ Known legacy roots on the workstation:
 Target unified install root:
 
 - `D:\LINH_EDIT`
+
+The legacy source folders are not modified.
