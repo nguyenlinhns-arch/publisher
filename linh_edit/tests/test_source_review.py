@@ -265,3 +265,89 @@ def test_enriched_candidates_receive_technical_rank(tmp_path, monkeypatch):
 
     assert [item.technical_rank for item in enriched] == [3, 1, 2]
     assert enriched[1].fingerprint
+
+
+def test_mark_review_persists_selected_role(tmp_path):
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"video")
+    manifest = _review_manifest(tmp_path, video)
+
+    source_review.mark_candidate_review(
+        manifest,
+        item_index=1,
+        candidate_index=1,
+        decision="KEEP",
+        role="human",
+        note="Giữ cảnh người.",
+    )
+
+    payload = source_review.load_review_manifest(manifest)
+    candidate = payload["items"][0]["candidates"][0]
+    assert candidate["decision"] == "KEEP"
+    assert candidate["review_role"] == "human"
+
+
+def test_apply_kept_candidates_builds_reviewed_only_rough_cut(tmp_path):
+    keep = tmp_path / "keep.mp4"
+    reject = tmp_path / "reject.mp4"
+    keep.write_bytes(b"keep")
+    reject.write_bytes(b"reject")
+
+    manifest = tmp_path / "source_review_manifest.json"
+    source_review._atomic_json_write(
+        manifest,
+        {
+            "schema": source_review.REVIEW_SCHEMA,
+            "items": [
+                {
+                    "source": str(keep),
+                    "audit_score": 0.9,
+                    "audit_reject": False,
+                    "candidates": [
+                        {
+                            "index": 1,
+                            "start": 1.0,
+                            "duration": 4.0,
+                            "technical_score": 0.8,
+                            "decision": "KEEP",
+                            "review_role": "human",
+                        }
+                    ],
+                },
+                {
+                    "source": str(reject),
+                    "audit_score": 0.9,
+                    "audit_reject": False,
+                    "candidates": [
+                        {
+                            "index": 1,
+                            "start": 0.0,
+                            "duration": 3.0,
+                            "technical_score": 0.8,
+                            "decision": "REJECT",
+                            "review_role": "detail",
+                        }
+                    ],
+                },
+            ],
+            "errors": [],
+        },
+    )
+    project_path = tmp_path / "travel.linhedit.json"
+    ProjectState(
+        profile="TRAVEL_DOCUMENTARY",
+        target_seconds=45.0,
+        source_mode="DIRECT_MEDIA",
+    ).save(project_path)
+
+    result = source_review.apply_kept_candidates(
+        manifest,
+        project_path,
+        build_timeline=True,
+    )
+
+    saved = ProjectState.load(project_path)
+    assert result["keep_candidates"] == 1
+    assert len(saved.timeline) == 1
+    assert saved.timeline[0].path == str(keep.resolve())
+    assert saved.timeline[0].role == "human"
