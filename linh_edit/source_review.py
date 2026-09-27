@@ -76,7 +76,10 @@ def candidate_windows(
     margin = min(segment_seconds / 2, duration * 0.08)
     left = margin
     right = max(left, duration - margin)
-    effective = max(1, min(count, math.ceil(duration / max(segment_seconds, 1.0))))
+    # Keep candidate numbering 1:1 with the contact-sheet tiles. Windows may
+    # overlap on short footage; that is intentional because visual sampling
+    # still needs a deterministic tile-to-time mapping.
+    effective = count
 
     if effective == 1:
         centers = [duration / 2]
