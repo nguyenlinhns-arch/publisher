@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Literal
 
-CURRENT_PROJECT_SCHEMA = 4
+CURRENT_PROJECT_SCHEMA = 5
 
 class ProjectConflictError(RuntimeError):
     """Raised when another process saved a newer project revision."""
@@ -60,6 +60,11 @@ class SfxItem:
 class ProjectState:
     schema_version: int = CURRENT_PROJECT_SCHEMA
     revision: int = 0
+    content_revision: int = 0
+    review_content_revision: int = -1
+    review_visual: str = "PENDING"
+    review_audio: str = "PENDING"
+    review_full_playback: str = "PENDING"
     name: str = "Dự án mới"
     profile: ProfileName = "TRAVEL_DOCUMENTARY"
     target_seconds: float = 75.0
@@ -87,20 +92,45 @@ class ProjectState:
     dirty: bool = False
 
     @staticmethod
+    def _disk_payload(path: Path) -> dict[str, Any]:
+        path = path.expanduser().resolve()
+        if not path.is_file():
+            return {}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except Exception:
+            return {}
+        return payload if isinstance(payload, dict) else {}
+
+    @staticmethod
     def disk_revision(path: Path) -> int:
         path = path.expanduser().resolve()
         if not path.is_file():
             return 0
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8-sig"))
-        except Exception:
-            return 0
-        if not isinstance(payload, dict):
-            return 0
+        payload = ProjectState._disk_payload(path)
         try:
             return max(0, int(payload.get("revision", 0) or 0))
         except (TypeError, ValueError):
             return 0
+
+    @staticmethod
+    def disk_content_revision(path: Path) -> int:
+        payload = ProjectState._disk_payload(path)
+        try:
+            return max(0, int(payload.get("content_revision", 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def review_is_current(self) -> bool:
+        return int(self.review_content_revision) == int(self.content_revision)
+
+    def ready_to_publish(self) -> bool:
+        return (
+            self.review_is_current()
+            and self.review_visual == "PASS"
+            and self.review_audio == "PASS"
+            and self.review_full_playback == "PASS"
+        )
 
     def save(self, path: Path, *, force: bool = False) -> None:
         path = path.expanduser().resolve()
@@ -115,9 +145,18 @@ class ProjectState:
             )
 
         next_revision = max(int(self.revision), disk_revision) + 1
+        disk_content_revision = self.disk_content_revision(path)
+        next_content_revision = max(
+            int(self.content_revision),
+            disk_content_revision,
+        )
+        if self.dirty:
+            next_content_revision += 1
+
         payload = asdict(self)
         payload["schema_version"] = CURRENT_PROJECT_SCHEMA
         payload["revision"] = next_revision
+        payload["content_revision"] = next_content_revision
         payload["dirty"] = False
         text = json.dumps(payload, ensure_ascii=False, indent=2)
         temp = path.with_suffix(path.suffix + ".partial")
@@ -126,6 +165,7 @@ class ProjectState:
 
         self.schema_version = CURRENT_PROJECT_SCHEMA
         self.revision = next_revision
+        self.content_revision = next_content_revision
 
         sidecar_stem = path.name
         if sidecar_stem.endswith(".linhedit.json"):
