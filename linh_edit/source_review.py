@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .analysis_frames import compose_contact_sheet, extract_candidate_frames
-from .cache import source_signature
+from .cache import prune_cache, source_signature
 from .checkpoint import create_checkpoint
 from .media import MediaAudit, audit_media_info, infer_role, probe
 from .proxy import ensure_proxy
@@ -397,6 +397,12 @@ def build_source_review(
             },
         },
     )
+    # Derived proxies/analysis files are disposable. Keep the cache bounded
+    # without ever deleting original footage or project files.
+    try:
+        prune_cache()
+    except Exception:
+        pass
     return manifest
 
 
