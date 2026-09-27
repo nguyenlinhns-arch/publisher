@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .engine.plan_io import load_plan
 from .engine.renderer import render_plan
+from .final_qa import write_editorial_qa
 from .media import probe
 
 from .project import ProjectState
@@ -128,4 +129,17 @@ def render_project(
         include_audio=include_audio,
     )
     plan = load_plan(plan_path)
-    return render_plan(plan, output)
+    result = render_plan(plan, output)
+    try:
+        write_editorial_qa(
+            result,
+            project,
+            preview=preview,
+        )
+    except Exception as exc:
+        editorial_error = output.with_suffix(".editorial_qa_error.txt")
+        editorial_error.write_text(
+            f"{type(exc).__name__}: {exc}\n",
+            encoding="utf-8",
+        )
+    return result
