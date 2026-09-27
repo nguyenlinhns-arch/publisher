@@ -7,13 +7,16 @@ from pathlib import Path
 
 from . import APP_NAME, __version__
 from .article_ingest import apply_article, fetch_article
+from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .engine_adapter import render_project
 from .legacy_import import import_legacy_script
 from .media import probe_duration
 from .news_ingest import apply_news_content
+from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
 from .tools import resolve_tool
+from .validation import validate_project
 
 
 CAPABILITIES = {
@@ -41,6 +44,11 @@ CAPABILITIES = {
         "article-import",
         "media-import",
         "project-status",
+        "project-validate",
+        "project-patch",
+        "project-checkpoint",
+        "checkpoint-list",
+        "checkpoint-restore",
     ],
     "output_default": {
         "width": 1080,
@@ -103,6 +111,25 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = sub.add_parser("project-status")
     status.add_argument("--project", type=Path, required=True)
+
+    validate = sub.add_parser("project-validate")
+    validate.add_argument("--project", type=Path, required=True)
+    validate.add_argument("--deep", action="store_true")
+
+    patch = sub.add_parser("project-patch")
+    patch.add_argument("--project", type=Path, required=True)
+    patch.add_argument("--patch", type=Path, required=True)
+
+    checkpoint = sub.add_parser("project-checkpoint")
+    checkpoint.add_argument("--project", type=Path, required=True)
+    checkpoint.add_argument("--label", default="manual")
+
+    checkpoint_list = sub.add_parser("checkpoint-list")
+    checkpoint_list.add_argument("--project", type=Path, required=True)
+
+    checkpoint_restore = sub.add_parser("checkpoint-restore")
+    checkpoint_restore.add_argument("--project", type=Path, required=True)
+    checkpoint_restore.add_argument("--checkpoint", type=Path, required=True)
     return parser
 
 
@@ -257,6 +284,104 @@ def main(argv: list[str] | None = None) -> int:
                         "voiceover": bool(project.voiceover),
                         "music": bool(project.music),
                         "title": project.title,
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "project-validate":
+            path = args.project.expanduser().resolve()
+            project = ProjectState.load(path)
+            report = validate_project(project, deep=bool(args.deep))
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "PASS" if report.passed else "FAIL",
+                        "project": str(path),
+                        **report.to_dict(),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0 if report.passed else 1
+
+        if command == "project-patch":
+            project_path = args.project.expanduser().resolve()
+            project = ProjectState.load(project_path)
+            checkpoint = create_checkpoint(
+                project,
+                project_path,
+                label="before-patch",
+            )
+            patched = apply_patch(project, load_patch(args.patch))
+            patched.save(project_path)
+            report = validate_project(patched, deep=False)
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "DONE",
+                        "project": str(project_path),
+                        "checkpoint": str(checkpoint),
+                        "warnings": [item.message for item in report.warnings],
+                        "duration": report.duration,
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "project-checkpoint":
+            project_path = args.project.expanduser().resolve()
+            project = ProjectState.load(project_path)
+            checkpoint = create_checkpoint(
+                project,
+                project_path,
+                label=str(args.label or "manual"),
+            )
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "DONE",
+                        "project": str(project_path),
+                        "checkpoint": str(checkpoint),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "checkpoint-list":
+            project_path = args.project.expanduser().resolve()
+            items = list_checkpoints(project_path)
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "READY",
+                        "project": str(project_path),
+                        "checkpoints": [str(item) for item in items],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "checkpoint-restore":
+            project_path = args.project.expanduser().resolve()
+            restored = restore_checkpoint(
+                args.checkpoint.expanduser().resolve(),
+                project_path,
+            )
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "DONE",
+                        "project": str(project_path),
+                        "profile": restored.profile,
+                        "duration": round(
+                            sum(item.duration for item in restored.timeline),
+                            3,
+                        ),
                     },
                     ensure_ascii=False,
                 )
