@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 from copy import deepcopy
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, fields, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -20,6 +20,7 @@ from .project import MediaItem, ProjectState
 from .visual_metrics import analyze_frame, annotate_duplicate_groups
 
 REVIEW_SCHEMA = "linh-edit.source-review.v2"
+REVIEW_ENGINE_VERSION = 3
 REVIEW_DECISIONS = {"PENDING", "SHORTLIST", "KEEP", "REJECT"}
 
 
@@ -249,6 +250,92 @@ def _annotate_global_duplicates(items: list[dict[str, Any]], *, threshold: int =
             previous.append((f"{item_index}:{candidate_index}", fingerprint))
 
 
+def _cached_review_item(
+    manifest: Path,
+    *,
+    tiles: int,
+    columns: int,
+    candidate_seconds: float,
+) -> SourceReviewItem | None:
+    if not manifest.is_file():
+        return None
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if int(payload.get("engine_version", 0)) != REVIEW_ENGINE_VERSION:
+        return None
+    params = payload.get("parameters") or {}
+    if (
+        int(params.get("tiles", -1)) != int(tiles)
+        or int(params.get("columns", -1)) != int(columns)
+        or abs(float(params.get("candidate_seconds", -1)) - float(candidate_seconds)) > 0.001
+    ):
+        return None
+
+    try:
+        candidate_fields = {field.name for field in fields(CandidateWindow)}
+        source_fields = {field.name for field in fields(SourceReviewItem)}
+        raw_candidates = payload.get("candidates") or []
+        candidates = tuple(
+            CandidateWindow(
+                **{
+                    key: value
+                    for key, value in raw.items()
+                    if key in candidate_fields
+                }
+            )
+            for raw in raw_candidates
+        )
+        values = {
+            key: value
+            for key, value in payload.items()
+            if key in source_fields and key != "candidates"
+        }
+        for key in ("audit_reasons", "audit_warnings"):
+            if key in values:
+                values[key] = tuple(values[key])
+        values["candidates"] = candidates
+        return SourceReviewItem(**values)
+    except Exception:
+        return None
+
+
+def _decision_key(source: str, candidate: dict[str, Any]) -> tuple[str, float, float]:
+    return (
+        str(Path(source).expanduser().resolve()),
+        round(float(candidate.get("start") or 0.0), 2),
+        round(float(candidate.get("end") or 0.0), 2),
+    )
+
+
+def _preserved_decisions(existing: dict[str, Any] | None) -> dict[tuple[str, float, float], dict[str, Any]]:
+    if not existing:
+        return {}
+    result: dict[tuple[str, float, float], dict[str, Any]] = {}
+    for item in existing.get("items") or []:
+        source = str(item.get("source") or "")
+        for candidate in item.get("candidates") or []:
+            decision = str(candidate.get("decision") or "PENDING").upper()
+            if decision == "PENDING" and not candidate.get("review_note"):
+                continue
+            result[_decision_key(source, candidate)] = {
+                key: candidate.get(key)
+                for key in (
+                    "decision",
+                    "review_role",
+                    "review_note",
+                    "status",
+                    "promoted_project",
+                    "promoted_role",
+                )
+                if key in candidate
+            }
+    return result
+
+
 def review_video(
     source: Path,
     output_dir: Path,
@@ -266,6 +353,16 @@ def review_video(
     audit: MediaAudit = audit_media_info(info)
     target_dir = output_dir / _safe_stem(source)
     target_dir.mkdir(parents=True, exist_ok=True)
+    item_manifest = target_dir / "review.json"
+
+    cached = _cached_review_item(
+        item_manifest,
+        tiles=tiles,
+        columns=columns,
+        candidate_seconds=candidate_seconds,
+    )
+    if cached is not None:
+        return cached
 
     analysis_source = source
     proxy_reused = False
@@ -340,9 +437,15 @@ def review_video(
         selection_mode=selection_mode,
     )
     _atomic_json_write(
-        target_dir / "review.json",
+        item_manifest,
         {
             "schema": REVIEW_SCHEMA,
+            "engine_version": REVIEW_ENGINE_VERSION,
+            "parameters": {
+                "tiles": int(tiles),
+                "columns": int(columns),
+                "candidate_seconds": float(candidate_seconds),
+            },
             "generated_at": datetime.now(timezone.utc).isoformat(),
             **asdict(item),
         },
@@ -383,12 +486,27 @@ def build_source_review(
         raise RuntimeError("Không tạo được source review. " + detail)
 
     manifest = output_dir / "source_review_manifest.json"
+    existing_manifest = None
+    if manifest.is_file():
+        try:
+            existing_manifest = load_review_manifest(manifest)
+        except Exception:
+            existing_manifest = None
+    preserved = _preserved_decisions(existing_manifest)
+
     item_payloads = [asdict(item) for item in items]
     _annotate_global_duplicates(item_payloads)
+    for item in item_payloads:
+        source = str(item.get("source") or "")
+        for candidate in item.get("candidates") or []:
+            keep = preserved.get(_decision_key(source, candidate))
+            if keep:
+                candidate.update(keep)
     _atomic_json_write(
         manifest,
         {
             "schema": REVIEW_SCHEMA,
+            "engine_version": REVIEW_ENGINE_VERSION,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "items": item_payloads,
             "errors": errors,
