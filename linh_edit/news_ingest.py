@@ -53,6 +53,53 @@ def _summary_from_text(value: str) -> str:
     return _shorten_words(source, 18)
 
 
+def _nested_display_summary(raw: dict[str, Any]) -> str:
+    direct = _clean(raw.get("summary") or raw.get("caption") or raw.get("subtitle"))
+    if direct:
+        return direct
+
+    chips = raw.get("chips")
+    if isinstance(chips, list):
+        values = []
+        for item in chips:
+            if not isinstance(item, dict):
+                continue
+            value = _clean(item.get("value") or item.get("accent") or item.get("text"))
+            if value:
+                values.append(value)
+            if len(values) >= 2:
+                break
+        if values:
+            return " • ".join(values)
+
+    card = raw.get("card")
+    if isinstance(card, dict):
+        closing = _clean(card.get("closing"))
+        if closing:
+            return closing
+        items = card.get("items")
+        if isinstance(items, list):
+            values = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                value = _clean(item.get("accent") or item.get("value") or item.get("text"))
+                if value:
+                    values.append(value)
+                if len(values) >= 2:
+                    break
+            if values:
+                return " • ".join(values)
+
+    image = raw.get("image")
+    if isinstance(image, dict):
+        for key in ("summary", "caption", "credit"):
+            value = _clean(image.get(key))
+            if value:
+                return value
+    return ""
+
+
 def _normalize_scene(raw: Any, index: int) -> NewsScene:
     if isinstance(raw, str):
         voice = _clean(raw)
@@ -78,7 +125,7 @@ def _normalize_scene(raw: Any, index: int) -> NewsScene:
         raise ValueError(f"Cảnh {index} thiếu voice_text/nội dung.")
 
     title = _clean(raw.get("title") or raw.get("headline")) or _title_from_text(voice)
-    summary = _clean(raw.get("summary") or raw.get("caption")) or _summary_from_text(voice)
+    summary = _nested_display_summary(raw) or _summary_from_text(voice)
     badge = _clean(raw.get("badge") or raw.get("kicker") or raw.get("context"))
     caption = _clean(raw.get("caption"))
     role = _clean(raw.get("role")) or "detail"
