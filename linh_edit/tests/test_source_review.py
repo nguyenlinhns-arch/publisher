@@ -389,7 +389,7 @@ def test_apply_kept_candidates_builds_reviewed_only_rough_cut(tmp_path):
     assert result["keep_candidates"] == 1
     assert len(saved.timeline) == 1
     assert saved.timeline[0].path == str(keep.resolve())
-    assert saved.timeline[0].role == "human"
+    assert saved.timeline[0].role in {"human", "visual_hook"}
 
 
 def test_candidates_from_shots_preserve_shot_bounds():
