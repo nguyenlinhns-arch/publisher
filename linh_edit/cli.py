@@ -9,6 +9,10 @@ from pathlib import Path
 from . import APP_NAME, __version__
 from .article_ingest import apply_article, fetch_article
 from .cache import cache_summary, prune_cache
+from .caption_planner import (
+    apply_selective_captions_to_file,
+    project_caption_plan,
+)
 from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .engine_adapter import render_project
 from .legacy_import import import_legacy_script
@@ -19,6 +23,10 @@ from .normalization import build_normalization_plan
 from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
+from .semantic_match import (
+    apply_text_shot_matching_to_file,
+    build_text_shot_report,
+)
 from .shot_detection import detect_shots
 from .source_review import (
     apply_candidate_hook_layout,
@@ -72,6 +80,10 @@ CAPABILITIES = {
         "normalization-plan",
         "cache-prune",
         "hook-layout-apply",
+        "caption-plan",
+        "caption-apply",
+        "text-shot-report",
+        "text-shot-apply",
     ],
     "output_default": {
         "width": 1080,
@@ -212,6 +224,23 @@ def build_parser() -> argparse.ArgumentParser:
     hook_layout.add_argument("--project", type=Path, required=True)
     hook_layout.add_argument("--item", type=int, required=True)
     hook_layout.add_argument("--candidate", type=int, required=True)
+
+    caption_plan = sub.add_parser("caption-plan")
+    caption_plan.add_argument("--project", type=Path, required=True)
+    caption_plan.add_argument("--coverage", type=float)
+
+    caption_apply = sub.add_parser("caption-apply")
+    caption_apply.add_argument("--project", type=Path, required=True)
+    caption_apply.add_argument("--coverage", type=float)
+
+    text_shot_report = sub.add_parser("text-shot-report")
+    text_shot_report.add_argument("--project", type=Path, required=True)
+    text_shot_report.add_argument("--coverage", type=float)
+
+    text_shot_apply = sub.add_parser("text-shot-apply")
+    text_shot_apply.add_argument("--project", type=Path, required=True)
+    text_shot_apply.add_argument("--coverage", type=float)
+    text_shot_apply.add_argument("--max-distance", type=int, default=3)
     return parser
 
 
@@ -655,6 +684,83 @@ def main(argv: list[str] | None = None) -> int:
                 args.project.expanduser().resolve(),
                 item_index=int(args.item),
                 candidate_index=int(args.candidate),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "caption-plan":
+            project_path = args.project.expanduser().resolve()
+            project = ProjectState.load(project_path)
+            coverage = (
+                float(args.coverage)
+                if args.coverage is not None
+                else float(project.caption_coverage_target)
+            )
+            blocks = project_caption_plan(
+                project,
+                coverage_target=coverage,
+            )
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "READY",
+                        "project": str(project_path),
+                        "coverage_target": coverage,
+                        "caption_blocks": len(blocks),
+                        "display_seconds": round(
+                            sum(block.duration for block in blocks),
+                            3,
+                        ),
+                        "blocks": [block.to_dict() for block in blocks],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "caption-apply":
+            project_path = args.project.expanduser().resolve()
+            project = ProjectState.load(project_path)
+            coverage = (
+                float(args.coverage)
+                if args.coverage is not None
+                else float(project.caption_coverage_target)
+            )
+            result = apply_selective_captions_to_file(
+                project_path,
+                coverage_target=coverage,
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "text-shot-report":
+            project_path = args.project.expanduser().resolve()
+            project = ProjectState.load(project_path)
+            coverage = (
+                float(args.coverage)
+                if args.coverage is not None
+                else float(project.caption_coverage_target)
+            )
+            result = build_text_shot_report(
+                project,
+                coverage_target=coverage,
+            )
+            result["project"] = str(project_path)
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "text-shot-apply":
+            project_path = args.project.expanduser().resolve()
+            project = ProjectState.load(project_path)
+            coverage = (
+                float(args.coverage)
+                if args.coverage is not None
+                else float(project.caption_coverage_target)
+            )
+            result = apply_text_shot_matching_to_file(
+                project_path,
+                coverage_target=coverage,
+                max_distance=max(1, min(8, int(args.max_distance))),
             )
             _safe_print(json.dumps(result, ensure_ascii=False))
             return 0
