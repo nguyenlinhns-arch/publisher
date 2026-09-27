@@ -111,3 +111,24 @@ def test_story_optimizer_prefers_existing_reviewed_timeline():
 
     assert all(item.path != "unreviewed.mp4" for item in project.timeline)
     assert any(item.path == "kept-human.mp4" for item in project.timeline)
+
+
+def test_new_review_cycle_does_not_reuse_old_audio_or_full_pass(tmp_path):
+    path = tmp_path / "cycle.linhedit.json"
+    project = ProjectState()
+    project.save(path)
+    review_gate.set_review_stage(path, stage="visual", value="PASS")
+    review_gate.set_review_stage(path, stage="audio", value="PASS")
+    review_gate.set_review_stage(path, stage="full", value="PASS")
+
+    edited = ProjectState.load(path)
+    edited.title = "New content"
+    edited.dirty = True
+    edited.save(path)
+
+    state = review_gate.set_review_stage(path, stage="visual", value="PASS")
+
+    assert state["visual"] == "PASS"
+    assert state["audio"] == "PENDING"
+    assert state["full_playback"] == "PENDING"
+    assert not state["ready_to_publish"]
