@@ -20,6 +20,7 @@ from .legacy_import import import_legacy_script
 from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
+from .source_review import build_source_review
 from .storyboard import import_storyboard as load_storyboard
 from .validation import validate_project
 
@@ -251,6 +252,11 @@ class LinhEditWindow:
         ttk.Button(media_frame, text="Bỏ", command=self.remove_media).grid(
             row=1, column=4, sticky=tk.EW, pady=(8, 0)
         )
+        ttk.Button(
+            media_frame,
+            text="DUYỆT FOOTAGE",
+            command=self.review_selected_media,
+        ).grid(row=1, column=5, sticky=tk.EW, padx=(4, 0), pady=(8, 0))
         ttk.Button(media_frame, text="↑ Ảnh", command=lambda: self.move_media(-1)).grid(
             row=2, column=0, sticky=tk.EW, pady=(6, 0)
         )
@@ -505,6 +511,51 @@ class LinhEditWindow:
         self.status_var.set(f"Đã thêm {added} media.")
         if errors:
             messagebox.showwarning("Một số file chưa đọc được", "\n".join(errors[:8]))
+
+    def review_selected_media(self) -> None:
+        if self.busy:
+            return
+        selected = self.media_tree.selection()
+        if not selected:
+            messagebox.showinfo("Chưa chọn footage", "Hãy chọn ít nhất một video.")
+            return
+        sources = [
+            Path(self.project.media[int(iid)].path)
+            for iid in selected
+            if self.project.media[int(iid)].kind == "video"
+        ]
+        if not sources:
+            messagebox.showinfo("Không có video", "Source Review hiện áp dụng cho footage video.")
+            return
+
+        review_root = Path(self.project.output_dir or output_dir()) / "_source_review"
+        self._set_busy(True, f"Đang tạo review pack cho {len(sources)} video...")
+        future = self.executor.submit(
+            build_source_review,
+            sources,
+            review_root,
+            tiles=12,
+            columns=4,
+            candidate_seconds=3.4,
+        )
+
+        def poll_review() -> None:
+            if not future.done():
+                self.root.after(150, poll_review)
+                return
+            self._set_busy(False)
+            try:
+                manifest = future.result()
+            except Exception as exc:
+                self.status_var.set("Source Review lỗi.")
+                messagebox.showerror("Không tạo được Source Review", str(exc))
+                return
+            self.status_var.set(
+                f"Source Review sẵn sàng: {manifest.name} • cần duyệt hình bằng mắt."
+            )
+            self._open_path(manifest.parent)
+
+        self.root.after(150, poll_review)
 
     def _select_news_images(self) -> list[str]:
         existing = [item.path for item in self.project.media if item.kind == "image"]
