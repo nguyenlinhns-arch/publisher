@@ -228,6 +228,9 @@ def validate_project(project: ProjectState, *, deep: bool = False) -> Validation
         ("duck_ratio", project.duck_ratio, 1.0, 20.0),
         ("duck_attack_ms", project.duck_attack_ms, 1.0, 2000.0),
         ("duck_release_ms", project.duck_release_ms, 1.0, 5000.0),
+        ("master_lufs", project.master_lufs, -24.0, -8.0),
+        ("master_true_peak", project.master_true_peak, -6.0, -0.1),
+        ("master_lra", project.master_lra, 1.0, 20.0),
         ("caption_coverage_target", project.caption_coverage_target, 0.10, 1.0),
     ]
     for name, value, low, high in audio_ranges:
