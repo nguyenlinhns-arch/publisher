@@ -10,6 +10,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from .article_ingest import apply_article, fetch_article
+from .contact_sheet import extract_contact_sheet
 from .cover import extract_cover
 from .engine_adapter import render_project
 from .paths import output_dir
@@ -50,6 +51,7 @@ class LinhEditWindow:
         self.project_path: Path | None = None
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="linh-edit")
         self.busy = False
+        self.last_contact_sheet: Path | None = None
 
         self.status_var = tk.StringVar(value="Sẵn sàng.")
         self.profile_var = tk.StringVar(value=PROFILE_NAMES[self.project.profile])
@@ -83,6 +85,7 @@ class LinhEditWindow:
         file_menu.add_command(label="Lưu thành...", command=self.save_project_as)
         file_menu.add_separator()
         file_menu.add_command(label="Mở thư mục thành phẩm", command=self.open_output_folder)
+        file_menu.add_command(label="Mở contact sheet gần nhất", command=self.open_contact_sheet)
         file_menu.add_separator()
         file_menu.add_command(label="Thoát", command=self.close)
         menu.add_cascade(label="Tệp", menu=file_menu)
@@ -959,12 +962,21 @@ class LinhEditWindow:
         def work():
             output = render_project(snapshot, target, preview=preview)
             cover = None
-            if not preview:
+            sheet = None
+            if preview:
+                try:
+                    sheet = extract_contact_sheet(
+                        output,
+                        output.with_name(output.stem + "_contact_sheet.jpg"),
+                    )
+                except Exception:
+                    sheet = None
+            else:
                 try:
                     cover = extract_cover(output, output.with_suffix(".jpg"), at_seconds=1.5)
                 except Exception:
                     cover = None
-            return output, cover
+            return output, cover, sheet
 
         future = self.executor.submit(work)
 
@@ -974,15 +986,18 @@ class LinhEditWindow:
                 return
             self._set_busy(False)
             try:
-                output, cover = future.result()
+                output, cover, sheet = future.result()
             except Exception as exc:
                 self.status_var.set("Render lỗi.")
                 messagebox.showerror("Render chưa thành công", str(exc))
                 return
-            self.status_var.set(f"Hoàn tất: {output}")
             if preview:
+                self.last_contact_sheet = sheet
+                note = f" • Contact sheet: {sheet.name}" if sheet else ""
+                self.status_var.set(f"Hoàn tất preview: {output.name}{note}")
                 self._open_path(output)
             else:
+                self.status_var.set(f"Hoàn tất: {output}")
                 self.project.output_dir = str(output.parent)
                 detail = f"Video: {output.name}"
                 if cover:
@@ -1004,6 +1019,21 @@ class LinhEditWindow:
 
     def open_output_folder(self) -> None:
         self._open_path(Path(self.project.output_dir or output_dir()))
+
+    def open_contact_sheet(self) -> None:
+        if self.last_contact_sheet and self.last_contact_sheet.is_file():
+            self._open_path(self.last_contact_sheet)
+            return
+        preview_dir = Path(self.project.output_dir or output_dir()) / "_preview"
+        candidate = preview_dir / "linh_edit_preview_contact_sheet.jpg"
+        if candidate.is_file():
+            self.last_contact_sheet = candidate
+            self._open_path(candidate)
+            return
+        messagebox.showinfo(
+            "Chưa có contact sheet",
+            "Hãy tạo XEM THỬ trước. Linh Edit sẽ tự tạo ảnh duyệt các cảnh.",
+        )
 
     def new_project(self) -> None:
         if not self._confirm_discard():
