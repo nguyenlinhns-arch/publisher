@@ -22,7 +22,7 @@ from .planner import build_rough_cut, import_media
 from .legacy_import import import_legacy_script
 from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
-from .project import MediaItem, ProjectState, SfxItem, TextItem
+from .project import MediaItem, ProjectConflictError, ProjectState, SfxItem, TextItem
 from .semantic_match import apply_text_shot_matching
 from .source_review import (
     apply_candidate_hook_layout,
@@ -66,6 +66,7 @@ class LinhEditWindow:
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="linh-edit")
         self.busy = False
         self.last_contact_sheet: Path | None = None
+        self._external_revision_pending = False
 
         self.status_var = tk.StringVar(value="Sẵn sàng.")
         self.profile_var = tk.StringVar(value=PROFILE_NAMES[self.project.profile])
@@ -83,6 +84,7 @@ class LinhEditWindow:
         self._build_menu()
         self._build()
         self._refresh_all()
+        self.root.after(1500, self._poll_external_project)
 
     def _build_menu(self) -> None:
         menu = tk.Menu(self.root)
@@ -97,6 +99,10 @@ class LinhEditWindow:
         file_menu.add_separator()
         file_menu.add_command(label="Lưu", command=self.save_project)
         file_menu.add_command(label="Lưu thành...", command=self.save_project_as)
+        file_menu.add_command(
+            label="Reload project từ đĩa",
+            command=self.reload_project_from_disk,
+        )
         file_menu.add_separator()
         file_menu.add_command(label="Tạo checkpoint", command=self.create_manual_checkpoint)
         file_menu.add_command(
@@ -1856,6 +1862,53 @@ class LinhEditWindow:
         self._refresh_all()
         self.status_var.set("Dự án mới.")
 
+    def _apply_project_to_ui(self) -> None:
+        self.profile_var.set(PROFILE_NAMES.get(self.project.profile, "Travel / Công tác"))
+        self.target_var.set(self.project.target_seconds)
+        self.title_var.set(self.project.title)
+        self.voice_var.set(self.project.voiceover)
+        self.music_var.set(self.project.music)
+        self._refresh_all()
+
+    def reload_project_from_disk(self) -> None:
+        if self.project_path is None or not self.project_path.is_file():
+            return
+        try:
+            latest = ProjectState.load(self.project_path)
+        except Exception as exc:
+            messagebox.showerror("Không reload được project", str(exc))
+            return
+        self.project = latest
+        self._external_revision_pending = False
+        self._apply_project_to_ui()
+        self.status_var.set(
+            f"Đã reload project • rev {self.project.revision}"
+        )
+
+    def _poll_external_project(self) -> None:
+        try:
+            if (
+                self.project_path is not None
+                and self.project_path.is_file()
+                and not self.busy
+            ):
+                disk_revision = ProjectState.disk_revision(self.project_path)
+                if disk_revision > self.project.revision:
+                    if self.project.dirty:
+                        if not self._external_revision_pending:
+                            self.status_var.set(
+                                "Có thay đổi mới từ ChatGPT/tiến trình khác; "
+                                "hãy lưu/checkpoint hoặc reload trước."
+                            )
+                        self._external_revision_pending = True
+                    else:
+                        self.reload_project_from_disk()
+        finally:
+            try:
+                self.root.after(1500, self._poll_external_project)
+            except tk.TclError:
+                pass
+
     def open_project(self) -> None:
         if not self._confirm_discard():
             return
@@ -1871,13 +1924,11 @@ class LinhEditWindow:
             messagebox.showerror("Không mở được dự án", str(exc))
             return
         self.project_path = Path(value)
-        self.profile_var.set(PROFILE_NAMES.get(self.project.profile, "Travel / Công tác"))
-        self.target_var.set(self.project.target_seconds)
-        self.title_var.set(self.project.title)
-        self.voice_var.set(self.project.voiceover)
-        self.music_var.set(self.project.music)
-        self._refresh_all()
-        self.status_var.set("Đã mở dự án.")
+        self._external_revision_pending = False
+        self._apply_project_to_ui()
+        self.status_var.set(
+            f"Đã mở dự án • rev {self.project.revision}."
+        )
 
     def import_storyboard_json(self) -> None:
         if self.busy:
@@ -1939,11 +1990,24 @@ class LinhEditWindow:
         self._sync_project()
         try:
             self.project.save(self.project_path)
+        except ProjectConflictError as exc:
+            self._external_revision_pending = True
+            self.status_var.set("Project có thay đổi mới từ tiến trình khác.")
+            reload_now = messagebox.askyesno(
+                "Project đã thay đổi",
+                str(exc) + "\n\nReload bản mới nhất từ đĩa?",
+            )
+            if reload_now:
+                self.reload_project_from_disk()
+            return
         except Exception as exc:
             messagebox.showerror("Không lưu được", str(exc))
             return
+        self._external_revision_pending = False
         self._update_title()
-        self.status_var.set(f"Đã lưu: {self.project_path.name}")
+        self.status_var.set(
+            f"Đã lưu: {self.project_path.name} • rev {self.project.revision}"
+        )
 
     def save_project_as(self) -> None:
         self._sync_project()
