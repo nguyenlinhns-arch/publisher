@@ -65,7 +65,7 @@ Push-Location $Root
 try {
     & $Python -m pip install --upgrade pip
     Assert-NativeSuccess "Nâng cấp pip"
-    & $Python -m pip install "pyinstaller==6.21.0" "pytest==9.1.1"
+    & $Python -m pip install "pyinstaller==6.21.0" "pytest==9.1.1" "Pillow==11.3.0"
     Assert-NativeSuccess "Cài công cụ build"
 
     if (-not $SkipTests) {
@@ -112,11 +112,21 @@ if (-not (Test-Path -LiteralPath $Exe -PathType Leaf)) {
 
 $BundledFfmpeg = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "ffmpeg.exe" -File | Select-Object -First 1
 $BundledFfprobe = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "ffprobe.exe" -File | Select-Object -First 1
-$BundledFont = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "RobotoCondensed-Bold.ttf" -File | Select-Object -First 1
+$BundledMontserratSemiBold = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "Montserrat-SemiBold.ttf" -File | Select-Object -First 1
+$BundledMontserratExtraBold = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "Montserrat-ExtraBold.ttf" -File | Select-Object -First 1
+$BundledOswaldBold = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "Oswald-Bold.ttf" -File | Select-Object -First 1
 $BundledBackground = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "nen.png" -File | Select-Object -First 1
 $BundledSfx = Get-ChildItem -LiteralPath $AppDir -Recurse -Filter "sound.mp3" -File | Select-Object -First 1
-if ($null -eq $BundledFfmpeg -or $null -eq $BundledFfprobe -or $null -eq $BundledFont -or $null -eq $BundledBackground -or $null -eq $BundledSfx) {
-    throw "Bản Linh Edit chưa đóng gói đủ FFmpeg/FFprobe/font/nền/SFX."
+if (
+    $null -eq $BundledFfmpeg -or
+    $null -eq $BundledFfprobe -or
+    $null -eq $BundledMontserratSemiBold -or
+    $null -eq $BundledMontserratExtraBold -or
+    $null -eq $BundledOswaldBold -or
+    $null -eq $BundledBackground -or
+    $null -eq $BundledSfx
+) {
+    throw "Bản Linh Edit chưa đóng gói đủ FFmpeg/FFprobe/Montserrat/Oswald/nền/SFX."
 }
 
 $Process = Start-Process -FilePath $Exe -ArgumentList "doctor" -Wait -PassThru
