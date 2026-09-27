@@ -9,6 +9,7 @@ from .caption_planner import apply_selective_captions
 from .checkpoint import create_checkpoint
 from .engine_adapter import render_project
 from .loudness import auto_balance_project
+from .planner import build_rough_cut
 from .project import ProjectState
 from .review_gate import review_status
 from .semantic_match import apply_text_shot_matching
@@ -47,6 +48,21 @@ def run_optimized_pipeline(
     )
 
     steps: list[dict[str, Any]] = []
+
+    if not project.timeline and project.media:
+        timeline = build_rough_cut(project)
+        if not timeline:
+            raise ValueError("Không tạo được rough cut từ media hiện có.")
+        project.timeline = timeline
+        project.dirty = True
+        steps.append(
+            {
+                "step": "rough_cut",
+                "status": "DONE",
+                "scenes": len(timeline),
+                "duration": round(sum(item.duration for item in timeline), 3),
+            }
+        )
 
     if project.profile == "TRAVEL_DOCUMENTARY" and project.media:
         try:
