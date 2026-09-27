@@ -5,7 +5,11 @@ from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Literal
 
-CURRENT_PROJECT_SCHEMA = 3
+CURRENT_PROJECT_SCHEMA = 4
+
+class ProjectConflictError(RuntimeError):
+    """Raised when another process saved a newer project revision."""
+
 
 ProfileName = Literal[
     "TRAVEL_DOCUMENTARY",
@@ -55,6 +59,7 @@ class SfxItem:
 @dataclass(slots=True)
 class ProjectState:
     schema_version: int = CURRENT_PROJECT_SCHEMA
+    revision: int = 0
     name: str = "Dự án mới"
     profile: ProfileName = "TRAVEL_DOCUMENTARY"
     target_seconds: float = 75.0
@@ -81,15 +86,46 @@ class ProjectState:
     story_scenes: list[dict[str, Any]] = field(default_factory=list)
     dirty: bool = False
 
-    def save(self, path: Path) -> None:
+    @staticmethod
+    def disk_revision(path: Path) -> int:
+        path = path.expanduser().resolve()
+        if not path.is_file():
+            return 0
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except Exception:
+            return 0
+        if not isinstance(payload, dict):
+            return 0
+        try:
+            return max(0, int(payload.get("revision", 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def save(self, path: Path, *, force: bool = False) -> None:
         path = path.expanduser().resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
+
+        disk_revision = self.disk_revision(path)
+        if path.is_file() and not force and disk_revision != int(self.revision):
+            raise ProjectConflictError(
+                "Project đã được tiến trình khác cập nhật "
+                f"(disk revision {disk_revision}, local revision {self.revision}). "
+                "Hãy reload project trước khi lưu để tránh ghi đè."
+            )
+
+        next_revision = max(int(self.revision), disk_revision) + 1
         payload = asdict(self)
+        payload["schema_version"] = CURRENT_PROJECT_SCHEMA
+        payload["revision"] = next_revision
         payload["dirty"] = False
         text = json.dumps(payload, ensure_ascii=False, indent=2)
         temp = path.with_suffix(path.suffix + ".partial")
         temp.write_text(text, encoding="utf-8")
         temp.replace(path)
+
+        self.schema_version = CURRENT_PROJECT_SCHEMA
+        self.revision = next_revision
 
         sidecar_stem = path.name
         if sidecar_stem.endswith(".linhedit.json"):
