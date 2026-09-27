@@ -438,6 +438,9 @@ def main(argv: list[str] | None = None) -> int:
                         "voiceover": bool(project.voiceover),
                         "music": bool(project.music),
                         "title": project.title,
+                        "revision": project.revision,
+                        "content_revision": project.content_revision,
+                        "review": review_status(project),
                     },
                     ensure_ascii=False,
                 )
