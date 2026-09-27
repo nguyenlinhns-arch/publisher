@@ -192,8 +192,26 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
                     f"apad,atrim=duration={duration:.3f},"
                     f"asetpts=PTS-STARTPTS[voicepre]"
                 )
-                if music_index is not None and plan.audio.auto_duck_music:
-                    filters.append("[voicepre]asplit=2[voice][voice_sc]")
+                if plan.audio.auto_duck_music:
+                    if music_index is not None:
+                        filters.append(
+                            "[voicepre]asplit=3"
+                            "[voice][voice_sc_music][voice_sc_base]"
+                        )
+                    else:
+                        filters.append(
+                            "[voicepre]asplit=2[voice][voice_sc_base]"
+                        )
+                    ambience_ratio = max(2.0, min(12.0, plan.audio.duck_ratio * 0.65))
+                    filters.append(
+                        f"[basea][voice_sc_base]sidechaincompress="
+                        f"threshold={plan.audio.duck_threshold:.6f}:"
+                        f"ratio={ambience_ratio:.3f}:"
+                        f"attack={plan.audio.duck_attack_ms:.3f}:"
+                        f"release={plan.audio.duck_release_ms:.3f}:"
+                        f"makeup=1[basea_mix]"
+                    )
+                    mix_labels = ["[basea_mix]"]
                 else:
                     filters.append("[voicepre]anull[voice]")
                 mix_labels.append("[voice]")
@@ -209,7 +227,7 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
                 )
                 if voice_index is not None and plan.audio.auto_duck_music:
                     filters.append(
-                        f"[musicpre][voice_sc]sidechaincompress="
+                        f"[musicpre][voice_sc_music]sidechaincompress="
                         f"threshold={plan.audio.duck_threshold:.6f}:"
                         f"ratio={plan.audio.duck_ratio:.3f}:"
                         f"attack={plan.audio.duck_attack_ms:.3f}:"
