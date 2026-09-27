@@ -270,12 +270,20 @@ def review_video(
     analysis_source = source
     proxy_reused = False
     proxy_warning = ""
-    try:
-        proxy = ensure_proxy(source)
-        analysis_source = Path(proxy.proxy)
-        proxy_reused = proxy.reused
-    except Exception as exc:
-        proxy_warning = f"proxy_fallback:{type(exc).__name__}"
+    use_proxy = (
+        max(info.width, info.height) >= 2160
+        or info.video_codec.lower() == "hevc"
+        or info.is_vfr
+        or bool(info.rotation % 360)
+        or info.color_transfer.lower() in {"smpte2084", "arib-std-b67"}
+    )
+    if use_proxy:
+        try:
+            proxy = ensure_proxy(source)
+            analysis_source = Path(proxy.proxy)
+            proxy_reused = proxy.reused
+        except Exception as exc:
+            proxy_warning = f"proxy_fallback:{type(exc).__name__}"
 
     shots: tuple[ShotSpan, ...] = ()
     selection_mode = "UNIFORM"
