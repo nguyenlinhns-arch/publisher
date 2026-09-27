@@ -104,8 +104,16 @@ def _copy_with_duration(item: MediaItem, role: str, duration: float) -> MediaIte
     return clone
 
 
-def optimize_travel_story(project: ProjectState) -> list[MediaItem]:
-    source = list(project.media)
+def optimize_travel_story(
+    project: ProjectState,
+    *,
+    prefer_existing_timeline: bool = False,
+) -> list[MediaItem]:
+    source = list(
+        project.timeline
+        if prefer_existing_timeline and project.timeline
+        else project.media
+    )
     if not source:
         return []
 
@@ -210,7 +218,10 @@ def analyze_story(timeline: list[MediaItem], target_seconds: float) -> StoryOpti
 def optimize_story(project: ProjectState) -> dict[str, Any]:
     if project.profile != "TRAVEL_DOCUMENTARY":
         raise ValueError("Story Optimizer 1.7 hiện áp dụng cho Travel / Công tác.")
-    timeline = optimize_travel_story(project)
+    timeline = optimize_travel_story(
+        project,
+        prefer_existing_timeline=bool(project.timeline),
+    )
     if not timeline:
         raise ValueError("Không có đủ media để tối ưu story.")
     project.timeline = timeline
