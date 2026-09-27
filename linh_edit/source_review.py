@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from copy import deepcopy
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import Any, Iterable
 from .checkpoint import create_checkpoint
 from .contact_sheet import extract_contact_sheet
 from .media import MediaAudit, audit_media_info, infer_role, probe
+from .planner import build_rough_cut
 from .project import MediaItem, ProjectState
 from .visual_metrics import (
     analyze_frame,
@@ -40,6 +42,7 @@ class CandidateWindow:
     global_duplicate_of: str = ""
     warnings: tuple[str, ...] = ()
     decision: str = "PENDING"
+    review_role: str = ""
     review_note: str = ""
     status: str = "PENDING_VISUAL_REVIEW"
 
@@ -358,6 +361,7 @@ def mark_candidate_review(
     item_index: int,
     candidate_index: int,
     decision: str,
+    role: str = "",
     note: str = "",
 ) -> Path:
     manifest = manifest.expanduser().resolve()
@@ -373,6 +377,8 @@ def mark_candidate_review(
         candidate_index=candidate_index,
     )
     candidate["decision"] = decision
+    if role.strip():
+        candidate["review_role"] = role.strip()
     candidate["review_note"] = note.strip()
     candidate["status"] = (
         "VISUAL_REVIEWED"
@@ -382,6 +388,102 @@ def mark_candidate_review(
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     _atomic_json_write(manifest, payload)
     return manifest
+
+
+def apply_kept_candidates(
+    manifest: Path,
+    project_path: Path,
+    *,
+    build_timeline: bool = True,
+) -> dict[str, Any]:
+    manifest = manifest.expanduser().resolve()
+    project_path = project_path.expanduser().resolve()
+    payload = load_review_manifest(manifest)
+    project = ProjectState.load(project_path)
+
+    selected: list[MediaItem] = []
+    skipped_rejected = 0
+    missing_sources: list[str] = []
+
+    for item in payload["items"]:
+        if bool(item.get("audit_reject")):
+            skipped_rejected += 1
+            continue
+        source = Path(str(item.get("source") or "")).expanduser().resolve()
+        if not source.is_file():
+            missing_sources.append(str(source))
+            continue
+        for candidate in item.get("candidates") or []:
+            if str(candidate.get("decision") or "").upper() != "KEEP":
+                continue
+            role = str(candidate.get("review_role") or "").strip() or infer_role(source)
+            keep_audio = project.profile == "TALKING_HEAD_EXPERT"
+            selected.append(
+                MediaItem(
+                    path=str(source),
+                    kind="video",
+                    role=role or "detail",
+                    start=float(candidate.get("start") or 0.0),
+                    duration=float(candidate.get("duration") or 0.0),
+                    score=max(
+                        0.0,
+                        min(
+                            1.0,
+                            float(
+                                candidate.get("technical_score")
+                                or item.get("audit_score")
+                                or 0.5
+                            ),
+                        ),
+                    ),
+                    motion="none",
+                    keep_audio=keep_audio,
+                    source_gain=1.0 if keep_audio else 0.10,
+                )
+            )
+
+    if not selected:
+        raise ValueError("Chưa có candidate KEEP hợp lệ để tạo rough cut.")
+
+    checkpoint = create_checkpoint(
+        project,
+        project_path,
+        label="before-review-build",
+    )
+
+    existing_keys = {
+        (item.path, round(item.start, 3), round(item.duration, 3))
+        for item in project.media
+    }
+    added = 0
+    for item in selected:
+        key = (item.path, round(item.start, 3), round(item.duration, 3))
+        if key not in existing_keys:
+            project.media.append(MediaItem(**asdict(item)))
+            existing_keys.add(key)
+            added += 1
+
+    if build_timeline:
+        reviewed = deepcopy(project)
+        reviewed.media = [MediaItem(**asdict(item)) for item in selected]
+        timeline = build_rough_cut(reviewed)
+        if not timeline:
+            raise ValueError("Các candidate KEEP chưa đủ để tạo rough cut.")
+        project.timeline = timeline
+
+    project.dirty = True
+    project.save(project_path)
+    return {
+        "status": "DONE",
+        "project": str(project_path),
+        "checkpoint": str(checkpoint),
+        "keep_candidates": len(selected),
+        "media_added": added,
+        "timeline_scenes": len(project.timeline),
+        "duration": round(sum(item.duration for item in project.timeline), 3),
+        "missing_sources": missing_sources,
+        "technical_reject_items": skipped_rejected,
+    }
 
 
 def promote_review_candidate(
