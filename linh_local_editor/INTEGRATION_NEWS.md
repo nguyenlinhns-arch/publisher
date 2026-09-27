@@ -1,20 +1,26 @@
-# Integration target: THAY LINH NEWS VIDEO APP 1.0.2
+# Legacy News migration into Linh Edit
 
-Host root already identified on the Windows PC:
-D:\THAY_LINH_NEWS_VIDEO_APP_1.0.2\THAY_LINH_NEWS_VIDEO_APP_1.0.2
+The old News application is no longer the target host. It stays unchanged as a
+rollback/migration source.
 
-This app remains a news/content-production host. It must not become the travel
-editor and must not absorb MXH publishing responsibilities.
+Live legacy root:
 
-Use only the EXPLAINER_NEWS profile from Linh Edit Engine:
-- 9:16 1080x1920 / 30fps
-- strong hook hierarchy
-- dense information may use selective kinetic text
-- hard/editorial cuts
-- evidence/visual matching
-- local FFmpeg render + QA
-- no cloud render requirement
+`D:\2 THAY_LINH_NEWS_VIDEO_APP_1.0.2\THAY_LINH_NEWS_VIDEO_APP_1.0.2`
 
-Do not change existing link/article ingestion features unless source audit proves a
-specific compatibility issue. The engine is shared code; the host decides which
-profiles are exposed.
+The unified host is **Linh Edit 1.1**.
+
+Migrated capabilities:
+
+- ordinary text / legacy JSON ingestion
+- deterministic scene splitting
+- title/summary/voice_text normalization
+- one-or-many image reuse
+- transcript generation
+- narration-weight timing and voice-duration resync
+- preview/final local render
+- legacy `script.json` import
+
+The old News folder must not be overwritten or deleted until the unified app has
+passed local Windows acceptance with real legacy projects.
+
+MXH publishing remains outside Linh Edit.
