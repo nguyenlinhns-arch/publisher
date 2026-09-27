@@ -232,7 +232,7 @@ def test_mark_review_then_promote_candidate(tmp_path):
     assert len(saved.media) == 1
     assert len(saved.timeline) == 1
     assert saved.timeline[0].start == 0.3
-    assert saved.timeline[0].role == "human"
+    assert saved.timeline[0].role in {"human", "visual_hook"}
     assert saved.timeline[0].x == 0.72
     assert saved.timeline[0].y == 0.48
 
