@@ -34,6 +34,7 @@ from .semantic_match import (
 from .shot_detection import detect_shots
 from .speech_rhythm import apply_talk_rhythm_to_file
 from .story_optimizer import optimize_story_to_file
+from .subject_detection import subject_runtime_status
 from .source_review import (
     apply_candidate_hook_layout,
     apply_kept_candidates,
@@ -346,14 +347,21 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if command == "doctor":
+            subject = subject_runtime_status()
+            subject_ready = bool(
+                subject.get("available")
+                and subject.get("face_model")
+                and subject.get("person_model")
+            )
             payload = {
                 **CAPABILITIES,
                 "ffmpeg": resolve_tool("ffmpeg"),
                 "ffprobe": resolve_tool("ffprobe"),
-                "status": "READY",
+                "subject_intelligence": subject,
+                "status": "READY" if subject_ready else "DEGRADED",
             }
             _safe_print(json.dumps(payload, ensure_ascii=False, indent=2))
-            return 0
+            return 0 if subject_ready else 1
 
         if command == "render":
             project = ProjectState.load(args.project.expanduser().resolve())
