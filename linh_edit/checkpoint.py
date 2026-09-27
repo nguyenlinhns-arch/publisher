@@ -108,5 +108,8 @@ def restore_checkpoint(checkpoint: Path, project_path: Path) -> ProjectState:
         label="before-restore",
     )
     restored = load_checkpoint(checkpoint)
+    # Restore content on top of the latest revision instead of rewinding the
+    # revision counter. This keeps optimistic concurrency monotonic.
+    restored.revision = current.revision
     restored.save(project_path)
     return restored
