@@ -132,7 +132,7 @@ def _normalize_scene(raw: Any, index: int) -> NewsScene:
     return NewsScene(
         title=_shorten_words(title, 12),
         voice_text=voice,
-        summary=_shorten_words(summary, 22),
+        summary=_shorten_words(summary, 12),
         badge=_shorten_words(badge, 6),
         caption=_shorten_words(caption, 20),
         role=role,
@@ -365,7 +365,7 @@ def apply_news_scenes(
         [
             TextItem(0.0, hook_end, context.upper(), "context", 0.5, 0.20, 60, 600, "#F4F1E9"),
             TextItem(0.5, hook_end, "ĐIỂM CHÍNH", "main", 0.5, 0.27, 102, 700, "#F4F1E9"),
-            TextItem(1.0, hook_end, _hook_keyword(project.title), "keyword", 0.5, 0.36, 138, 800, "#FFC928"),
+            TextItem(1.0, hook_end, _hook_keyword(project.title), "keyword", 0.5, 0.36, 150, 800, "#FFC928"),
         ]
     )
 
