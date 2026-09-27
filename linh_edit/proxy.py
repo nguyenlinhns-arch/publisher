@@ -52,6 +52,10 @@ def ensure_proxy(
         and cache_matches(payload, source)
         and int(payload.get("proxy_version", 0)) == 1
     ):
+        try:
+            manifest.touch()
+        except OSError:
+            pass
         return ProxyResult(
             source=str(source),
             proxy=str(target),
