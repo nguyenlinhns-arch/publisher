@@ -26,7 +26,7 @@ def test_project_schema_v2_migrates_audio_defaults(tmp_path: Path):
 
     project = ProjectState.load(path)
 
-    assert project.schema_version == 4
+    assert project.schema_version == 5
     assert project.auto_duck_music is True
     assert project.voice_gain == 1.0
     assert project.caption_coverage_target == 0.65
