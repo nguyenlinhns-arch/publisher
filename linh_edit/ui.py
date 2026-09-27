@@ -663,6 +663,7 @@ class LinhEditWindow:
             filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac *.ogg *.flac *.mp4"), ("Tất cả tệp", "*.*")],
         )
         if value:
+            self._checkpoint_if_saved("before-audio-change")
             self.music_var.set(value)
             self._mark_dirty()
 
@@ -692,6 +693,7 @@ class LinhEditWindow:
         self._refresh_all()
 
     def remove_media(self) -> None:
+        self._checkpoint_if_saved("before-media-remove")
         indices = sorted((int(x) for x in self.media_tree.selection()), reverse=True)
         for index in indices:
             self.project.media.pop(index)
@@ -760,6 +762,7 @@ class LinhEditWindow:
         index = self._selected_timeline_index()
         if index is None:
             return
+        self._checkpoint_if_saved("before-timeline-remove")
         self.project.timeline.pop(index)
         self.project.dirty = True
         self._refresh_all()
@@ -768,6 +771,7 @@ class LinhEditWindow:
         index = self._selected_timeline_index()
         if index is None:
             return
+        self._checkpoint_if_saved("before-timeline-duplicate")
         self.project.timeline.insert(index + 1, deepcopy(self.project.timeline[index]))
         self.project.dirty = True
         self._refresh_all()
@@ -826,6 +830,7 @@ class LinhEditWindow:
         )
 
         def save() -> None:
+            self._checkpoint_if_saved("before-timeline-edit")
             try:
                 item.role = vars_["role"].get()
                 item.start = max(0.0, float(vars_["start"].get()))
@@ -880,7 +885,7 @@ class LinhEditWindow:
                 )
             if keyword.get().strip():
                 self.project.texts.append(
-                    TextItem(1.0, 3.0, keyword.get().strip(), "keyword", 0.5, 0.36, 138, 800, "#FFC928")
+                    TextItem(1.0, 3.0, keyword.get().strip(), "keyword", 0.5, 0.36, 150, 800, "#FFC928")
                 )
             self.project.dirty = True
             self._refresh_all()
@@ -995,6 +1000,7 @@ class LinhEditWindow:
             )
             if gain is None:
                 return
+            self._checkpoint_if_saved("before-sfx-change")
             self.project.sfx.append(SfxItem(path=path, start=start, gain=gain))
             self.project.dirty = True
             refresh()
@@ -1004,6 +1010,7 @@ class LinhEditWindow:
             selection = tree.selection()
             if not selection:
                 return
+            self._checkpoint_if_saved("before-sfx-change")
             self.project.sfx.pop(int(selection[0]))
             self.project.dirty = True
             refresh()
