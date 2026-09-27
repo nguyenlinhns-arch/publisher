@@ -4,7 +4,7 @@ from PIL import Image
 
 import linh_edit.source_review as source_review
 from linh_edit.media import MediaAudit, MediaInfo
-from linh_edit.project import ProjectState
+from linh_edit.project import ProjectState, TextItem
 from linh_edit.visual_metrics import FrameMetrics
 
 
@@ -174,6 +174,15 @@ def _review_manifest(tmp_path: Path, video: Path) -> Path:
                         "contrast": 0.6,
                         "edge_energy": 0.7,
                         "technical_score": 0.8,
+                        "reframe_x": 0.72,
+                        "reframe_y": 0.48,
+                        "negative_space": "LEFT",
+                        "hook_layout": "CENTER-LEFT",
+                        "hook_style": "HIGH_CONTRAST",
+                        "hook_x": 0.12,
+                        "hook_y": 0.27,
+                        "hook_align": "left",
+                        "layout_confidence": 0.8,
                         "duplicate_of": None,
                         "warnings": [],
                         "decision": "PENDING",
@@ -224,6 +233,8 @@ def test_mark_review_then_promote_candidate(tmp_path):
     assert len(saved.timeline) == 1
     assert saved.timeline[0].start == 0.3
     assert saved.timeline[0].role == "human"
+    assert saved.timeline[0].x == 0.72
+    assert saved.timeline[0].y == 0.48
 
 
 def test_promote_requires_keep_decision(tmp_path):
@@ -482,3 +493,41 @@ def test_preserved_decisions_survive_review_rebuild():
     )
     assert preserved[key]["decision"] == "KEEP"
     assert preserved[key]["review_role"] == "human"
+
+
+def test_apply_candidate_hook_layout_repositions_existing_hook(tmp_path):
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"video")
+    manifest = _review_manifest(tmp_path, video)
+    source_review.mark_candidate_review(
+        manifest,
+        item_index=1,
+        candidate_index=1,
+        decision="KEEP",
+        role="visual_hook",
+    )
+
+    project_path = tmp_path / "hook.linhedit.json"
+    ProjectState(
+        profile="TRAVEL_DOCUMENTARY",
+        target_seconds=45.0,
+        texts=[
+            TextItem(0.0, 3.0, "GIA LAI", "context", 0.5, 0.2, 60, 600),
+            TextItem(0.5, 3.0, "KHÔNG CHỈ CÓ", "main", 0.5, 0.27, 102, 700),
+            TextItem(1.0, 3.0, "CÀ PHÊ", "keyword", 0.5, 0.36, 150, 800),
+        ],
+    ).save(project_path)
+
+    result = source_review.apply_candidate_hook_layout(
+        manifest,
+        project_path,
+        item_index=1,
+        candidate_index=1,
+    )
+
+    saved = ProjectState.load(project_path)
+    hooks = {item.role: item for item in saved.texts}
+    assert result["hook_layout"] == "CENTER-LEFT"
+    assert hooks["context"].x == 0.12
+    assert hooks["main"].align == "left"
+    assert hooks["keyword"].y > hooks["main"].y
