@@ -65,7 +65,7 @@ Push-Location $Root
 try {
     & $Python -m pip install --upgrade pip
     Assert-NativeSuccess "Nâng cấp pip"
-    & $Python -m pip install "pyinstaller==6.21.0" "pytest==9.1.1" "Pillow==11.3.0"
+    & $Python -m pip install "pyinstaller==6.21.0" "pytest==9.1.1" "Pillow==11.3.0" "opencv-python-headless==4.12.0.88"
     Assert-NativeSuccess "Cài công cụ build"
 
     if (-not $SkipTests) {
@@ -91,6 +91,7 @@ try {
         "--workpath", $Work,
         "--specpath", $Spec,
         "--paths", $Root,
+        "--hidden-import", "cv2",
         "--add-binary", "$Ffprobe;bin",
         "--add-binary", "$Ffmpeg;bin",
         "--add-data", "$Fonts;assets\fonts",
