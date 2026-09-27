@@ -122,8 +122,19 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
                 head = f"trim=duration={clip.duration:.3f},setpts=PTS-STARTPTS,"
             else:
                 head = f"trim=start={clip.start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,"
+            hdr_filter = ""
+            if clip.kind == "video" and clip.hdr_to_sdr:
+                hdr_filter = (
+                    "zscale=t=linear:npl=100,"
+                    "format=gbrpf32le,"
+                    "zscale=p=bt709,"
+                    "tonemap=tonemap=hable:desat=0,"
+                    "zscale=t=bt709:m=bt709:r=tv,"
+                    "format=yuv420p,"
+                )
             visual = (
                 head
+                + hdr_filter
                 + f"scale={w}:{h}:force_original_aspect_ratio=increase,"
                 + f"scale=iw*{scale:.6f}:ih*{scale:.6f},"
                 + f"crop={w}:{h}:"
@@ -251,13 +262,23 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
                 mix_labels.append(label)
 
             if len(mix_labels) == 1:
-                filters.append("[basea]anull[outa]")
+                filters.append("[basea]anull[mixpre]")
             else:
                 filters.append(
                     "".join(mix_labels)
                     + f"amix=inputs={len(mix_labels)}:duration=longest:normalize=0,"
-                    + "alimiter=limit=0.95[outa]"
+                    + "alimiter=limit=0.95[mixpre]"
                 )
+            if plan.audio.auto_master_audio:
+                filters.append(
+                    f"[mixpre]loudnorm="
+                    f"I={plan.audio.master_lufs:.2f}:"
+                    f"TP={plan.audio.master_true_peak:.2f}:"
+                    f"LRA={plan.audio.master_lra:.2f}:"
+                    f"print_format=summary[outa]"
+                )
+            else:
+                filters.append("[mixpre]anull[outa]")
 
         command.extend(
             [
