@@ -23,6 +23,7 @@ from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
 from .source_review import (
+    apply_kept_candidates,
     build_source_review,
     load_review_manifest,
     mark_candidate_review,
@@ -687,9 +688,9 @@ class LinhEditWindow:
         ).grid(row=3, column=3, columnspan=3, sticky=tk.EW, padx=4, pady=(8, 0))
         ttk.Button(
             outer,
-            text="Mở thư mục review",
-            command=lambda: self._open_path(manifest.parent),
-        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(8, 0))
+            text="ROUGH CUT TỪ TẤT CẢ KEEP",
+            command=lambda: build_from_keeps(),
+        ).grid(row=3, column=0, columnspan=3, sticky=tk.EW, padx=(0, 4), pady=(8, 0))
 
         status = tk.StringVar(value="")
         ttk.Label(outer, textvariable=status, anchor=tk.W).grid(
@@ -828,6 +829,7 @@ class LinhEditWindow:
                     item_index=item_index,
                     candidate_index=candidate_index,
                     decision=decision,
+                    role=role_var.get() if decision in {"KEEP", "SHORTLIST"} else "",
                     note=note,
                 )
             except Exception as exc:
@@ -881,6 +883,41 @@ class LinhEditWindow:
             status.set(
                 f"Đã promote candidate {candidate_index}: "
                 f"{float(result['start']):.1f}s + {float(result['duration']):.1f}s"
+            )
+
+        def build_from_keeps() -> None:
+            if self.project_path is None:
+                messagebox.showinfo(
+                    "Cần lưu project",
+                    "Hãy lưu project trước khi dựng rough cut từ KEEP.",
+                    parent=win,
+                )
+                return
+            self._sync_project()
+            if self.project.dirty:
+                self.save_project()
+                if self.project.dirty:
+                    return
+            try:
+                result = apply_kept_candidates(
+                    manifest,
+                    self.project_path,
+                    build_timeline=True,
+                )
+                self.project = ProjectState.load(self.project_path)
+            except Exception as exc:
+                messagebox.showerror("Chưa dựng được rough cut", str(exc), parent=win)
+                return
+            self.profile_var.set(PROFILE_NAMES.get(self.project.profile, "Travel / Công tác"))
+            self.target_var.set(self.project.target_seconds)
+            self.title_var.set(self.project.title)
+            self.voice_var.set(self.project.voiceover)
+            self.music_var.set(self.project.music)
+            self._refresh_all()
+            status.set(
+                f"Rough cut từ {int(result['keep_candidates'])} KEEP → "
+                f"{int(result['timeline_scenes'])} cảnh • "
+                f"{float(result['duration']):.1f}s"
             )
 
         tree.bind("<Double-1>", lambda _event: open_selected_frame())
