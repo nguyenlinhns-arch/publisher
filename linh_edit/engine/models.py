@@ -82,8 +82,28 @@ class AudioSpec:
     music: Path | None = None
     sfx: tuple[SfxSpec, ...] = ()
     music_gain: float = 0.14
+    voice_gain: float = 1.0
+    auto_duck_music: bool = True
+    duck_threshold: float = 0.025
+    duck_ratio: float = 8.0
+    duck_attack_ms: float = 25.0
+    duck_release_ms: float = 450.0
     source_ambience_gain: float = 0.10
     ending_music_only_seconds: float = 6.0
+
+    def validate(self) -> None:
+        if not 0 <= self.music_gain <= 4:
+            raise ValueError("audio.music_gain must be between 0 and 4")
+        if not 0 <= self.voice_gain <= 4:
+            raise ValueError("audio.voice_gain must be between 0 and 4")
+        if not 0.0001 <= self.duck_threshold <= 1:
+            raise ValueError("audio.duck_threshold must be between 0.0001 and 1")
+        if not 1 <= self.duck_ratio <= 20:
+            raise ValueError("audio.duck_ratio must be between 1 and 20")
+        if not 1 <= self.duck_attack_ms <= 2000:
+            raise ValueError("audio.duck_attack_ms out of range")
+        if not 1 <= self.duck_release_ms <= 5000:
+            raise ValueError("audio.duck_release_ms out of range")
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,6 +141,7 @@ class EditPlan:
             text.validate()
         for sfx in self.audio.sfx:
             sfx.validate()
+        self.audio.validate()
         self.export.validate()
 
     @property
