@@ -27,7 +27,12 @@ def _cv2():
     return cv2
 
 
-def _detect_bgr(image, cv2) -> SubjectDetection | None:
+def _detect_bgr(
+    image,
+    cv2,
+    *,
+    detect_person: bool = True,
+) -> SubjectDetection | None:
     if image is None:
         return None
     height, width = image.shape[:2]
@@ -79,7 +84,9 @@ def _detect_bgr(image, cv2) -> SubjectDetection | None:
         )
 
     # Fall back to a local HOG person detector. This is slower than face
-    # detection, so it only runs when no face was found.
+    # detection, so tracking can disable it during the fast face-only pass.
+    if not detect_person:
+        return None
     try:
         hog = cv2.HOGDescriptor()
         hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
@@ -141,27 +148,54 @@ def track_subject_video(
             start + (end - start) * index / (samples - 1)
             for index in range(samples)
         ]
-    detections: list[SubjectDetection] = []
+    sampled_images = []
+    faces: list[SubjectDetection] = []
     try:
         for timestamp in points:
             capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000.0)
             ok, image = capture.read()
             if not ok:
                 continue
-            detected = _detect_bgr(image, cv2)
+            sampled_images.append(image)
+            detected = _detect_bgr(
+                image,
+                cv2,
+                detect_person=False,
+            )
             if detected is not None:
-                detections.append(detected)
+                faces.append(detected)
     finally:
         capture.release()
 
-    if not detections:
-        return None
-    faces = [item for item in detections if item.kind == "face"]
-    chosen = faces if len(faces) >= max(1, len(detections) // 2) else detections
-    kind = "face" if chosen is faces else max(
-        chosen,
-        key=lambda item: item.confidence,
-    ).kind
+    if faces:
+        chosen = faces
+        kind = "face"
+    else:
+        # Person HOG is substantially slower. Run it only on up to three
+        # representative frames when the fast face pass found nothing.
+        detections: list[SubjectDetection] = []
+        if sampled_images:
+            indices = sorted(
+                set(
+                    [
+                        0,
+                        len(sampled_images) // 2,
+                        len(sampled_images) - 1,
+                    ]
+                )
+            )
+            for index in indices:
+                detected = _detect_bgr(
+                    sampled_images[index],
+                    cv2,
+                    detect_person=True,
+                )
+                if detected is not None:
+                    detections.append(detected)
+        if not detections:
+            return None
+        chosen = detections
+        kind = max(chosen, key=lambda item: item.confidence).kind
     return SubjectDetection(
         kind=kind,
         x=round(median(item.x for item in chosen), 4),
