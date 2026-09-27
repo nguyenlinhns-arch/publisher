@@ -108,8 +108,11 @@ def restore_checkpoint(checkpoint: Path, project_path: Path) -> ProjectState:
         label="before-restore",
     )
     restored = load_checkpoint(checkpoint)
-    # Restore content on top of the latest revision instead of rewinding the
-    # revision counter. This keeps optimistic concurrency monotonic.
+    # Restore content on top of the latest revisions instead of rewinding
+    # either counter. A restore changes editorial content, so content_revision
+    # must advance and any old review gate becomes stale automatically.
     restored.revision = current.revision
+    restored.content_revision = current.content_revision
+    restored.dirty = True
     restored.save(project_path)
     return restored
