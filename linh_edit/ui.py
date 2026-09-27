@@ -242,6 +242,16 @@ class LinhEditWindow:
         ttk.Button(media_frame, text="Bỏ", command=self.remove_media).grid(
             row=1, column=4, sticky=tk.EW, pady=(8, 0)
         )
+        ttk.Button(media_frame, text="↑ Ảnh", command=lambda: self.move_media(-1)).grid(
+            row=2, column=0, sticky=tk.EW, pady=(6, 0)
+        )
+        ttk.Button(media_frame, text="↓ Ảnh", command=lambda: self.move_media(1)).grid(
+            row=2, column=1, sticky=tk.EW, padx=4, pady=(6, 0)
+        )
+        ttk.Label(
+            media_frame,
+            text="Thứ tự Media cũng là thứ tự ảnh News/Editorial",
+        ).grid(row=2, column=2, columnspan=3, sticky=tk.W, padx=4, pady=(6, 0))
 
         timeline_frame.rowconfigure(0, weight=1)
         timeline_frame.columnconfigure(0, weight=1)
@@ -592,6 +602,23 @@ class LinhEditWindow:
             self.project.media.pop(index)
         self.project.dirty = True
         self._refresh_all()
+
+    def move_media(self, offset: int) -> None:
+        selection = self.media_tree.selection()
+        if len(selection) != 1:
+            return
+        index = int(selection[0])
+        dest = index + offset
+        if not 0 <= dest < len(self.project.media):
+            return
+        self.project.media[index], self.project.media[dest] = (
+            self.project.media[dest],
+            self.project.media[index],
+        )
+        self.project.dirty = True
+        self._refresh_media()
+        self.media_tree.selection_set(str(dest))
+        self.media_tree.focus(str(dest))
 
     def auto_edit(self) -> None:
         self._sync_project()
