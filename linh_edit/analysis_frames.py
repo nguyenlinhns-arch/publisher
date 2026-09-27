@@ -128,3 +128,72 @@ def compose_contact_sheet(
     canvas.save(temp, format="JPEG", quality=90, optimize=True)
     temp.replace(target)
     return target
+
+
+
+def extract_native_frame(
+    source: Path,
+    timestamp: float,
+    target: Path,
+    *,
+    max_width: int = 640,
+) -> Path:
+    source = source.expanduser().resolve()
+    target = target.expanduser().resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp = target.with_suffix(".partial.jpg")
+    completed = subprocess.run(
+        [
+            resolve_tool("ffmpeg"),
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-ss",
+            f"{max(0.0, float(timestamp)):.3f}",
+            "-i",
+            str(source),
+            "-frames:v",
+            "1",
+            "-vf",
+            f"scale={max(160, int(max_width))}:-2",
+            "-q:v",
+            "3",
+            str(temp),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=120,
+        check=False,
+    )
+    if completed.returncode != 0 or not temp.is_file():
+        raise RuntimeError(
+            (completed.stderr or f"Không lấy được native frame tại {timestamp:.2f}s")[-2000:]
+        )
+    temp.replace(target)
+    return target
+
+
+def extract_native_candidate_frames(
+    source: Path,
+    timestamps: list[float],
+    output_dir: Path,
+    *,
+    max_width: int = 640,
+) -> tuple[Path, ...]:
+    output_dir = output_dir.expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result: list[Path] = []
+    for index, timestamp in enumerate(timestamps, start=1):
+        target = output_dir / f"candidate_{index:02d}_native.jpg"
+        if not target.is_file():
+            extract_native_frame(
+                source,
+                timestamp,
+                target,
+                max_width=max_width,
+            )
+        result.append(target.resolve())
+    return tuple(result)
