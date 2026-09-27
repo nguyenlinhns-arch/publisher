@@ -21,6 +21,7 @@ from .planner import build_rough_cut, import_media
 from .project import ProjectState
 from .shot_detection import detect_shots
 from .source_review import (
+    apply_candidate_hook_layout,
     apply_kept_candidates,
     build_source_review,
     mark_candidate_review,
@@ -70,6 +71,7 @@ CAPABILITIES = {
         "cache-status",
         "normalization-plan",
         "cache-prune",
+        "hook-layout-apply",
     ],
     "output_default": {
         "width": 1080,
@@ -204,6 +206,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     cache_prune = sub.add_parser("cache-prune")
     cache_prune.add_argument("--max-gb", type=float, default=20.0)
+
+    hook_layout = sub.add_parser("hook-layout-apply")
+    hook_layout.add_argument("--manifest", type=Path, required=True)
+    hook_layout.add_argument("--project", type=Path, required=True)
+    hook_layout.add_argument("--item", type=int, required=True)
+    hook_layout.add_argument("--candidate", type=int, required=True)
     return parser
 
 
@@ -639,6 +647,16 @@ def main(argv: list[str] | None = None) -> int:
                     ensure_ascii=False,
                 )
             )
+            return 0
+
+        if command == "hook-layout-apply":
+            result = apply_candidate_hook_layout(
+                args.manifest.expanduser().resolve(),
+                args.project.expanduser().resolve(),
+                item_index=int(args.item),
+                candidate_index=int(args.candidate),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
             return 0
     except Exception as exc:
         _safe_print(f"ERROR: {exc}", error=True)
