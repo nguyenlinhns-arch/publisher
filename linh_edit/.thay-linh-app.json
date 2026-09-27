@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "id": "linh_edit_1_1_0",
+  "name": "Linh Edit",
+  "kind": "video_editor",
+  "version": "1.1.0",
+  "managed": true,
+  "actions": {
+    "check": "CHECK_THAY_LINH_HUB.ps1",
+    "launch": "MO_UNG_DUNG.bat"
+  },
+  "logs": [],
+  "lifecycle": {
+    "schemaVersion": 1,
+    "protocol": "thay-linh-app-lifecycle-v1",
+    "diagnose": {
+      "adapter": "hub-native-v1"
+    },
+    "validate": {
+      "adapter": "app-action-v1",
+      "action": "check"
+    },
+    "repair": {
+      "adapter": "hub-native-v1"
+    },
+    "checkUpdate": {
+      "adapter": "hub-native-v1"
+    },
+    "applyUpdate": {
+      "adapter": "hub-native-v1"
+    },
+    "rollback": {
+      "adapter": "hub-native-v1",
+      "retainStableVersions": 2
+    },
+    "health": {
+      "adapter": "app-action-v1",
+      "action": "check"
+    },
+    "version": {
+      "adapter": "manifest-v1",
+      "field": "version"
+    },
+    "requiredPaths": [
+      {
+        "path": "LinhEdit.exe",
+        "kind": "file",
+        "role": "dist"
+      },
+      {
+        "path": "_internal",
+        "kind": "directory",
+        "role": "dependency"
+      },
+      {
+        "path": "MO_UNG_DUNG.bat",
+        "kind": "file",
+        "role": "launcher"
+      },
+      {
+        "path": "CHECK_THAY_LINH_HUB.ps1",
+        "kind": "file",
+        "role": "manifest-helper"
+      }
+    ],
+    "preserve": [
+      "projects",
+      "outputs",
+      "data",
+      "logs"
+    ],
+    "process": {
+      "names": [
+        "LinhEdit.exe"
+      ],
+      "maxInstances": 1,
+      "ports": []
+    },
+    "baselineId": "linh-edit-1.1.0-unified-20260927"
+  }
+}
