@@ -43,6 +43,12 @@ def set_review_stage(
     if value not in VALID_REVIEW_STATUS:
         raise ValueError("review status phải là PENDING, PASS hoặc FAIL.")
 
+    # If editorial content changed since the previous review cycle, never
+    # carry PASS values from that older edit into the new cycle.
+    if project.review_content_revision != project.content_revision:
+        project.review_visual = "PENDING"
+        project.review_audio = "PENDING"
+        project.review_full_playback = "PENDING"
     setattr(project, STAGE_FIELD[stage], value)
     project.review_content_revision = project.content_revision
     project.dirty = False
