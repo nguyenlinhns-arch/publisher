@@ -4,7 +4,7 @@ from linh_edit import cli
 
 
 def test_capabilities_exposes_unified_sources():
-    assert cli.CAPABILITIES["version"] == "1.4.0"
+    assert cli.CAPABILITIES["version"] == "1.5.0"
     assert "ARTICLE_URL" in cli.CAPABILITIES["source_modes"]
     assert "LEGACY_EDITORIAL" in cli.CAPABILITIES["source_modes"]
     assert "legacy-import" in cli.CAPABILITIES["automation_commands"]
