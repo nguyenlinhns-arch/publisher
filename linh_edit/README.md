@@ -1,4 +1,4 @@
-# Linh Edit 1.5
+# Linh Edit 1.6
 
 Linh Edit is the single local Windows editor for Linh video workflows.
 
@@ -12,134 +12,126 @@ Linh Edit is the single local Windows editor for Linh video workflows.
 Legacy News and Editorial apps remain untouched as rollback/migration sources.
 MXH publishing stays separate.
 
-## 1.5 — Performance + Shot Intelligence + Smart Layout
+## 1.6 — VO/Text/Audio Intelligence + safe live control
 
-Version 1.5 keeps the reviewed-selection loop from 1.4 and makes it practical
-for large phone/camera footage libraries.
+Version 1.6 builds on the proxy/shot/smart-layout engine from 1.5 and upgrades
+the narration/text/audio layer while making direct ChatGPT edits safer when the
+desktop app is open.
 
-### Proxy + analysis cache
+### Selective captions from VO script
 
-Heavy footage no longer needs to be re-decoded at full quality for every review.
+Linh Edit now turns a transcript/VO script into selective body captions rather
+than full subtitles.
 
-- 4K/8K, HEVC, VFR, rotated and HDR-sensitive sources can use a local analysis proxy
-- proxies are H.264, analysis-only, muted and capped at 30fps
-- final render continues to use the original source
-- cache keys include source path + size + mtime
-- unchanged sources reuse cached proxies and shot analysis
-- Source Review analysis is cached and manual KEEP/SHORTLIST/REJECT decisions survive rebuilds
-- derived cache is bounded and can be pruned without touching original footage
+- Hook 0–3s keeps ownership of opening text
+- narration is split into compact 2–12 word blocks
+- blocks are timed from the actual VO duration when a voice file is present
+- only the more informative blocks are selected toward a configurable coverage
+  target (default 65%)
+- body captions stay lower-third and keep the Oswald caption style
+- existing Hook layers are preserved when captions are regenerated
 
-CLI:
-- `proxy-build`
-- `cache-status`
-- `cache-prune`
-
-### Shot-boundary review
-
-Source Review now prefers actual scene/shot boundaries instead of only uniform
-time sampling.
-
-- FFmpeg scene detection is cached
-- candidate windows stay inside detected shot boundaries
-- review still falls back safely to uniform sampling if scene detection fails
-- the contact sheet is therefore more likely to represent genuinely different shots
+UI:
+- **DÁN VO SCRIPT**
+- **AUTO CAPTION VO**
 
 CLI:
-- `shot-detect`
-- `source-review`
+- `transcript-set`
+- `caption-plan`
+- `caption-apply`
 
-### VFR / rotation / HDR awareness
+### Text → Shot semantic matching
 
-Linh Edit now reads:
+Caption text is classified into visual roles such as:
 
-- average and nominal frame rate
-- VFR status
-- rotation metadata
-- pixel format
-- color transfer / space / primaries
+- road / travel → `road_reset`
+- people / meetings → `human`
+- work / administration → `work`
+- place / landscape → `place`
+- village / daily life → `life`
+- kitchen / coffee / detail → `detail`
+- emotional language → `emotion`
 
-The app produces a normalization plan rather than destructively transcoding
-source footage. Original media remains the final-render source.
+The apply path is deliberately conservative. It only swaps nearby timeline
+slots when both source snippets are long enough to preserve the original slot
+durations. This improves text–shot relevance without changing total runtime.
 
-CLI:
-- `normalization-plan`
-
-### Smart 9:16 reframe
-
-Candidate analysis now estimates a local visual-saliency center and stores
-9:16 crop suggestions.
-
-- landscape footage gets a suggested x/y crop
-- portrait-native footage stays centered when no crop is needed
-- the suggestion is carried into KEEP promotion and reviewed-only rough cuts
-- this is a visual heuristic, not face/person recognition, so it never bypasses review
-
-### Hook layout intelligence
-
-For each reviewed candidate Linh Edit estimates:
-
-- negative-space region
-- CENTER / UPPER-CENTER / CENTER-LEFT placement
-- CLEAN vs HIGH_CONTRAST recommendation
-- Hook x/y/alignment
-- layout confidence
-
-The review UI shows the suggested reframe and Hook layout. A KEEP candidate can
-apply its placement to existing Context/Main/Keyword Hook layers with a
-checkpoint first.
+UI:
+- **MATCH TEXT → SHOT**
 
 CLI:
-- `hook-layout-apply`
+- `text-shot-report`
+- `text-shot-apply`
 
-### Review loop retained from 1.4
+### VO-first audio hierarchy
 
-- individual candidate thumbnails
-- technical rank
-- brightness / contrast / edge-detail hints
-- perceptual duplicate warnings across footage
-- KEEP / SHORTLIST / REJECT
-- role assignment
-- candidate promotion
-- **ROUGH CUT TỪ TẤT CẢ KEEP**
+The local renderer now supports:
 
-Only explicit KEEP candidates enter the reviewed automation path.
+- independent VO gain
+- automatic sidechain ducking of music under narration
+- automatic ducking of retained source ambience under narration
+- configurable threshold, ratio, attack and release
+- existing SFX, music fades and limiter retained
+
+UI:
+- **AUDIO / DUCKING**
+
+The Windows smoke test renders real synthetic VO + music through the sidechain
+pipeline.
+
+### Project revision safety + live reload
+
+Project schema v4 adds an optimistic revision counter.
+
+- every successful project save increments the revision
+- stale saves are rejected instead of silently overwriting a newer project
+- checkpoint restore keeps revision history monotonic
+- the desktop app polls for external project changes
+- when the UI has no unsaved local edits, newer ChatGPT/CLI changes reload
+  automatically
+- when local edits are dirty, Linh Edit warns instead of overwriting either side
+
+This is the foundation for stable:
+`ChatGPT → command → checkpoint → mutate → save revision → UI live reload`.
+
+### 1.5 performance/visual intelligence retained
+
+- reusable analysis proxies for heavy 4K/8K, HEVC, VFR/rotation/HDR footage
+- bounded derived-data cache
+- cached shot-boundary detection
+- Source Review with KEEP / SHORTLIST / REJECT
+- technical rank and duplicate warnings
+- smart 9:16 reframe suggestions
+- negative-space Hook placement
+- reviewed-only rough-cut building
+- normalization planning while final render stays on original footage
 
 ## Direct ChatGPT / Hub commands
 
-- `media-import`
-- `media-audit`
+Important automation commands now include:
+
 - `proxy-build`
 - `shot-detect`
 - `source-review`
 - `review-mark`
 - `review-promote`
 - `review-build`
-- `hook-layout-apply`
 - `normalization-plan`
-- `cache-status`
-- `cache-prune`
-- `project-status`
-- `project-validate`
+- `hook-layout-apply`
+- `transcript-set`
+- `caption-plan`
+- `caption-apply`
+- `text-shot-report`
+- `text-shot-apply`
 - `project-patch`
 - `project-checkpoint`
-- `checkpoint-list`
 - `checkpoint-restore`
-- `news-import`
-- `article-import`
-- `legacy-import`
+- `project-validate`
 - `render`
 
-## Safety / review policy
+## Review policy
 
-- project schema v2
-- atomic saves
-- source/transcript sidecars
-- durable checkpoints
-- preflight validation before render
-- original footage is never replaced by proxies
-- cache contains only disposable derived data
-- technical scoring never auto-approves visual quality
-- technical render completion is not playback approval
+Technical render completion is never treated as final editorial approval.
 
 Final review remains:
 
@@ -147,9 +139,11 @@ Final review remains:
 2. Audio-only
 3. Full playback without stopping
 
+Exports remain `PENDING_PLAYBACK` until those checks are actually completed.
+
 ## Windows app
 
-The portable Windows build contains:
+The portable Windows package contains:
 
 - `LinhEdit.exe`
 - FFmpeg / FFprobe
