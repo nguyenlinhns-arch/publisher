@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "linh_edit_1_7_0",
+  "id": "linh_edit_2_0_0",
   "name": "Linh Edit",
   "kind": "video_editor",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "managed": true,
   "actions": {
     "check": "CHECK_THAY_LINH_HUB.ps1",
@@ -76,6 +76,6 @@
       "maxInstances": 1,
       "ports": []
     },
-    "baselineId": "linh-edit-1.7.0-unified-20260927"
+    "baselineId": "linh-edit-2.0.0-unified-20260927"
   }
 }
