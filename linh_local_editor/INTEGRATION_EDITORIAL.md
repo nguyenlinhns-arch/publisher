@@ -1,38 +1,31 @@
-# Integration target: THAY LINH VIDEO APP EDITORIAL 1.7.0 FINAL
+# Legacy Editorial migration into Linh Edit
 
-Host root already identified on the Windows PC:
-D:\THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL
+The old Editorial package is no longer the target host. It remains intact as a
+rollback/migration source.
 
-This package is an add-on, not a replacement app.
+Live legacy root:
 
-## Non-negotiable integration rules
+`D:\3 THAY_LINH_VIDEO_APP_EDITORIAL_1.7.0_FINAL`
 
-1. Checkpoint/copy the current working app before any mutation.
-2. Keep MO_UNG_DUNG.bat unchanged unless source inspection proves a launcher change is required.
-3. Do not change existing manual edit behavior.
-4. Add one host action/menu/button: "LINH AUTO EDIT".
-5. The host owns project/timeline state; the engine owns deterministic render of an explicit plan.
-6. Profiles exposed to the host:
-   - Travel / Công tác
-   - Talk / Chuyên gia
-   - Tin tức / Editorial
-   - Tuyển dụng trực tiếp
-7. Rendering is local via FFmpeg/FFprobe. No cloud render or paid API is required.
-8. Never write into MXH Video Editor or publishing folders.
-9. Render to a new versioned output; do not overwrite a known-good master.
-10. QA gate: ffprobe geometry/codec/fps + full decode before final replace.
+Its manifest reports the working application as Editorial 2.5.0. The unified
+host is **Linh Edit 1.1**.
 
-## First UI integration
+Migrated core capabilities:
 
-The existing Editorial UI should expose:
-- Profile selector
-- Add footage
-- Add VO
-- Add optional music
-- Target duration
-- "Phân tích / Tạo rough cut"
-- Timeline/manual adjustments (existing host behavior)
-- "Render Preview"
-- "Export Final"
+- legacy hero/card `script.json` import
+- transcript-first voice workflow
+- public article URL ingestion
+- source-grounded article scene generation
+- real article-image download into an isolated workspace
+- URL safety checks against private/internal targets
+- voice-duration timeline resync
+- local preview/final render and versioned output
 
-The first production target is TRAVEL_DOCUMENTARY using the Gia Lai footage.
+Project-specific extras such as stock-market evidence remain legacy modules until
+they are explicitly promoted into the unified core; they are not allowed to
+block Travel, Talk, News, Editorial or Recruitment workflows.
+
+The old Editorial folder must not be overwritten or deleted until local
+acceptance on real legacy projects passes.
+
+MXH publishing remains separate.
