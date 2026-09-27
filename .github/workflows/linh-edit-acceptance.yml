@@ -33,12 +33,12 @@ jobs:
       - name: Archive accepted portable app
         shell: powershell
         run: |
-          Compress-Archive -Path dist\LinhEdit\* -DestinationPath LinhEdit-1.1.0-ACCEPTED-Windows-x64.zip -CompressionLevel Optimal
+          Compress-Archive -Path dist\LinhEdit\* -DestinationPath LinhEdit-1.2.0-ACCEPTED-Windows-x64.zip -CompressionLevel Optimal
       - uses: actions/upload-artifact@v4
         with:
-          name: LinhEdit-1.1.0-ACCEPTED-Windows-x64
+          name: LinhEdit-1.2.0-ACCEPTED-Windows-x64
           path: |
             dist/LinhEdit/**
-            LinhEdit-1.1.0-ACCEPTED-Windows-x64.zip
+            LinhEdit-1.2.0-ACCEPTED-Windows-x64.zip
           if-no-files-found: error
           retention-days: 30
