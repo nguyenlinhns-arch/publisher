@@ -75,6 +75,7 @@ def load_plan(path: Path) -> EditPlan:
         crf=int(export_payload.get("crf", 18)),
         preset=str(export_payload.get("preset", "medium")),
         audio_bitrate=str(export_payload.get("audio_bitrate", "192k")),
+        include_audio=bool(export_payload.get("include_audio", True)),
     )
     plan = EditPlan(
         profile=str(payload["profile"]),  # type: ignore[arg-type]
