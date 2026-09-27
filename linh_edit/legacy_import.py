@@ -7,7 +7,7 @@ from typing import Any
 
 from .media import probe_duration
 from .news_ingest import NewsScene, apply_news_scenes, build_transcript, parse_news_content
-from .project import ProjectState
+from .project import ProjectState, SfxItem
 from .tools import resolve_asset
 
 
@@ -120,6 +120,7 @@ def import_legacy_script(path: Path, project: ProjectState) -> ProjectState:
     music_path = path.parent / "assets" / "background_music.mp3"
     if music_path.is_file():
         project.music = str(music_path.resolve())
+        project.music_gain = 0.07
 
     apply_news_scenes(
         project,
@@ -130,6 +131,20 @@ def import_legacy_script(path: Path, project: ProjectState) -> ProjectState:
         source_text=path.read_text(encoding="utf-8-sig"),
         title=_legacy_title(payload, scenes),
     )
+    transition_path = path.parent / "assets" / "transition_sound.mp3"
+    if transition_path.is_file():
+        project.sfx.clear()
+        cursor = 0.0
+        for item in project.timeline:
+            project.sfx.append(
+                SfxItem(
+                    path=str(transition_path.resolve()),
+                    start=round(cursor, 3),
+                    gain=0.10,
+                )
+            )
+            cursor += item.duration
+
     # apply_news_scenes rebuilds the canonical transcript from the old scene narration.
     project.dirty = True
     return project
