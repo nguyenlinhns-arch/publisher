@@ -27,13 +27,7 @@ def _cv2():
     return cv2
 
 
-def detect_subject(frame: Path) -> SubjectDetection | None:
-    frame = frame.expanduser().resolve()
-    cv2 = _cv2()
-    if cv2 is None or not frame.is_file():
-        return None
-
-    image = cv2.imread(str(frame))
+def _detect_bgr(image, cv2) -> SubjectDetection | None:
     if image is None:
         return None
     height, width = image.shape[:2]
@@ -103,6 +97,69 @@ def detect_subject(frame: Path) -> SubjectDetection | None:
             confidence=round(_clamp(0.45 + min(0.45, max(0.0, weight) / 4)), 4),
         )
     return None
+
+
+def detect_subject(frame: Path) -> SubjectDetection | None:
+    frame = frame.expanduser().resolve()
+    cv2 = _cv2()
+    if cv2 is None or not frame.is_file():
+        return None
+    return _detect_bgr(cv2.imread(str(frame)), cv2)
+
+
+def track_subject_video(
+    source: Path,
+    *,
+    start: float,
+    end: float,
+    samples: int = 5,
+) -> SubjectDetection | None:
+    source = source.expanduser().resolve()
+    cv2 = _cv2()
+    if cv2 is None or not source.is_file():
+        return None
+    capture = cv2.VideoCapture(str(source))
+    if not capture.isOpened():
+        return None
+    samples = max(3, min(9, int(samples)))
+    start = max(0.0, float(start))
+    end = max(start, float(end))
+    if end - start < 0.05:
+        points = [start]
+    else:
+        points = [
+            start + (end - start) * index / (samples - 1)
+            for index in range(samples)
+        ]
+    detections: list[SubjectDetection] = []
+    try:
+        for timestamp in points:
+            capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000.0)
+            ok, image = capture.read()
+            if not ok:
+                continue
+            detected = _detect_bgr(image, cv2)
+            if detected is not None:
+                detections.append(detected)
+    finally:
+        capture.release()
+
+    if not detections:
+        return None
+    faces = [item for item in detections if item.kind == "face"]
+    chosen = faces if len(faces) >= max(1, len(detections) // 2) else detections
+    kind = "face" if chosen is faces else max(
+        chosen,
+        key=lambda item: item.confidence,
+    ).kind
+    return SubjectDetection(
+        kind=kind,
+        x=round(median(item.x for item in chosen), 4),
+        y=round(median(item.y for item in chosen), 4),
+        width=round(median(item.width for item in chosen), 4),
+        height=round(median(item.height for item in chosen), 4),
+        confidence=round(sum(item.confidence for item in chosen) / len(chosen), 4),
+    )
 
 
 def track_subject(frames: tuple[Path, ...]) -> SubjectDetection | None:
