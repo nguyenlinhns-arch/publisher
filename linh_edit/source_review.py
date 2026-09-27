@@ -742,6 +742,70 @@ def apply_kept_candidates(
     }
 
 
+def apply_candidate_hook_layout(
+    manifest: Path,
+    project_path: Path,
+    *,
+    item_index: int,
+    candidate_index: int,
+) -> dict[str, Any]:
+    manifest = manifest.expanduser().resolve()
+    project_path = project_path.expanduser().resolve()
+    payload = load_review_manifest(manifest)
+    _item, candidate = _candidate_ref(
+        payload,
+        item_index=item_index,
+        candidate_index=candidate_index,
+    )
+    if str(candidate.get("decision") or "PENDING").upper() != "KEEP":
+        raise ValueError("Candidate Hook phải được đánh dấu KEEP trước.")
+    layout = str(candidate.get("hook_layout") or "").strip()
+    if not layout:
+        raise ValueError("Candidate chưa có Hook layout suggestion.")
+
+    project = ProjectState.load(project_path)
+    hook_items = [
+        item
+        for item in project.texts
+        if item.role in {"context", "main", "keyword"}
+    ]
+    if not hook_items:
+        raise ValueError("Project chưa có Hook text để áp bố cục.")
+
+    checkpoint = create_checkpoint(
+        project,
+        project_path,
+        label="before-hook-layout",
+    )
+    x = float(candidate.get("hook_x") or 0.5)
+    base_y = float(candidate.get("hook_y") or 0.25)
+    align = str(candidate.get("hook_align") or "center")
+    offsets = {
+        "context": 0.0,
+        "main": 0.075,
+        "keyword": 0.17,
+    }
+    for item in hook_items:
+        item.x = x
+        item.y = min(0.72, base_y + offsets.get(item.role, 0.0))
+        item.align = align
+
+    project.dirty = True
+    project.save(project_path)
+    return {
+        "status": "DONE",
+        "project": str(project_path),
+        "checkpoint": str(checkpoint),
+        "hook_layout": layout,
+        "hook_style": str(candidate.get("hook_style") or ""),
+        "hook_x": x,
+        "hook_y": base_y,
+        "hook_align": align,
+        "negative_space": str(candidate.get("negative_space") or ""),
+        "layout_confidence": float(candidate.get("layout_confidence") or 0.0),
+    }
+
+
 def promote_review_candidate(
     manifest: Path,
     project_path: Path,
