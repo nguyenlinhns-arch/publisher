@@ -142,11 +142,11 @@ $SmokeMusic = Join-Path $SmokeDir "music.wav"
 $SmokeProject = Join-Path $SmokeDir "project.linhedit.json"
 $SmokeOutput = Join-Path $SmokeDir "final.mp4"
 
-& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "testsrc2=size=1080x1920:rate=30" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 2 -c:v libx264 -pix_fmt yuv420p -c:a aac $SmokeVideo
+& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "testsrc2=size=1080x1920:rate=30" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 6 -c:v libx264 -pix_fmt yuv420p -c:a aac $SmokeVideo
 Assert-NativeSuccess "Tạo media smoke test Windows"
-& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "sine=frequency=700:sample_rate=48000" -t 2 -c:a pcm_s16le $SmokeVoice
+& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "sine=frequency=700:sample_rate=48000" -t 5 -c:a pcm_s16le $SmokeVoice
 Assert-NativeSuccess "Tạo voice smoke test"
-& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "sine=frequency=120:sample_rate=48000" -t 2 -c:a pcm_s16le $SmokeMusic
+& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "sine=frequency=120:sample_rate=48000" -t 6 -c:a pcm_s16le $SmokeMusic
 Assert-NativeSuccess "Tạo music smoke test"
 
 $Clip = @{
@@ -154,7 +154,7 @@ $Clip = @{
     kind = "video"
     role = "human"
     start = 0.0
-    duration = 2.0
+    duration = 6.0
     score = 1.0
     x = 0.5
     y = 0.5
@@ -166,7 +166,7 @@ $Clip = @{
 $ProjectPayload = @{
     name = "Windows smoke"
     profile = "TALKING_HEAD_EXPERT"
-    target_seconds = 2.0
+    target_seconds = 6.0
     title = "Smoke"
     media = @($Clip)
     timeline = @($Clip)
@@ -182,10 +182,29 @@ $ProjectPayload = @{
     duck_attack_ms = 25.0
     duck_release_ms = 450.0
     caption_coverage_target = 0.65
+    transcript = "Buoi sang toi di tren con duong vao lang. Sau do toi gap nguoi dan va tiep tuc cong viec."
     output_dir = $SmokeDir
     dirty = $false
 }
 $ProjectPayload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SmokeProject -Encoding utf8
+
+$CaptionProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "caption-apply",
+    "--project", $SmokeProject,
+    "--coverage", "0.65"
+) -Wait -PassThru
+if ($CaptionProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe caption-apply smoke test thất bại với mã $($CaptionProcess.ExitCode)."
+}
+
+$TextShotProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "text-shot-report",
+    "--project", $SmokeProject,
+    "--coverage", "0.65"
+) -Wait -PassThru
+if ($TextShotProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe text-shot-report smoke test thất bại với mã $($TextShotProcess.ExitCode)."
+}
 
 $RenderProcess = Start-Process -FilePath $Exe -ArgumentList @("render", "--project", $SmokeProject, "--output", $SmokeOutput) -Wait -PassThru
 if ($RenderProcess.ExitCode -ne 0) {
