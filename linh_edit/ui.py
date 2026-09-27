@@ -863,6 +863,10 @@ class LinhEditWindow:
                 f"Decision: {candidate.get('decision') or 'PENDING'}"
                 + (f" • trùng {duplicate}" if duplicate else "")
                 + (
+                    f"\nSubject: {candidate.get('subject_kind') or 'saliency'} "
+                    f"({float(candidate.get('subject_confidence', 0)):.2f})"
+                )
+                + (
                     f"\nReframe: x={float(candidate.get('reframe_x', 0.5)):.2f}, "
                     f"y={float(candidate.get('reframe_y', 0.5)):.2f}"
                 )
@@ -2111,7 +2115,10 @@ class LinhEditWindow:
                     detail += "\nÂm thanh: KHÔNG CÓ (visual master)"
                 if cover:
                     detail += f"\nCover: {cover.name}"
-                detail += f"\nQA: {output.with_suffix('.qa.json').name}"
+                detail += f"\nQA kỹ thuật: {output.with_suffix('.qa.json').name}"
+                editorial_qa = output.with_suffix(".editorial_qa.json")
+                if editorial_qa.is_file():
+                    detail += f"\nQA biên tập tự động: {editorial_qa.name}"
                 detail += "\nReview playback: PENDING"
                 messagebox.showinfo("Xuất kỹ thuật hoàn tất", detail)
 
