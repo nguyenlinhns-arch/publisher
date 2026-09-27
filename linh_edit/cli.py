@@ -15,7 +15,11 @@ from .news_ingest import apply_news_content
 from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
-from .source_review import build_source_review
+from .source_review import (
+    build_source_review,
+    mark_candidate_review,
+    promote_review_candidate,
+)
 from .tools import resolve_tool
 from .validation import validate_project
 
@@ -52,6 +56,8 @@ CAPABILITIES = {
         "checkpoint-restore",
         "media-audit",
         "source-review",
+        "review-mark",
+        "review-promote",
     ],
     "output_default": {
         "width": 1080,
@@ -143,6 +149,25 @@ def build_parser() -> argparse.ArgumentParser:
     source_review.add_argument("--tiles", type=int, default=12)
     source_review.add_argument("--columns", type=int, default=4)
     source_review.add_argument("--candidate-seconds", type=float, default=3.4)
+
+    review_mark = sub.add_parser("review-mark")
+    review_mark.add_argument("--manifest", type=Path, required=True)
+    review_mark.add_argument("--item", type=int, required=True)
+    review_mark.add_argument("--candidate", type=int, required=True)
+    review_mark.add_argument(
+        "--decision",
+        choices=["PENDING", "SHORTLIST", "KEEP", "REJECT"],
+        required=True,
+    )
+    review_mark.add_argument("--note", default="")
+
+    review_promote = sub.add_parser("review-promote")
+    review_promote.add_argument("--manifest", type=Path, required=True)
+    review_promote.add_argument("--project", type=Path, required=True)
+    review_promote.add_argument("--item", type=int, required=True)
+    review_promote.add_argument("--candidate", type=int, required=True)
+    review_promote.add_argument("--role")
+    review_promote.add_argument("--media-only", action="store_true")
     return parser
 
 
@@ -456,6 +481,40 @@ def main(argv: list[str] | None = None) -> int:
                     ensure_ascii=False,
                 )
             )
+            return 0
+
+        if command == "review-mark":
+            manifest = mark_candidate_review(
+                args.manifest.expanduser().resolve(),
+                item_index=int(args.item),
+                candidate_index=int(args.candidate),
+                decision=str(args.decision),
+                note=str(args.note or ""),
+            )
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "DONE",
+                        "manifest": str(manifest),
+                        "item": int(args.item),
+                        "candidate": int(args.candidate),
+                        "decision": str(args.decision).upper(),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "review-promote":
+            result = promote_review_candidate(
+                args.manifest.expanduser().resolve(),
+                args.project.expanduser().resolve(),
+                item_index=int(args.item),
+                candidate_index=int(args.candidate),
+                role=str(args.role).strip() if args.role else None,
+                to_timeline=not bool(args.media_only),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
             return 0
     except Exception as exc:
         _safe_print(f"ERROR: {exc}", error=True)
