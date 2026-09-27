@@ -9,16 +9,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from .analysis_frames import compose_contact_sheet, extract_candidate_frames
+from .cache import source_signature
 from .checkpoint import create_checkpoint
-from .contact_sheet import extract_contact_sheet
 from .media import MediaAudit, audit_media_info, infer_role, probe
+from .proxy import ensure_proxy
+from .shot_detection import ShotSpan, detect_shots
 from .planner import build_rough_cut
 from .project import MediaItem, ProjectState
-from .visual_metrics import (
-    analyze_frame,
-    annotate_duplicate_groups,
-    extract_contact_sheet_tiles,
-)
+from .visual_metrics import analyze_frame, annotate_duplicate_groups
 
 REVIEW_SCHEMA = "linh-edit.source-review.v2"
 REVIEW_DECISIONS = {"PENDING", "SHORTLIST", "KEEP", "REJECT"}
@@ -60,6 +59,10 @@ class SourceReviewItem:
     audit_reasons: tuple[str, ...]
     audit_warnings: tuple[str, ...]
     candidates: tuple[CandidateWindow, ...]
+    analysis_source: str = ""
+    proxy_reused: bool = False
+    shot_count: int = 0
+    selection_mode: str = "UNIFORM"
     visual_review: str = "PENDING"
     notes: str = (
         "Điểm kỹ thuật chỉ hỗ trợ sàng lọc. Rung, motion blur, crop mặt, "
@@ -69,7 +72,10 @@ class SourceReviewItem:
 
 def _safe_stem(path: Path) -> str:
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", path.stem).strip("-")
-    digest = hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()[:10]
+    try:
+        digest = source_signature(path).key[:12]
+    except Exception:
+        digest = hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()[:12]
     return f"{stem[:70] or 'media'}-{digest}"
 
 
@@ -129,6 +135,46 @@ def candidate_windows(
             CandidateWindow(
                 index=index,
                 center=round(center, 3),
+                start=round(start, 3),
+                end=round(end, 3),
+                duration=round(end - start, 3),
+            )
+        )
+    return tuple(result)
+
+
+def candidates_from_shots(
+    shots: tuple[ShotSpan, ...],
+    *,
+    count: int = 12,
+    segment_seconds: float = 3.4,
+) -> tuple[CandidateWindow, ...]:
+    usable = [shot for shot in shots if shot.duration >= 0.45]
+    if not usable:
+        return ()
+
+    count = max(1, min(24, int(count)))
+    segment_seconds = max(0.5, float(segment_seconds))
+    if len(usable) <= count:
+        chosen = usable
+    else:
+        # Even coverage across the full story, not just the longest shots.
+        positions = [
+            round(index * (len(usable) - 1) / max(1, count - 1))
+            for index in range(count)
+        ]
+        chosen = [usable[position] for position in positions]
+
+    result: list[CandidateWindow] = []
+    for index, shot in enumerate(chosen, start=1):
+        duration = min(segment_seconds, shot.duration)
+        center = (shot.start + shot.end) / 2
+        start = max(shot.start, min(shot.end - duration, center - duration / 2))
+        end = min(shot.end, start + duration)
+        result.append(
+            CandidateWindow(
+                index=index,
+                center=round((start + end) / 2, 3),
                 start=round(start, 3),
                 end=round(end, 3),
                 duration=round(end - start, 3),
@@ -221,25 +267,52 @@ def review_video(
     target_dir = output_dir / _safe_stem(source)
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    sheet = target_dir / "source_contact_sheet.jpg"
-    extract_contact_sheet(
-        source,
-        sheet,
-        tiles=tiles,
-        columns=columns,
-    )
-    base_candidates = candidate_windows(
-        info.duration,
-        count=tiles,
-        segment_seconds=candidate_seconds,
-    )
-    frames = extract_contact_sheet_tiles(
-        sheet,
+    analysis_source = source
+    proxy_reused = False
+    proxy_warning = ""
+    try:
+        proxy = ensure_proxy(source)
+        analysis_source = Path(proxy.proxy)
+        proxy_reused = proxy.reused
+    except Exception as exc:
+        proxy_warning = f"proxy_fallback:{type(exc).__name__}"
+
+    shots: tuple[ShotSpan, ...] = ()
+    selection_mode = "UNIFORM"
+    try:
+        shots = detect_shots(analysis_source)
+        base_candidates = candidates_from_shots(
+            shots,
+            count=tiles,
+            segment_seconds=candidate_seconds,
+        )
+        if base_candidates:
+            selection_mode = "SHOT_BOUNDARY"
+        else:
+            raise RuntimeError("no-shot-candidates")
+    except Exception:
+        base_candidates = candidate_windows(
+            info.duration,
+            count=tiles,
+            segment_seconds=candidate_seconds,
+        )
+
+    frames = extract_candidate_frames(
+        analysis_source,
+        [candidate.center for candidate in base_candidates],
         target_dir / "candidates",
-        tiles=len(base_candidates),
+    )
+    sheet = target_dir / "source_contact_sheet.jpg"
+    compose_contact_sheet(
+        frames,
+        sheet,
         columns=columns,
     )
     candidates = _enrich_candidates(base_candidates, frames)
+
+    audit_warnings = list(audit.warnings)
+    if proxy_warning:
+        audit_warnings.append(proxy_warning)
 
     item = SourceReviewItem(
         source=str(source),
@@ -251,8 +324,12 @@ def review_video(
         audit_score=audit.score,
         audit_reject=audit.reject,
         audit_reasons=audit.reasons,
-        audit_warnings=audit.warnings,
+        audit_warnings=tuple(audit_warnings),
         candidates=candidates,
+        analysis_source=str(analysis_source),
+        proxy_reused=proxy_reused,
+        shot_count=len(shots),
+        selection_mode=selection_mode,
     )
     _atomic_json_write(
         target_dir / "review.json",
@@ -311,6 +388,8 @@ def build_source_review(
                 "technical_audit": "AUTOMATED",
                 "visual_metrics": "HEURISTIC_RANKING_ONLY",
                 "technical_rank": "PER_SOURCE_NOT_AESTHETIC_RANK",
+                "proxy_cache": "ENABLED",
+                "shot_detection": "PREFERRED_WITH_UNIFORM_FALLBACK",
                 "duplicate_detection": "PERCEPTUAL_HASH_HEURISTIC",
                 "visual_quality": "PENDING_HUMAN_OR_VISION_REVIEW",
                 "auto_accept_visual": False,
