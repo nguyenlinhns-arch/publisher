@@ -86,3 +86,20 @@ def test_project_load_accepts_windows_utf8_bom(tmp_path: Path):
     assert project.title == "Smoke"
     assert len(project.timeline) == 1
     assert project.timeline[0].keep_audio
+
+
+def test_project_save_writes_source_and_transcript_sidecars(tmp_path: Path):
+    target = tmp_path / "news.linhedit.json"
+    project = ProjectState(
+        profile="EXPLAINER_NEWS",
+        source_mode="NEWS_TEXT",
+        source_text="Bài nguồn gốc.",
+        transcript="Lời đọc đã chuẩn hóa.",
+    )
+
+    project.save(target)
+
+    assert (tmp_path / "news_source.txt").read_text(encoding="utf-8") == "Bài nguồn gốc."
+    assert (
+        tmp_path / "news_transcript.txt"
+    ).read_text(encoding="utf-8") == "Lời đọc đã chuẩn hóa.\n"
