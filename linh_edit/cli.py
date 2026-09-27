@@ -16,6 +16,7 @@ from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
 from .source_review import (
+    apply_kept_candidates,
     build_source_review,
     mark_candidate_review,
     promote_review_candidate,
@@ -58,6 +59,7 @@ CAPABILITIES = {
         "source-review",
         "review-mark",
         "review-promote",
+        "review-build",
     ],
     "output_default": {
         "width": 1080,
@@ -159,6 +161,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["PENDING", "SHORTLIST", "KEEP", "REJECT"],
         required=True,
     )
+    review_mark.add_argument("--role", default="")
     review_mark.add_argument("--note", default="")
 
     review_promote = sub.add_parser("review-promote")
@@ -168,6 +171,11 @@ def build_parser() -> argparse.ArgumentParser:
     review_promote.add_argument("--candidate", type=int, required=True)
     review_promote.add_argument("--role")
     review_promote.add_argument("--media-only", action="store_true")
+
+    review_build = sub.add_parser("review-build")
+    review_build.add_argument("--manifest", type=Path, required=True)
+    review_build.add_argument("--project", type=Path, required=True)
+    review_build.add_argument("--media-only", action="store_true")
     return parser
 
 
@@ -489,6 +497,7 @@ def main(argv: list[str] | None = None) -> int:
                 item_index=int(args.item),
                 candidate_index=int(args.candidate),
                 decision=str(args.decision),
+                role=str(args.role or ""),
                 note=str(args.note or ""),
             )
             _safe_print(
@@ -513,6 +522,15 @@ def main(argv: list[str] | None = None) -> int:
                 candidate_index=int(args.candidate),
                 role=str(args.role).strip() if args.role else None,
                 to_timeline=not bool(args.media_only),
+            )
+            _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "review-build":
+            result = apply_kept_candidates(
+                args.manifest.expanduser().resolve(),
+                args.project.expanduser().resolve(),
+                build_timeline=not bool(args.media_only),
             )
             _safe_print(json.dumps(result, ensure_ascii=False))
             return 0
