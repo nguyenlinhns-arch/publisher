@@ -10,6 +10,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from .article_ingest import apply_article, fetch_article
+from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .contact_sheet import extract_contact_sheet
 from .cover import extract_cover
 from .engine_adapter import render_project
@@ -20,6 +21,7 @@ from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
 from .storyboard import import_storyboard as load_storyboard
+from .validation import validate_project
 
 APP_VERSION = "1.1.0"
 
@@ -83,6 +85,13 @@ class LinhEditWindow:
         file_menu.add_separator()
         file_menu.add_command(label="Lưu", command=self.save_project)
         file_menu.add_command(label="Lưu thành...", command=self.save_project_as)
+        file_menu.add_separator()
+        file_menu.add_command(label="Tạo checkpoint", command=self.create_manual_checkpoint)
+        file_menu.add_command(
+            label="Khôi phục checkpoint gần nhất",
+            command=self.restore_latest_checkpoint,
+        )
+        file_menu.add_command(label="Kiểm tra project", command=self.validate_current_project)
         file_menu.add_separator()
         file_menu.add_command(label="Mở thư mục thành phẩm", command=self.open_output_folder)
         file_menu.add_command(label="Mở contact sheet gần nhất", command=self.open_contact_sheet)
@@ -333,6 +342,89 @@ class LinhEditWindow:
         self.project.dirty = True
         self._update_title()
 
+    def _checkpoint_if_saved(self, label: str) -> Path | None:
+        if self.project_path is None or not self.project_path.is_file():
+            return None
+        try:
+            return create_checkpoint(
+                self.project,
+                self.project_path,
+                label=label,
+            )
+        except Exception as exc:
+            self.status_var.set(f"Checkpoint chưa tạo được: {exc}")
+            return None
+
+    def create_manual_checkpoint(self) -> None:
+        if self.project_path is None:
+            messagebox.showinfo(
+                "Chưa lưu project",
+                "Hãy lưu project trước khi tạo checkpoint.",
+            )
+            return
+        self._sync_project()
+        try:
+            if self.project.dirty:
+                self.project.save(self.project_path)
+            checkpoint = create_checkpoint(
+                self.project,
+                self.project_path,
+                label="manual",
+            )
+        except Exception as exc:
+            messagebox.showerror("Không tạo được checkpoint", str(exc))
+            return
+        self.status_var.set(f"Checkpoint: {checkpoint.name}")
+
+    def restore_latest_checkpoint(self) -> None:
+        if self.project_path is None:
+            messagebox.showinfo(
+                "Chưa có project",
+                "Hãy mở hoặc lưu project trước.",
+            )
+            return
+        items = list_checkpoints(self.project_path)
+        if not items:
+            messagebox.showinfo("Chưa có checkpoint", "Project chưa có checkpoint.")
+            return
+        latest = items[0]
+        if not messagebox.askyesno(
+            "Khôi phục checkpoint",
+            f"Khôi phục checkpoint gần nhất?\n{latest.name}",
+        ):
+            return
+        try:
+            self.project = restore_checkpoint(latest, self.project_path)
+        except Exception as exc:
+            messagebox.showerror("Không khôi phục được", str(exc))
+            return
+        self.profile_var.set(PROFILE_NAMES.get(self.project.profile, "Travel / Công tác"))
+        self.target_var.set(self.project.target_seconds)
+        self.title_var.set(self.project.title)
+        self.voice_var.set(self.project.voiceover)
+        self.music_var.set(self.project.music)
+        self._refresh_all()
+        self.status_var.set(f"Đã khôi phục: {latest.name}")
+
+    def validate_current_project(self) -> None:
+        self._sync_project()
+        report = validate_project(self.project, deep=False)
+        if report.passed:
+            detail = (
+                f"PASS • {report.duration:.1f}s"
+                f" • {len(report.warnings)} cảnh báo"
+            )
+            if report.warnings:
+                detail += "\n\n" + "\n".join(
+                    f"- {item.message}" for item in report.warnings[:8]
+                )
+            messagebox.showinfo("Kiểm tra project", detail)
+        else:
+            detail = "\n".join(
+                f"- {item.message}" for item in report.errors[:8]
+            )
+            messagebox.showerror("Project chưa hợp lệ", detail)
+
     def _update_title(self) -> None:
         name = self.project_path.name if self.project_path else self.project.name
         star = " *" if self.project.dirty else ""
@@ -443,6 +535,7 @@ class LinhEditWindow:
             return
 
         try:
+            self._checkpoint_if_saved("before-news-import")
             # Content changed: never silently reuse a voice made for an older transcript.
             self.voice_var.set("")
             self.project.voiceover = ""
@@ -492,6 +585,7 @@ class LinhEditWindow:
                 article = future.result()
                 if not article.local_images:
                     raise ValueError("Không tải được ảnh hợp lệ từ bài viết.")
+                self._checkpoint_if_saved("before-article-import")
                 self.voice_var.set("")
                 self.project.voiceover = ""
                 apply_article(self.project, article)
@@ -534,6 +628,7 @@ class LinhEditWindow:
             filetypes=[("Audio", "*.mp3 *.wav *.m4a *.aac *.ogg *.flac *.mp4"), ("Tất cả tệp", "*.*")],
         )
         if value:
+            self._checkpoint_if_saved("before-audio-change")
             self.voice_var.set(value)
             self.project.voiceover = value
             try:
@@ -626,6 +721,7 @@ class LinhEditWindow:
             messagebox.showinfo("Chưa có video", "Hãy thêm footage trước.")
             return
         try:
+            self._checkpoint_if_saved("before-rough-cut")
             timeline = build_rough_cut(self.project)
         except Exception as exc:
             messagebox.showerror("Không tạo được rough cut", str(exc))
@@ -772,6 +868,7 @@ class LinhEditWindow:
             )
 
         def save() -> None:
+            self._checkpoint_if_saved("before-hook")
             self.project.texts = [x for x in self.project.texts if x.role not in {"context", "main", "keyword"}]
             if context.get().strip():
                 self.project.texts.append(
@@ -820,6 +917,7 @@ class LinhEditWindow:
             except (ValueError, tk.TclError) as exc:
                 messagebox.showerror("Chưa hợp lệ", str(exc), parent=win)
                 return
+            self._checkpoint_if_saved("before-text")
             self.project.texts.append(
                 TextItem(s, e, text.get().strip(), "caption", 0.5, 0.78, 72, 700, "#F4F1E9")
             )
@@ -977,6 +1075,7 @@ class LinhEditWindow:
     def export_final(self) -> None:
         if self.busy or not self._ensure_timeline():
             return
+        self._checkpoint_if_saved("before-export")
         default_dir = Path(self.project.output_dir or output_dir())
         default_dir.mkdir(parents=True, exist_ok=True)
         initial = self.project.title.strip() or "linh_edit_final"
@@ -1171,6 +1270,7 @@ class LinhEditWindow:
         if not value:
             return
         try:
+            self._checkpoint_if_saved("before-legacy-import")
             import_legacy_script(Path(value), self.project)
         except Exception as exc:
             messagebox.showerror("Không nhập được dự án cũ", str(exc))
