@@ -109,12 +109,14 @@ def ensure_proxy(
     temp.replace(target)
 
     signature = source_signature(source)
+    source_info = asdict(info)
+    source_info["path"] = str(info.path)
     payload = {
         "schema": CACHE_SCHEMA,
         "kind": "proxy",
         "proxy_version": 1,
         "source_signature": asdict(signature),
-        "source_info": asdict(info),
+        "source_info": source_info,
         "proxy": str(target),
         "width": width,
         "height": height,
