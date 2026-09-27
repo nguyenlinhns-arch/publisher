@@ -33,6 +33,16 @@ def _detect_bgr(image, cv2) -> SubjectDetection | None:
     height, width = image.shape[:2]
     if width <= 0 or height <= 0:
         return None
+    # Detection uses normalized coordinates, so downscaling large review frames
+    # greatly reduces CPU cost without changing reframe geometry.
+    if width > 640:
+        scale = 640.0 / width
+        image = cv2.resize(
+            image,
+            (640, max(2, int(round(height * scale)))),
+            interpolation=cv2.INTER_AREA,
+        )
+        height, width = image.shape[:2]
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)
