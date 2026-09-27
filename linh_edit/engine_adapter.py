@@ -8,6 +8,7 @@ from .engine.plan_io import load_plan
 from .engine.renderer import render_plan
 
 from .project import ProjectState
+from .validation import validate_project
 
 
 def _timeline_duration(project: ProjectState) -> float:
@@ -81,6 +82,18 @@ def render_project(
     preview: bool = False,
     include_audio: bool = True,
 ) -> Path:
+    output = output.expanduser().resolve()
+    report = validate_project(project, deep=False)
+    preflight_path = output.with_suffix(".preflight.json")
+    preflight_path.parent.mkdir(parents=True, exist_ok=True)
+    preflight_path.write_text(
+        json.dumps(report.to_dict(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    if not report.passed:
+        summary = "; ".join(item.message for item in report.errors[:8])
+        raise RuntimeError("Project preflight failed: " + summary)
+
     plan_path = output.with_suffix(".plan.json")
     project_to_plan(
         project,
