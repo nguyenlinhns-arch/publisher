@@ -1166,7 +1166,9 @@ class LinhEditWindow:
                 self.status_var.set(f"Hoàn tất preview: {output.name}{note}")
                 self._open_path(output)
             else:
-                self.status_var.set(f"Hoàn tất: {output}")
+                self.status_var.set(
+                    f"Xuất kỹ thuật xong: {output.name} • Review playback: PENDING"
+                )
                 self.project.output_dir = str(output.parent)
                 detail = f"Video: {output.name}"
                 if not include_audio:
@@ -1174,7 +1176,8 @@ class LinhEditWindow:
                 if cover:
                     detail += f"\nCover: {cover.name}"
                 detail += f"\nQA: {output.with_suffix('.qa.json').name}"
-                messagebox.showinfo("Xuất video thành công", detail)
+                detail += "\nReview playback: PENDING"
+                messagebox.showinfo("Xuất kỹ thuật hoàn tất", detail)
 
         self.root.after(150, poll)
 
