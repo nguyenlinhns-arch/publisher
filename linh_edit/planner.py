@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from pathlib import Path
 
-from .media import default_segment_duration, infer_role, probe
+from .media import audit_media_info, default_segment_duration, infer_role, probe
 from .project import MediaItem, ProjectState
 
 
@@ -31,6 +31,9 @@ def import_media(paths: list[Path]) -> list[MediaItem]:
     for path in paths:
         path = path.expanduser().resolve()
         role = infer_role(path)
+        if not path.is_file():
+            raise RuntimeError(f"Không tìm thấy media: {path}")
+
         if path.suffix.lower() in IMAGE_EXTENSIONS:
             items.append(
                 MediaItem(
@@ -48,14 +51,12 @@ def import_media(paths: list[Path]) -> list[MediaItem]:
             continue
 
         info = probe(path)
+        audit = audit_media_info(info)
+        if audit.reject:
+            raise RuntimeError(
+                f"Loại media {path.name}: " + ", ".join(audit.reasons)
+            )
         duration = default_segment_duration(role, info.duration)
-        score = 0.50
-        if info.height > info.width:
-            score += 0.10
-        if max(info.width, info.height) >= 2160:
-            score += 0.10
-        if 29.5 <= info.fps <= 30.5:
-            score += 0.05
         items.append(
             MediaItem(
                 path=str(info.path),
@@ -63,7 +64,7 @@ def import_media(paths: list[Path]) -> list[MediaItem]:
                 role=role,
                 start=0.0,
                 duration=duration,
-                score=min(1.0, score),
+                score=audit.score,
                 motion="none",
                 keep_audio=False,
                 source_gain=0.10,
