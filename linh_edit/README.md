@@ -1,191 +1,197 @@
-# Linh Edit 1.7
+# Linh Edit 2.0
 
-Linh Edit is the single local Windows editor for Linh video workflows.
+Linh Edit is the unified local Windows editor for the Linh video workflow.
 
-## One app, four profiles
+It replaces the need to operate the old News and Editorial editors separately,
+while keeping those legacy folders untouched for rollback. MXH publishing
+remains a separate app/workflow.
+
+## Profiles
 
 - Travel / Công tác
 - Talk / Chuyên gia
 - Tin tức / Editorial
 - Tuyển dụng
 
-Legacy News and Editorial apps remain untouched as rollback/migration sources.
-MXH publishing stays separate.
+Default output remains vertical 1080×1920 at 30fps.
 
-## 1.7 — Story Rhythm + Three-Pass Review Gate
+## Core workflow
 
-Version 1.7 builds on the 1.6 VO/Text/Audio layer and makes story rhythm and
-final editorial review first-class project state.
+Story → Source Review → Select → Rough Cut → Reframe → Hook → Selective Text →
+Audio → Color/HDR → Cover → Automated QA → Review 3 Pass → Export/Publish-ready.
 
-### Constraint-based Travel Story Optimizer
+The app intentionally prefers hard cuts, real footage, selective text and
+natural documentary pacing over heavy transitions or decorative FX.
 
-Travel rough cuts now use a deterministic story optimizer instead of a simple
-role loop.
+## Media intelligence
 
-It targets the Linh documentary arc:
+### Proxy + cache
 
-- visual hook
-- human
-- work
-- road reset
-- place
-- detail / life
-- emotion
-- lingering ending
+Heavy sources such as 4K/8K, HEVC, VFR, rotated and HDR footage can use
+disposable local analysis proxies. Final render always reads the original
+source.
 
-The optimizer:
+The cache is fingerprinted by path, size and mtime, reused when safe, bounded,
+and can be pruned without touching source footage.
 
-- caps work/admin footage as a minority of total runtime
-- rewards source diversity and avoids needless repeated snippets
-- preserves road resets when source footage is available
-- gives human/emotion shots longer holds than work/admin shots
-- keeps hard-cut structure
-- pushes an ending shot to the tail when available
-- reports work ratio, road-reset count, source diversity and final role order
+### Shot-aware Source Review
 
-UI:
-- **STORY OPTIMIZE**
+Linh Edit prefers real shot boundaries over uniform sampling, then creates:
 
-CLI:
-- `story-optimize`
-
-Travel **AUTO EDIT** is routed through this optimizer.
-
-### Talk Rhythm — punch-in / punch-out at phrase boundaries
-
-Talk / Expert projects can now use sentence-aware rhythm without continuous
-zoom effects.
-
-Linh Edit:
-
-- detects VO silence with FFmpeg when a voice track is available
-- falls back to transcript punctuation timing when silence detection has no
-  useful boundary
-- splits the existing source clip without changing total runtime
-- alternates a subtle 1.0 / 1.035 punch scale at phrase boundaries
-- keeps original source time continuity and audio
-
-UI:
-- **TALK RHYTHM**
-
-CLI:
-- `talk-rhythm-apply`
-
-### Three-Pass Review Gate
-
-Visual-only, Audio-only and Full Playback are now stored as project review
-state instead of only being notes in a QA file.
-
-States:
-
-- PENDING
-- PASS
-- FAIL
-
-A project becomes **READY_TO_PUBLISH** only when all three passes are PASS for
-the current content revision.
-
-If the edit changes later:
-
-- `content_revision` increments
-- earlier review approvals automatically become stale
-- the project is no longer READY_TO_PUBLISH until reviewed again
-
-UI:
-- **REVIEW 3 PASS**
-- File menu → Review 3 pass
-
-CLI:
-- `review-status`
-- `review-set`
-- `review-reset`
-
-### Safer live ChatGPT + desktop editing
-
-Project schema v5 separates:
-
-- save revision — protects against simultaneous writers
-- content revision — tracks editorial changes
-- review content revision — binds review approval to the exact edit
-
-Stale cross-process saves remain blocked. Checkpoint restore now counts as a
-content change, so restoring an older edit automatically invalidates stale
-review approvals.
-
-### 1.6 intelligence retained
-
-- selective captions from VO script
-- DÁN VO SCRIPT / AUTO CAPTION VO
-- conservative text-to-shot matching
-- VO-first music ducking
-- retained source ambience ducking under VO
-- configurable threshold / ratio / attack / release
-- project live reload after safe external edits
-
-### 1.5 performance/visual intelligence retained
-
-- 4K/8K/HEVC/VFR/HDR analysis proxies
-- reusable bounded cache
-- shot-boundary Source Review
-- KEEP / SHORTLIST / REJECT
+- candidate time windows
+- contact sheets
+- individual review frames
+- brightness / contrast / edge-detail hints
 - perceptual duplicate warnings
-- smart 9:16 reframe suggestions
-- negative-space Hook layout suggestions
-- reviewed-only rough-cut building
-- final render always uses original source footage
+- technical rank
+- KEEP / SHORTLIST / REJECT state
+- role assignment
 
-## Direct ChatGPT / Hub commands
+Technical heuristics never auto-approve visual quality.
 
-The deterministic command layer includes:
+### Face/person-aware reframe
 
-- `story-optimize`
-- `talk-rhythm-apply`
-- `review-status`
-- `review-set`
-- `review-reset`
-- `transcript-set`
-- `caption-plan`
-- `caption-apply`
-- `text-shot-report`
-- `text-shot-apply`
-- `source-review`
-- `review-mark`
-- `review-promote`
-- `review-build`
-- `hook-layout-apply`
-- `proxy-build`
-- `shot-detect`
-- `normalization-plan`
-- `project-patch`
-- `project-checkpoint`
-- `checkpoint-restore`
-- `project-validate`
-- `render`
+OpenCV-based local subject intelligence now detects and tracks faces or people
+across multiple frames of a candidate. The tracked center improves 9:16
+reframe placement. If detection is unavailable or uncertain, Linh Edit falls
+back to local visual-saliency analysis.
 
-## Review policy
+No face identity recognition is performed.
 
-A successful render means technical render/QA passed.
+### Hook intelligence
 
-Publication readiness still requires:
+For reviewed candidates Linh Edit estimates:
 
-1. Visual-only PASS
-2. Audio-only PASS
-3. Full Playback PASS
+- negative-space region
+- CENTER / UPPER-CENTER / CENTER-LEFT placement
+- CLEAN vs HIGH_CONTRAST
+- Hook x/y/alignment
+- layout confidence
 
-Any later content edit invalidates those approvals automatically.
+A KEEP candidate can apply its layout to Context/Main/Keyword Hook layers with
+a checkpoint first.
 
-## Windows app
+## Story and rhythm intelligence
 
-The portable Windows package contains:
+### Travel Story Optimizer
+
+Travel rough cuts use the project DNA:
+
+visual hook → human → work → road reset → place → detail/life → emotion →
+lingering ending.
+
+The optimizer limits work/admin dominance, rewards source diversity, preserves
+reviewed/manual selections, keeps road resets when available, and gives
+human/emotion/ending shots longer holds.
+
+### Talk Rhythm
+
+Talk projects can detect VO silence with FFmpeg and fall back to transcript
+punctuation. The source is split at phrase boundaries while preserving total
+runtime, then receives subtle alternating 1.0 / 1.035 punch rhythm rather than
+continuous zooming.
+
+## VO, text and semantic matching
+
+### Selective captions
+
+VO script/transcript is split into compact narration blocks. Hook owns 0–3s;
+body captions are selective rather than full subtitles, with a configurable
+coverage target (default 65%).
+
+### Text → Shot matching
+
+Narration concepts such as road, people, work, place, daily life, detail and
+emotion are mapped to visual roles. The automatic apply path only swaps nearby
+timeline slots when duration constraints remain safe.
+
+## Audio intelligence
+
+- independent VO and music gain
+- source ambience hierarchy
+- sidechain ducking under VO
+- configurable threshold / ratio / attack / release
+- LUFS measurement
+- automatic VO/music stem balancing
+- final loudness mastering (default -14 LUFS, -1.5 dBTP, LRA 11)
+- final limiter retained
+
+The one-command optimization pipeline can measure source loudness and prepare
+the mix before render.
+
+## Color and HDR
+
+Linh Edit reads VFR, rotation, pixel format and color metadata. HDR10/PQ and
+HLG sources can be tone-mapped to natural BT.709 SDR in analysis proxies and
+final SDR output while the original source file remains untouched.
+
+## Automated final QA
+
+Every render keeps the technical QA and also writes an editorial QA report with:
+
+- output geometry / fps / codecs / duration
+- black-span detection
+- long-silence detection
+- final loudness / true peak
+- shot-count and average-shot metrics
+- work ratio
+- road reset / human / emotion counts
+- source repetition
+- caption coverage
+- Hook completeness
+- current Review 3 Pass state
+
+Automated QA is advisory. It never replaces playback review.
+
+## Safe direct ChatGPT / Hub control
+
+Project schema v6 separates:
+
+- save revision
+- content revision
+- review content revision
+
+Stale writers are rejected. A clean desktop project live-reloads after safe
+CLI/ChatGPT edits; dirty local edits are protected from overwrite.
+
+The main automation command is:
+
+- `optimize-all`
+
+It performs the profile-appropriate story/rhythm pass, selective captions,
+conservative text-shot matching where applicable, automatic audio balancing,
+validation and an optional render, then writes a durable pipeline receipt.
+
+Advanced deterministic commands remain available for individual phases such as
+`source-review`, `review-build`, `caption-apply`, `text-shot-apply`,
+`audio-auto-master`, `qa-analyze`, `project-patch` and `render`.
+
+## Review 3 Pass
+
+Publication readiness requires the current content revision to have:
+
+1. VISUAL ONLY = PASS
+2. AUDIO ONLY = PASS
+3. FULL PLAYBACK = PASS
+
+Any later editorial change or checkpoint restore makes earlier approvals stale.
+Only then does project status become READY_TO_PUBLISH.
+
+## Windows package
+
+The portable package includes:
 
 - `LinhEdit.exe`
 - FFmpeg / FFprobe
+- OpenCV face/person intelligence
+- Pillow visual analysis
 - Montserrat + Oswald
-- Pillow visual-analysis runtime
 - Hub lifecycle files
 
-Normal use does not require a separate Python installation.
+Normal operation does not require a separate Python installation.
 
 Unified source root:
 
 - `D:\LINH_EDIT`
+
+Legacy rollback roots remain untouched.
