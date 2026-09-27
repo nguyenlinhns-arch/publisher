@@ -24,7 +24,12 @@ PROJECT_FIELDS = {
     "duck_ratio",
     "duck_attack_ms",
     "duck_release_ms",
+    "auto_master_audio",
+    "master_lufs",
+    "master_true_peak",
+    "master_lra",
     "caption_coverage_target",
+    "auto_hdr_to_sdr",
     "output_dir",
     "source_mode",
     "source_text",
@@ -214,6 +219,10 @@ def _apply_one(project: ProjectState, op: dict[str, Any]) -> None:
             "duck_ratio",
             "duck_attack_ms",
             "duck_release_ms",
+            "auto_master_audio",
+            "master_lufs",
+            "master_true_peak",
+            "master_lra",
         }
         unknown = set(values) - allowed
         if unknown:
