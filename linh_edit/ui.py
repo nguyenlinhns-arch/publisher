@@ -86,6 +86,10 @@ class LinhEditWindow:
         file_menu.add_separator()
         file_menu.add_command(label="Mở thư mục thành phẩm", command=self.open_output_folder)
         file_menu.add_command(label="Mở contact sheet gần nhất", command=self.open_contact_sheet)
+        file_menu.add_command(
+            label="Xuất visual master không tiếng...",
+            command=self.export_visual_master,
+        )
         file_menu.add_separator()
         file_menu.add_command(label="Thoát", command=self.close)
         menu.add_cascade(label="Tệp", menu=file_menu)
@@ -922,6 +926,27 @@ class LinhEditWindow:
         target = preview_dir / "linh_edit_preview.mp4"
         self._render_async(target, preview=True)
 
+    def export_visual_master(self) -> None:
+        if self.busy or not self._ensure_timeline():
+            return
+        default_dir = Path(self.project.output_dir or output_dir())
+        default_dir.mkdir(parents=True, exist_ok=True)
+        initial = (self.project.title.strip() or "linh_edit") + "_visual_master_no_audio"
+        target = filedialog.asksaveasfilename(
+            title="Xuất visual master không tiếng",
+            initialdir=str(default_dir),
+            initialfile=initial + ".mp4",
+            defaultextension=".mp4",
+            filetypes=[("MP4", "*.mp4")],
+        )
+        if target:
+            safe_target = self._versioned_output(Path(target))
+            self._render_async(
+                safe_target,
+                preview=False,
+                include_audio=False,
+            )
+
     def export_final(self) -> None:
         if self.busy or not self._ensure_timeline():
             return
@@ -941,7 +966,7 @@ class LinhEditWindow:
                 self.status_var.set(
                     f"File đã tồn tại → xuất bản mới: {safe_target.name}"
                 )
-            self._render_async(safe_target, preview=False)
+            self._render_async(safe_target, preview=False, include_audio=True)
 
     @staticmethod
     def _versioned_output(path: Path) -> Path:
@@ -954,13 +979,24 @@ class LinhEditWindow:
                 return candidate
             number += 1
 
-    def _render_async(self, target: Path, *, preview: bool) -> None:
+    def _render_async(
+        self,
+        target: Path,
+        *,
+        preview: bool,
+        include_audio: bool = True,
+    ) -> None:
         self._sync_project()
         snapshot = deepcopy(self.project)
         self._set_busy(True, "Đang render preview..." if preview else "Đang xuất video final...")
 
         def work():
-            output = render_project(snapshot, target, preview=preview)
+            output = render_project(
+                snapshot,
+                target,
+                preview=preview,
+                include_audio=include_audio,
+            )
             cover = None
             sheet = None
             if preview:
@@ -1000,6 +1036,8 @@ class LinhEditWindow:
                 self.status_var.set(f"Hoàn tất: {output}")
                 self.project.output_dir = str(output.parent)
                 detail = f"Video: {output.name}"
+                if not include_audio:
+                    detail += "\nÂm thanh: KHÔNG CÓ (visual master)"
                 if cover:
                     detail += f"\nCover: {cover.name}"
                 detail += f"\nQA: {output.with_suffix('.qa.json').name}"
