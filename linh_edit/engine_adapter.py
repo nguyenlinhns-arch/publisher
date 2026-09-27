@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .engine.plan_io import load_plan
 from .engine.renderer import render_plan
+from .media import probe
 
 from .project import ProjectState
 from .validation import validate_project
@@ -27,7 +28,21 @@ def project_to_plan(
     preset = "veryfast" if preview else "medium"
 
     clips = []
+    media_probe_cache: dict[str, object] = {}
     for item in project.timeline:
+        hdr_to_sdr = False
+        if project.auto_hdr_to_sdr and item.kind == "video":
+            try:
+                info = media_probe_cache.get(item.path)
+                if info is None:
+                    info = probe(Path(item.path))
+                    media_probe_cache[item.path] = info
+                hdr_to_sdr = str(getattr(info, "color_transfer", "")).lower() in {
+                    "smpte2084",
+                    "arib-std-b67",
+                }
+            except Exception:
+                hdr_to_sdr = False
         clips.append(
             {
                 "source": item.path,
@@ -41,6 +56,7 @@ def project_to_plan(
                 "motion": item.motion,
                 "mute_source_audio": not item.keep_audio,
                 "source_gain": item.source_gain,
+                "hdr_to_sdr": hdr_to_sdr,
             }
         )
 
@@ -60,6 +76,10 @@ def project_to_plan(
             "duck_ratio": project.duck_ratio,
             "duck_attack_ms": project.duck_attack_ms,
             "duck_release_ms": project.duck_release_ms,
+            "auto_master_audio": project.auto_master_audio,
+            "master_lufs": project.master_lufs,
+            "master_true_peak": project.master_true_peak,
+            "master_lra": project.master_lra,
             "source_ambience_gain": 0.10,
             "ending_music_only_seconds": 6.0,
         },
