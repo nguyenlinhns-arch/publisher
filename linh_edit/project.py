@@ -72,12 +72,14 @@ class ProjectState:
     dirty: bool = False
 
     def save(self, path: Path) -> None:
+        path = path.expanduser().resolve()
+        path.parent.mkdir(parents=True, exist_ok=True)
         payload = asdict(self)
         payload["dirty"] = False
-        path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        text = json.dumps(payload, ensure_ascii=False, indent=2)
+        temp = path.with_suffix(path.suffix + ".partial")
+        temp.write_text(text, encoding="utf-8")
+        temp.replace(path)
         self.dirty = False
 
     @classmethod
