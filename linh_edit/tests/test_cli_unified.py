@@ -53,3 +53,62 @@ def test_legacy_import_cli_saves_project(tmp_path):
     payload = json.loads(target.read_text(encoding="utf-8"))
     assert payload["source_mode"] == "LEGACY_NEWS"
     assert payload["profile"] == "EXPLAINER_NEWS"
+
+
+def test_media_import_cli_builds_direct_media_project(tmp_path, monkeypatch):
+    media = tmp_path / "talk.mp4"
+    media.write_bytes(b"media")
+    target = tmp_path / "direct.linhedit.json"
+
+    monkeypatch.setattr(
+        cli,
+        "import_media",
+        lambda paths: [
+            cli.ProjectState.__dataclass_fields__ and __import__(
+                "linh_edit.project", fromlist=["MediaItem"]
+            ).MediaItem(
+                path=str(paths[0]),
+                kind="video",
+                role="human",
+                duration=10.0,
+                score=1.0,
+            )
+        ],
+    )
+
+    code = cli.main(
+        [
+            "media-import",
+            "--media",
+            str(media),
+            "--profile",
+            "TALKING_HEAD_EXPERT",
+            "--target-seconds",
+            "10",
+            "--project",
+            str(target),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    assert payload["source_mode"] == "DIRECT_MEDIA"
+    assert payload["profile"] == "TALKING_HEAD_EXPERT"
+    assert payload["timeline"][0]["keep_audio"] is True
+
+
+def test_project_status_cli_reports_saved_project(tmp_path, capsys):
+    target = tmp_path / "status.linhedit.json"
+    project = cli.ProjectState(
+        profile="TRAVEL_DOCUMENTARY",
+        source_mode="DIRECT_MEDIA",
+        title="Status test",
+    )
+    project.save(target)
+
+    code = cli.main(["project-status", "--project", str(target)])
+
+    assert code == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["status"] == "READY"
+    assert output["title"] == "Status test"
