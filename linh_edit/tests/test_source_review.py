@@ -41,11 +41,11 @@ def test_review_video_writes_contact_sheet_candidate_frames_and_manifest(tmp_pat
         lambda _path: MediaInfo(
             path=video,
             duration=12.0,
-            width=1080,
-            height=1920,
+            width=2160,
+            height=3840,
             fps=30.0,
             has_audio=True,
-            video_codec="h264",
+            video_codec="hevc",
             audio_codec="aac",
         ),
     )
