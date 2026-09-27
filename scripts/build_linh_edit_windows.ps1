@@ -18,6 +18,10 @@ $Fonts = Join-Path $Root "assets\fonts"
 $Background = Join-Path $Root "assets\nen.png"
 $DefaultSfx = Join-Path $Root "assets\sound.mp3"
 $Entry = Join-Path $Root "linh_edit_launcher.py"
+$HubLauncher = Join-Path $Root "linh_edit\MO_UNG_DUNG.bat"
+$HubCheck = Join-Path $Root "linh_edit\CHECK_THAY_LINH_HUB.ps1"
+$HubManifest = Join-Path $Root "linh_edit\.thay-linh-app.json"
+$AppManifest = Join-Path $Root "linh_edit\app_manifest.json"
 $Dist = Join-Path $Root "dist"
 $Work = Join-Path $Root "build\linh-edit-pyinstaller"
 $Spec = Join-Path $Root "build\linh-edit-spec"
@@ -46,7 +50,7 @@ if ((-not $SkipFetch) -and ((-not (Test-Path -LiteralPath $Ffmpeg -PathType Leaf
     Assert-NativeSuccess "Tải FFmpeg đã khóa checksum"
 }
 
-foreach ($Required in @($Ffmpeg, $Ffprobe, $Fonts, $Background, $DefaultSfx, $Entry)) {
+foreach ($Required in @($Ffmpeg, $Ffprobe, $Fonts, $Background, $DefaultSfx, $Entry, $HubLauncher, $HubCheck, $HubManifest, $AppManifest)) {
     if (-not (Test-Path -LiteralPath $Required)) {
         throw "Thiếu thành phần build: $Required"
     }
@@ -171,6 +175,22 @@ if (-not (Test-Path -LiteralPath $SmokeOutput -PathType Leaf)) {
 Assert-NativeSuccess "ffprobe smoke output từ LinhEdit.exe"
 
 Copy-Item -LiteralPath (Join-Path $Root "linh_edit\README.md") -Destination (Join-Path $AppDir "README.txt") -Force
+Copy-Item -LiteralPath $HubLauncher -Destination (Join-Path $AppDir "MO_UNG_DUNG.bat") -Force
+Copy-Item -LiteralPath $HubCheck -Destination (Join-Path $AppDir "CHECK_THAY_LINH_HUB.ps1") -Force
+Copy-Item -LiteralPath $HubManifest -Destination (Join-Path $AppDir ".thay-linh-app.json") -Force
+Copy-Item -LiteralPath $AppManifest -Destination (Join-Path $AppDir "app_manifest.json") -Force
+
+foreach ($RequiredPackaged in @(
+    (Join-Path $AppDir "MO_UNG_DUNG.bat"),
+    (Join-Path $AppDir "CHECK_THAY_LINH_HUB.ps1"),
+    (Join-Path $AppDir ".thay-linh-app.json"),
+    (Join-Path $AppDir "app_manifest.json")
+)) {
+    if (-not (Test-Path -LiteralPath $RequiredPackaged -PathType Leaf)) {
+        throw "Thiếu thành phần Hub trong bản đóng gói: $RequiredPackaged"
+    }
+}
+
 if (Test-Path -LiteralPath (Join-Path $Root "THIRD_PARTY_NOTICES.md")) {
     Copy-Item -LiteralPath (Join-Path $Root "THIRD_PARTY_NOTICES.md") -Destination (Join-Path $AppDir "THIRD_PARTY_NOTICES.md") -Force
 }
