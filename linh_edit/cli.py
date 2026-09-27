@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import json
 import sys
 from pathlib import Path
 
 from . import APP_NAME, __version__
 from .article_ingest import apply_article, fetch_article
+from .cache import cache_summary
 from .checkpoint import create_checkpoint, list_checkpoints, restore_checkpoint
 from .engine_adapter import render_project
 from .legacy_import import import_legacy_script
 from .media import audit_video, probe_duration
+from .proxy import ensure_proxy
 from .news_ingest import apply_news_content
 from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
+from .shot_detection import detect_shots
 from .source_review import (
     apply_kept_candidates,
     build_source_review,
@@ -60,6 +64,9 @@ CAPABILITIES = {
         "review-mark",
         "review-promote",
         "review-build",
+        "proxy-build",
+        "shot-detect",
+        "cache-status",
     ],
     "output_default": {
         "width": 1080,
@@ -176,6 +183,18 @@ def build_parser() -> argparse.ArgumentParser:
     review_build.add_argument("--manifest", type=Path, required=True)
     review_build.add_argument("--project", type=Path, required=True)
     review_build.add_argument("--media-only", action="store_true")
+
+    proxy_build = sub.add_parser("proxy-build")
+    proxy_build.add_argument("--media", type=Path, action="append", required=True)
+    proxy_build.add_argument("--force", action="store_true")
+
+    shot_detect = sub.add_parser("shot-detect")
+    shot_detect.add_argument("--media", type=Path, required=True)
+    shot_detect.add_argument("--threshold", type=float, default=0.32)
+    shot_detect.add_argument("--min-gap", type=float, default=0.45)
+    shot_detect.add_argument("--force", action="store_true")
+
+    sub.add_parser("cache-status")
     return parser
 
 
@@ -533,6 +552,63 @@ def main(argv: list[str] | None = None) -> int:
                 build_timeline=not bool(args.media_only),
             )
             _safe_print(json.dumps(result, ensure_ascii=False))
+            return 0
+
+        if command == "proxy-build":
+            items = []
+            for raw in args.media:
+                result = ensure_proxy(
+                    raw.expanduser().resolve(),
+                    force=bool(args.force),
+                )
+                items.append(
+                    {
+                        "source": result.source,
+                        "proxy": result.proxy,
+                        "reused": result.reused,
+                        "width": result.width,
+                        "height": result.height,
+                        "fps": result.fps,
+                    }
+                )
+            _safe_print(
+                json.dumps(
+                    {"status": "DONE", "items": items},
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "shot-detect":
+            source = args.media.expanduser().resolve()
+            proxy = ensure_proxy(source, force=False)
+            shots = detect_shots(
+                Path(proxy.proxy),
+                threshold=float(args.threshold),
+                min_gap=float(args.min_gap),
+                force=bool(args.force),
+            )
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "DONE",
+                        "source": str(source),
+                        "analysis_source": proxy.proxy,
+                        "proxy_reused": proxy.reused,
+                        "shots": [asdict(item) for item in shots],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "cache-status":
+            _safe_print(
+                json.dumps(
+                    {"status": "READY", **cache_summary()},
+                    ensure_ascii=False,
+                )
+            )
             return 0
     except Exception as exc:
         _safe_print(f"ERROR: {exc}", error=True)
