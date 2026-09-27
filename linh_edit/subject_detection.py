@@ -188,3 +188,22 @@ def track_subject(frames: tuple[Path, ...]) -> SubjectDetection | None:
         height=round(median(item.height for item in chosen), 4),
         confidence=round(sum(item.confidence for item in chosen) / len(chosen), 4),
     )
+
+
+
+def subject_runtime_status() -> dict[str, object]:
+    cv2 = _cv2()
+    if cv2 is None:
+        return {
+            "available": False,
+            "opencv_version": "",
+            "face_model": False,
+            "person_model": False,
+        }
+    cascade_path = Path(cv2.data.haarcascades) / "haarcascade_frontalface_default.xml"
+    return {
+        "available": True,
+        "opencv_version": str(getattr(cv2, "__version__", "")),
+        "face_model": cascade_path.is_file(),
+        "person_model": bool(hasattr(cv2, "HOGDescriptor_getDefaultPeopleDetector")),
+    }
