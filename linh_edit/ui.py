@@ -20,7 +20,12 @@ from .legacy_import import import_legacy_script
 from .media import probe_duration
 from .news_ingest import apply_news_content, resync_story_to_duration
 from .project import MediaItem, ProjectState, SfxItem, TextItem
-from .source_review import build_source_review
+from .source_review import (
+    build_source_review,
+    load_review_manifest,
+    mark_candidate_review,
+    promote_review_candidate,
+)
 from .storyboard import import_storyboard as load_storyboard
 from .validation import validate_project
 
@@ -553,9 +558,247 @@ class LinhEditWindow:
             self.status_var.set(
                 f"Source Review sẵn sàng: {manifest.name} • cần duyệt hình bằng mắt."
             )
-            self._open_path(manifest.parent)
+            self.open_source_review(manifest)
 
         self.root.after(150, poll_review)
+
+    def open_source_review(self, manifest: Path) -> None:
+        manifest = manifest.expanduser().resolve()
+        try:
+            load_review_manifest(manifest)
+        except Exception as exc:
+            messagebox.showerror("Source Review lỗi", str(exc))
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("Linh Edit — Duyệt footage")
+        win.geometry("1180x620")
+        win.transient(self.root)
+
+        outer = ttk.Frame(win, padding=10)
+        outer.pack(fill=tk.BOTH, expand=True)
+        outer.rowconfigure(1, weight=1)
+        outer.columnconfigure(0, weight=1)
+
+        ttk.Label(
+            outer,
+            text=(
+                "Điểm kỹ thuật chỉ để sàng lọc. "
+                "KEEP/REJECT phải dựa trên việc xem frame/footage thực tế."
+            ),
+        ).grid(row=0, column=0, columnspan=6, sticky=tk.W, pady=(0, 8))
+
+        tree = ttk.Treeview(
+            outer,
+            columns=(
+                "source", "time", "score", "light", "sharp", "dup", "decision", "warnings"
+            ),
+            show="headings",
+            selectmode="browse",
+        )
+        headings = {
+            "source": "Footage",
+            "time": "Đoạn",
+            "score": "Tech",
+            "light": "Sáng",
+            "sharp": "Chi tiết",
+            "dup": "Trùng",
+            "decision": "Duyệt",
+            "warnings": "Cảnh báo",
+        }
+        widths = {
+            "source": 230,
+            "time": 110,
+            "score": 65,
+            "light": 65,
+            "sharp": 70,
+            "dup": 55,
+            "decision": 90,
+            "warnings": 300,
+        }
+        for key, label in headings.items():
+            tree.heading(key, text=label)
+            tree.column(key, width=widths[key], anchor=tk.W)
+        tree.grid(row=1, column=0, columnspan=6, sticky=tk.NSEW)
+        scroll = ttk.Scrollbar(outer, orient=tk.VERTICAL, command=tree.yview)
+        scroll.grid(row=1, column=6, sticky=tk.NS)
+        tree.configure(yscrollcommand=scroll.set)
+
+        role_var = tk.StringVar(value="detail")
+        ttk.Label(outer, text="Role promote").grid(row=2, column=0, sticky=tk.W, pady=(8, 0))
+        ttk.Combobox(
+            outer,
+            textvariable=role_var,
+            values=ROLES,
+            state="readonly",
+            width=18,
+        ).grid(row=2, column=1, sticky=tk.W, padx=(6, 10), pady=(8, 0))
+
+        ttk.Button(outer, text="MỞ FRAME", command=lambda: open_selected_frame()).grid(
+            row=2, column=2, sticky=tk.EW, padx=4, pady=(8, 0)
+        )
+        ttk.Button(outer, text="KEEP", command=lambda: mark_selected("KEEP")).grid(
+            row=2, column=3, sticky=tk.EW, padx=4, pady=(8, 0)
+        )
+        ttk.Button(outer, text="SHORTLIST", command=lambda: mark_selected("SHORTLIST")).grid(
+            row=2, column=4, sticky=tk.EW, padx=4, pady=(8, 0)
+        )
+        ttk.Button(outer, text="REJECT", command=lambda: mark_selected("REJECT")).grid(
+            row=2, column=5, sticky=tk.EW, padx=4, pady=(8, 0)
+        )
+        ttk.Button(
+            outer,
+            text="PROMOTE → TIMELINE",
+            command=lambda: promote_selected(),
+        ).grid(row=3, column=3, columnspan=3, sticky=tk.EW, padx=4, pady=(8, 0))
+        ttk.Button(
+            outer,
+            text="Mở thư mục review",
+            command=lambda: self._open_path(manifest.parent),
+        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(8, 0))
+
+        status = tk.StringVar(value="")
+        ttk.Label(outer, textvariable=status, anchor=tk.W).grid(
+            row=4, column=0, columnspan=6, sticky=tk.EW, pady=(8, 0)
+        )
+
+        def selected_ref() -> tuple[int, int] | None:
+            selected = tree.selection()
+            if not selected:
+                return None
+            try:
+                item_text, candidate_text = selected[0].split(":", 1)
+                return int(item_text), int(candidate_text)
+            except Exception:
+                return None
+
+        def refresh() -> None:
+            previous = tree.selection()
+            for iid in tree.get_children():
+                tree.delete(iid)
+            payload = load_review_manifest(manifest)
+            for item_index, item in enumerate(payload["items"], start=1):
+                source_name = Path(str(item.get("source") or "")).name
+                for candidate_index, candidate in enumerate(item.get("candidates") or [], start=1):
+                    warnings = ", ".join(str(x) for x in candidate.get("warnings") or [])
+                    duplicate = candidate.get("duplicate_of")
+                    iid = f"{item_index}:{candidate_index}"
+                    tree.insert(
+                        "",
+                        tk.END,
+                        iid=iid,
+                        values=(
+                            source_name,
+                            f"{float(candidate.get('start', 0)):.1f}–"
+                            f"{float(candidate.get('end', 0)):.1f}s",
+                            f"{float(candidate.get('technical_score', 0)):.2f}",
+                            f"{float(candidate.get('brightness', 0)):.2f}",
+                            f"{float(candidate.get('edge_energy', 0)):.2f}",
+                            str(duplicate or ""),
+                            str(candidate.get("decision") or "PENDING"),
+                            warnings,
+                        ),
+                    )
+            if previous and tree.exists(previous[0]):
+                tree.selection_set(previous[0])
+
+        def candidate_payload() -> dict | None:
+            ref = selected_ref()
+            if ref is None:
+                return None
+            payload = load_review_manifest(manifest)
+            item_index, candidate_index = ref
+            try:
+                return payload["items"][item_index - 1]["candidates"][candidate_index - 1]
+            except Exception:
+                return None
+
+        def open_selected_frame() -> None:
+            candidate = candidate_payload()
+            if not candidate:
+                status.set("Chưa chọn candidate.")
+                return
+            frame = Path(str(candidate.get("frame") or ""))
+            if not frame.is_file():
+                status.set("Candidate chưa có frame riêng.")
+                return
+            self._open_path(frame)
+
+        def mark_selected(decision: str) -> None:
+            ref = selected_ref()
+            if ref is None:
+                status.set("Chưa chọn candidate.")
+                return
+            item_index, candidate_index = ref
+            note = ""
+            if decision in {"KEEP", "REJECT"}:
+                note_value = simpledialog.askstring(
+                    "Ghi chú duyệt",
+                    "Ghi chú ngắn (có thể để trống):",
+                    parent=win,
+                )
+                if note_value is None:
+                    return
+                note = note_value
+            try:
+                mark_candidate_review(
+                    manifest,
+                    item_index=item_index,
+                    candidate_index=candidate_index,
+                    decision=decision,
+                    note=note,
+                )
+            except Exception as exc:
+                messagebox.showerror("Không cập nhật được review", str(exc), parent=win)
+                return
+            refresh()
+            status.set(f"Candidate {candidate_index}: {decision}")
+
+        def promote_selected() -> None:
+            ref = selected_ref()
+            if ref is None:
+                status.set("Chưa chọn candidate.")
+                return
+            if self.project_path is None:
+                messagebox.showinfo(
+                    "Cần lưu project",
+                    "Hãy lưu project trước khi promote footage vào timeline.",
+                    parent=win,
+                )
+                return
+            self._sync_project()
+            if self.project.dirty:
+                self.save_project()
+                if self.project.dirty:
+                    return
+            item_index, candidate_index = ref
+            try:
+                result = promote_review_candidate(
+                    manifest,
+                    self.project_path,
+                    item_index=item_index,
+                    candidate_index=candidate_index,
+                    role=role_var.get(),
+                    to_timeline=True,
+                )
+                self.project = ProjectState.load(self.project_path)
+            except Exception as exc:
+                messagebox.showerror("Chưa promote được", str(exc), parent=win)
+                return
+            self.profile_var.set(PROFILE_NAMES.get(self.project.profile, "Travel / Công tác"))
+            self.target_var.set(self.project.target_seconds)
+            self.title_var.set(self.project.title)
+            self.voice_var.set(self.project.voiceover)
+            self.music_var.set(self.project.music)
+            self._refresh_all()
+            refresh()
+            status.set(
+                f"Đã promote candidate {candidate_index}: "
+                f"{float(result['start']):.1f}s + {float(result['duration']):.1f}s"
+            )
+
+        tree.bind("<Double-1>", lambda _event: open_selected_frame())
+        refresh()
 
     def _select_news_images(self) -> list[str]:
         existing = [item.path for item in self.project.media if item.kind == "image"]
