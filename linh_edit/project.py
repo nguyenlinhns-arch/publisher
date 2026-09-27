@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Literal
+
+CURRENT_PROJECT_SCHEMA = 2
 
 ProfileName = Literal[
     "TRAVEL_DOCUMENTARY",
@@ -52,6 +54,7 @@ class SfxItem:
 
 @dataclass(slots=True)
 class ProjectState:
+    schema_version: int = CURRENT_PROJECT_SCHEMA
     name: str = "Dự án mới"
     profile: ProfileName = "TRAVEL_DOCUMENTARY"
     target_seconds: float = 75.0
@@ -109,9 +112,26 @@ class ProjectState:
         # Windows PowerShell 5.1 and both legacy Linh video apps may emit
         # UTF-8 JSON with a BOM. utf-8-sig accepts both BOM and plain UTF-8.
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        if not isinstance(payload, dict):
+            raise ValueError("Project Linh Edit phải là JSON object.")
+
+        version = int(payload.get("schema_version", 1) or 1)
+        if version > CURRENT_PROJECT_SCHEMA:
+            raise ValueError(
+                f"Project schema {version} mới hơn Linh Edit hỗ trợ "
+                f"({CURRENT_PROJECT_SCHEMA})."
+            )
+        payload["schema_version"] = CURRENT_PROJECT_SCHEMA
+
         media = [MediaItem(**item) for item in payload.pop("media", [])]
         timeline = [MediaItem(**item) for item in payload.pop("timeline", [])]
         texts = [TextItem(**item) for item in payload.pop("texts", [])]
         sfx = [SfxItem(**item) for item in payload.pop("sfx", [])]
+
+        # Ignore stale same-generation keys from experimental builds while
+        # refusing future schema versions above. This keeps old projects usable
+        # without silently accepting a truly newer project format.
+        allowed = {item.name for item in fields(cls)}
+        payload = {key: value for key, value in payload.items() if key in allowed}
         payload["dirty"] = False
         return cls(media=media, timeline=timeline, texts=texts, sfx=sfx, **payload)
