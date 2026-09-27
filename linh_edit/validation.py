@@ -221,6 +221,26 @@ def validate_project(project: ProjectState, *, deep: bool = False) -> Validation
                 )
             )
 
+    audio_ranges = [
+        ("music_gain", project.music_gain, 0.0, 4.0),
+        ("voice_gain", project.voice_gain, 0.0, 4.0),
+        ("duck_threshold", project.duck_threshold, 0.0001, 1.0),
+        ("duck_ratio", project.duck_ratio, 1.0, 20.0),
+        ("duck_attack_ms", project.duck_attack_ms, 1.0, 2000.0),
+        ("duck_release_ms", project.duck_release_ms, 1.0, 5000.0),
+        ("caption_coverage_target", project.caption_coverage_target, 0.10, 1.0),
+    ]
+    for name, value, low, high in audio_ranges:
+        if not low <= float(value) <= high:
+            errors.append(
+                _issue(
+                    "error",
+                    "INVALID_SETTING",
+                    f"{name} phải nằm trong khoảng {low}–{high}.",
+                    name,
+                )
+            )
+
     for label, value in (("voiceover", project.voiceover), ("music", project.music)):
         if value and not Path(value).expanduser().is_file():
             errors.append(
