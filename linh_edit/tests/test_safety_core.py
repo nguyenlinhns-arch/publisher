@@ -51,7 +51,7 @@ def test_project_load_migrates_old_schema_and_ignores_stale_key(tmp_path):
 
     project = ProjectState.load(path)
 
-    assert project.schema_version == 3
+    assert project.schema_version == 4
     assert project.name == "Old"
 
 
