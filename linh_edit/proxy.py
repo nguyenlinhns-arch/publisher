@@ -28,7 +28,10 @@ class ProxyResult:
 
 
 def _proxy_dimensions(info: MediaInfo) -> tuple[int, int]:
-    if info.height >= info.width:
+    width, height = info.width, info.height
+    if abs(info.rotation) % 180 == 90:
+        width, height = height, width
+    if height >= width:
         return 720, 1280
     return 1280, 720
 
