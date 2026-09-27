@@ -1,4 +1,4 @@
-name: Linh Edit 1.1 Release
+name: Linh Edit 1.2 Release
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: linh-edit-1-1-release-${{ github.ref }}
+  group: linh-edit-1-2-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
       - name: Package release
         shell: powershell
         run: |
-          $Zip = "LinhEdit-1.1.0-Windows-x64.zip"
+          $Zip = "LinhEdit-1.2.0-Windows-x64.zip"
           if (Test-Path $Zip) { Remove-Item $Zip -Force }
           Compress-Archive -Path dist\LinhEdit\* -DestinationPath $Zip -CompressionLevel Optimal
       - name: Publish or refresh prerelease
@@ -46,8 +46,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $Tag = "linh-edit-v1.1.0"
-          $Zip = "LinhEdit-1.1.0-Windows-x64.zip"
+          $Tag = "linh-edit-v1.2.0"
+          $Zip = "LinhEdit-1.2.0-Windows-x64.zip"
           git tag -f $Tag $env:GITHUB_SHA
           git push origin "refs/tags/$Tag" --force
           $Previous = $ErrorActionPreference
@@ -58,5 +58,5 @@ jobs:
           if ($Exists) {
             gh release upload $Tag $Zip --clobber --repo "${{ github.repository }}"
           } else {
-            gh release create $Tag $Zip --repo "${{ github.repository }}" --target "$env:GITHUB_SHA" --title "Linh Edit 1.1.0" --notes "Unified local editor: Travel, Talk, News/Editorial and Recruitment. Includes legacy News/Editorial import, article URL ingestion, contact sheet review, Hook typography, local QA, legacy music/SFX migration and true no-audio visual master export." --prerelease
+            gh release create $Tag $Zip --repo "${{ github.repository }}" --target "$env:GITHUB_SHA" --title "Linh Edit 1.2.0" --notes "Unified local editor: Travel, Talk, News/Editorial and Recruitment. Includes legacy News/Editorial import, article URL ingestion, contact sheet review, Hook typography, local QA, legacy music/SFX migration and true no-audio visual master export." --prerelease
           }
