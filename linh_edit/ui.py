@@ -38,7 +38,7 @@ from .source_review import (
 from .storyboard import import_storyboard as load_storyboard
 from .validation import validate_project
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.7.0"
 
 PROFILE_LABELS = {
     "Travel / Công tác": "TRAVEL_DOCUMENTARY",
