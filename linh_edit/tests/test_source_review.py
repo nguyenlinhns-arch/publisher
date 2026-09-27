@@ -90,6 +90,7 @@ def test_review_video_writes_contact_sheet_candidate_frames_and_manifest(tmp_pat
         return tuple(result)
 
     monkeypatch.setattr(source_review, "extract_candidate_frames", fake_frames)
+    monkeypatch.setattr(source_review, "extract_native_candidate_frames", fake_frames)
 
     item = source_review.review_video(
         video,
@@ -104,6 +105,8 @@ def test_review_video_writes_contact_sheet_candidate_frames_and_manifest(tmp_pat
     assert item.proxy_reused is True
     assert item.shot_count == 4
     assert all(Path(candidate.frame).is_file() for candidate in item.candidates)
+    assert all(0.0 <= candidate.reframe_x <= 1.0 for candidate in item.candidates)
+    assert all(candidate.hook_layout for candidate in item.candidates)
     assert (Path(item.contact_sheet).parent / "review.json").is_file()
 
 
