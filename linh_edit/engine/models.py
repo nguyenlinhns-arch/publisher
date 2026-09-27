@@ -94,6 +94,7 @@ class ExportSpec:
     crf: int = 18
     preset: str = "medium"
     audio_bitrate: str = "192k"
+    include_audio: bool = True
 
     def validate(self) -> None:
         if self.width <= 0 or self.height <= 0 or self.fps <= 0:
