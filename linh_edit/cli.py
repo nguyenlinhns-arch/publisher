@@ -15,6 +15,7 @@ from .news_ingest import apply_news_content
 from .patches import apply_patch, load_patch
 from .planner import build_rough_cut, import_media
 from .project import ProjectState
+from .source_review import build_source_review
 from .tools import resolve_tool
 from .validation import validate_project
 
@@ -50,6 +51,7 @@ CAPABILITIES = {
         "checkpoint-list",
         "checkpoint-restore",
         "media-audit",
+        "source-review",
     ],
     "output_default": {
         "width": 1080,
@@ -134,6 +136,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     media_audit = sub.add_parser("media-audit")
     media_audit.add_argument("--media", type=Path, action="append", required=True)
+
+    source_review = sub.add_parser("source-review")
+    source_review.add_argument("--media", type=Path, action="append", required=True)
+    source_review.add_argument("--output-dir", type=Path, required=True)
+    source_review.add_argument("--tiles", type=int, default=12)
+    source_review.add_argument("--columns", type=int, default=4)
+    source_review.add_argument("--candidate-seconds", type=float, default=3.4)
     return parser
 
 
@@ -423,6 +432,26 @@ def main(argv: list[str] | None = None) -> int:
                         "count": len(reports),
                         "rejected": rejected,
                         "items": reports,
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if command == "source-review":
+            manifest = build_source_review(
+                [item.expanduser().resolve() for item in args.media],
+                args.output_dir.expanduser().resolve(),
+                tiles=max(1, min(24, int(args.tiles))),
+                columns=max(1, min(6, int(args.columns))),
+                candidate_seconds=max(0.5, float(args.candidate_seconds)),
+            )
+            _safe_print(
+                json.dumps(
+                    {
+                        "status": "READY_FOR_VISUAL_REVIEW",
+                        "manifest": str(manifest),
+                        "auto_accept_visual": False,
                     },
                     ensure_ascii=False,
                 )
