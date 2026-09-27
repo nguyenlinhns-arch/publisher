@@ -197,7 +197,14 @@ def main(argv: list[str] | None = None) -> int:
                 include_audio=not bool(args.visual_master),
             )
             _safe_print(
-                json.dumps({"status": "DONE", "output": str(result)}, ensure_ascii=False)
+                json.dumps(
+                    {
+                        "status": "TECHNICAL_DONE",
+                        "output": str(result),
+                        "review": "PENDING_PLAYBACK",
+                    },
+                    ensure_ascii=False,
+                )
             )
             return 0
 
