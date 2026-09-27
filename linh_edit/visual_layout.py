@@ -6,7 +6,7 @@ from typing import Any
 
 from PIL import Image, ImageFilter, ImageStat
 
-from .subject_detection import detect_subject
+from .subject_detection import SubjectDetection, detect_subject
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,7 +97,12 @@ def _reframe_axis(
     return _clamp(crop_start / available, 0.0, 1.0)
 
 
-def analyze_layout(frame: Path, *, target_aspect: float = 9 / 16) -> LayoutSuggestion:
+def analyze_layout(
+    frame: Path,
+    *,
+    target_aspect: float = 9 / 16,
+    subject_override: SubjectDetection | None = None,
+) -> LayoutSuggestion:
     frame = frame.expanduser().resolve()
     with Image.open(frame) as opened:
         image = opened.convert("RGB")
@@ -106,8 +111,11 @@ def analyze_layout(frame: Path, *, target_aspect: float = 9 / 16) -> LayoutSugge
         subject_x, subject_y, confidence = _edge_centroid(gray)
         subject_kind = "saliency"
         subject_confidence = confidence
-        detected = detect_subject(frame)
-        if detected is not None and detected.confidence >= max(0.45, confidence):
+        detected = subject_override or detect_subject(frame)
+        if detected is not None and (
+            subject_override is not None
+            or detected.confidence >= max(0.45, confidence)
+        ):
             subject_x = detected.x
             subject_y = detected.y
             subject_kind = detected.kind
