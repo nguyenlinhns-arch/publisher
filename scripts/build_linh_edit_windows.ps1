@@ -206,6 +206,16 @@ if ($TextShotProcess.ExitCode -ne 0) {
     throw "LinhEdit.exe text-shot-report smoke test thất bại với mã $($TextShotProcess.ExitCode)."
 }
 
+$TalkRhythmProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "talk-rhythm-apply",
+    "--project", $SmokeProject,
+    "--minimum-segment", "1.0",
+    "--punch-scale", "1.035"
+) -Wait -PassThru
+if ($TalkRhythmProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe talk-rhythm-apply smoke test thất bại với mã $($TalkRhythmProcess.ExitCode)."
+}
+
 $RenderProcess = Start-Process -FilePath $Exe -ArgumentList @("render", "--project", $SmokeProject, "--output", $SmokeOutput) -Wait -PassThru
 if ($RenderProcess.ExitCode -ne 0) {
     throw "LinhEdit.exe render smoke test thất bại với mã $($RenderProcess.ExitCode)."
@@ -265,6 +275,25 @@ $AudioProbe = & $BundledFfprobe.FullName -v error -select_streams a:0 -show_entr
 Assert-NativeSuccess "ffprobe visual master output"
 if ($AudioProbe) {
     throw "Visual master không được chứa audio stream."
+}
+
+foreach ($ReviewStage in @("visual", "audio", "full")) {
+    $ReviewProcess = Start-Process -FilePath $Exe -ArgumentList @(
+        "review-set",
+        "--project", $SmokeProject,
+        "--stage", $ReviewStage,
+        "--value", "PASS"
+    ) -Wait -PassThru
+    if ($ReviewProcess.ExitCode -ne 0) {
+        throw "LinhEdit.exe review-set $ReviewStage smoke test thất bại."
+    }
+}
+$ReviewStatusProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "review-status",
+    "--project", $SmokeProject
+) -Wait -PassThru
+if ($ReviewStatusProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe review-status smoke test thất bại."
 }
 
 Copy-Item -LiteralPath (Join-Path $Root "linh_edit\README.md") -Destination (Join-Path $AppDir "README.txt") -Force
