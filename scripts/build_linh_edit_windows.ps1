@@ -67,6 +67,10 @@ try {
     Assert-NativeSuccess "Nâng cấp pip"
     & $Python -m pip install "pyinstaller==6.21.0" "pytest==9.1.1" "Pillow==11.3.0" "opencv-python-headless==4.12.0.88"
     Assert-NativeSuccess "Cài công cụ build"
+    $Cv2Data = (& $Python -c "import cv2; print(cv2.data.haarcascades)").Trim()
+    if (-not (Test-Path -LiteralPath $Cv2Data -PathType Container)) {
+        throw "Không tìm thấy OpenCV Haar cascade data: $Cv2Data"
+    }
 
     if (-not $SkipTests) {
         $env:PYTHONPATH = $Root
@@ -92,6 +96,7 @@ try {
         "--specpath", $Spec,
         "--paths", $Root,
         "--hidden-import", "cv2",
+        "--add-data", "$Cv2Data;cv2\data",
         "--add-binary", "$Ffprobe;bin",
         "--add-binary", "$Ffmpeg;bin",
         "--add-data", "$Fonts;assets\fonts",
