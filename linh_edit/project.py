@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Literal
 
-CURRENT_PROJECT_SCHEMA = 5
+CURRENT_PROJECT_SCHEMA = 6
 
 class ProjectConflictError(RuntimeError):
     """Raised when another process saved a newer project revision."""
@@ -82,7 +82,12 @@ class ProjectState:
     duck_ratio: float = 8.0
     duck_attack_ms: float = 25.0
     duck_release_ms: float = 450.0
+    auto_master_audio: bool = True
+    master_lufs: float = -14.0
+    master_true_peak: float = -1.5
+    master_lra: float = 11.0
     caption_coverage_target: float = 0.65
+    auto_hdr_to_sdr: bool = True
     output_dir: str = ""
     source_mode: str = ""
     source_text: str = ""
