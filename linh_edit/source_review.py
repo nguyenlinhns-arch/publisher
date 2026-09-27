@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -34,7 +34,10 @@ class CandidateWindow:
     contrast: float = 0.0
     edge_energy: float = 0.0
     technical_score: float = 0.0
+    technical_rank: int = 0
+    fingerprint: str = ""
     duplicate_of: int | None = None
+    global_duplicate_of: str = ""
     warnings: tuple[str, ...] = ()
     decision: str = "PENDING"
     review_note: str = ""
@@ -161,11 +164,40 @@ def _enrich_candidates(
                 contrast=metric.contrast,
                 edge_energy=metric.edge_energy,
                 technical_score=round(score, 4),
+                fingerprint=metric.dhash,
                 duplicate_of=duplicate_of,
                 warnings=tuple(warnings),
             )
         )
-    return tuple(result)
+    ranked = sorted(
+        range(len(result)),
+        key=lambda idx: result[idx].technical_score,
+        reverse=True,
+    )
+    rank_by_index = {index: rank + 1 for rank, index in enumerate(ranked)}
+    return tuple(
+        replace(item, technical_rank=rank_by_index[index])
+        for index, item in enumerate(result)
+    )
+
+
+def _annotate_global_duplicates(items: list[dict[str, Any]], *, threshold: int = 4) -> None:
+    from .visual_metrics import hamming_distance
+
+    previous: list[tuple[str, str]] = []
+    for item_index, item in enumerate(items, start=1):
+        candidates = item.get("candidates") or []
+        for candidate_index, candidate in enumerate(candidates, start=1):
+            fingerprint = str(candidate.get("fingerprint") or "")
+            if not fingerprint:
+                continue
+            duplicate = ""
+            for ref, old_fingerprint in previous:
+                if hamming_distance(fingerprint, old_fingerprint) <= threshold:
+                    duplicate = ref
+                    break
+            candidate["global_duplicate_of"] = duplicate
+            previous.append((f"{item_index}:{candidate_index}", fingerprint))
 
 
 def review_video(
@@ -263,16 +295,20 @@ def build_source_review(
         raise RuntimeError("Không tạo được source review. " + detail)
 
     manifest = output_dir / "source_review_manifest.json"
+    item_payloads = [asdict(item) for item in items]
+    _annotate_global_duplicates(item_payloads)
     _atomic_json_write(
         manifest,
         {
             "schema": REVIEW_SCHEMA,
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "items": [asdict(item) for item in items],
+            "items": item_payloads,
             "errors": errors,
             "policy": {
                 "technical_audit": "AUTOMATED",
                 "visual_metrics": "HEURISTIC_RANKING_ONLY",
+                "technical_rank": "PER_SOURCE_NOT_AESTHETIC_RANK",
+                "duplicate_detection": "PERCEPTUAL_HASH_HEURISTIC",
                 "visual_quality": "PENDING_HUMAN_OR_VISION_REVIEW",
                 "auto_accept_visual": False,
                 "promotion_requires": "KEEP",
