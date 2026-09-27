@@ -188,8 +188,14 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
                 filters.append(
                     f"[{voice_index}:a:0]aresample=48000,"
                     f"aformat=sample_fmts=fltp:channel_layouts=stereo,"
-                    f"apad,atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[voice]"
+                    f"volume={plan.audio.voice_gain:.6f},"
+                    f"apad,atrim=duration={duration:.3f},"
+                    f"asetpts=PTS-STARTPTS[voicepre]"
                 )
+                if music_index is not None and plan.audio.auto_duck_music:
+                    filters.append("[voicepre]asplit=2[voice][voice_sc]")
+                else:
+                    filters.append("[voicepre]anull[voice]")
                 mix_labels.append("[voice]")
             if music_index is not None:
                 fade_out_start = max(0.0, duration - 1.5)
@@ -198,8 +204,20 @@ def render_plan(plan: EditPlan, output: Path) -> Path:
                     f"aformat=sample_fmts=fltp:channel_layouts=stereo,"
                     f"volume={plan.audio.music_gain:.6f},"
                     f"afade=t=in:st=0:d=0.8,afade=t=out:st={fade_out_start:.3f}:d=1.5,"
-                    f"atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[music]"
+                    f"atrim=duration={duration:.3f},"
+                    f"asetpts=PTS-STARTPTS[musicpre]"
                 )
+                if voice_index is not None and plan.audio.auto_duck_music:
+                    filters.append(
+                        f"[musicpre][voice_sc]sidechaincompress="
+                        f"threshold={plan.audio.duck_threshold:.6f}:"
+                        f"ratio={plan.audio.duck_ratio:.3f}:"
+                        f"attack={plan.audio.duck_attack_ms:.3f}:"
+                        f"release={plan.audio.duck_release_ms:.3f}:"
+                        f"makeup=1[music]"
+                    )
+                else:
+                    filters.append("[musicpre]anull[music]")
                 mix_labels.append("[music]")
 
             for sfx_number, (sfx_index, sfx) in enumerate(sfx_inputs):
