@@ -32,6 +32,8 @@ def test_short_clip_becomes_one_candidate():
 def test_review_video_writes_contact_sheet_candidate_frames_and_manifest(tmp_path, monkeypatch):
     video = tmp_path / "travel.mp4"
     video.write_bytes(b"video")
+    proxy_path = tmp_path / "proxy.mp4"
+    proxy_path.write_bytes(b"proxy")
 
     monkeypatch.setattr(
         source_review,
@@ -58,14 +60,36 @@ def test_review_video_writes_contact_sheet_candidate_frames_and_manifest(tmp_pat
             warnings=(),
         ),
     )
+    monkeypatch.setattr(
+        source_review,
+        "ensure_proxy",
+        lambda _path: type(
+            "Proxy",
+            (),
+            {"proxy": str(proxy_path), "reused": True},
+        )(),
+    )
+    monkeypatch.setattr(
+        source_review,
+        "detect_shots",
+        lambda _path: (
+            source_review.ShotSpan(1, 0.0, 3.0, 3.0),
+            source_review.ShotSpan(2, 3.0, 6.0, 3.0),
+            source_review.ShotSpan(3, 6.0, 9.0, 3.0),
+            source_review.ShotSpan(4, 9.0, 12.0, 3.0),
+        ),
+    )
 
-    def fake_sheet(_source, target, **_kwargs):
-        target.parent.mkdir(parents=True, exist_ok=True)
-        # 4 columns x 1 row using the standard tile geometry.
-        Image.new("RGB", (1120, 496), "gray").save(target)
-        return target
+    def fake_frames(_source, timestamps, output_dir, **_kwargs):
+        output_dir.mkdir(parents=True, exist_ok=True)
+        result = []
+        for index, _timestamp in enumerate(timestamps, start=1):
+            path = output_dir / f"candidate_{index:02d}.jpg"
+            Image.new("RGB", (270, 480), (80 + index * 10, 100, 120)).save(path)
+            result.append(path)
+        return tuple(result)
 
-    monkeypatch.setattr(source_review, "extract_contact_sheet", fake_sheet)
+    monkeypatch.setattr(source_review, "extract_candidate_frames", fake_frames)
 
     item = source_review.review_video(
         video,
@@ -76,6 +100,9 @@ def test_review_video_writes_contact_sheet_candidate_frames_and_manifest(tmp_pat
 
     assert Path(item.contact_sheet).is_file()
     assert len(item.candidates) == 4
+    assert item.selection_mode == "SHOT_BOUNDARY"
+    assert item.proxy_reused is True
+    assert item.shot_count == 4
     assert all(Path(candidate.frame).is_file() for candidate in item.candidates)
     assert (Path(item.contact_sheet).parent / "review.json").is_file()
 
@@ -349,3 +376,25 @@ def test_apply_kept_candidates_builds_reviewed_only_rough_cut(tmp_path):
     assert len(saved.timeline) == 1
     assert saved.timeline[0].path == str(keep.resolve())
     assert saved.timeline[0].role == "human"
+
+
+def test_candidates_from_shots_preserve_shot_bounds():
+    spans = (
+        source_review.ShotSpan(1, 0.0, 2.0, 2.0),
+        source_review.ShotSpan(2, 2.0, 7.0, 5.0),
+        source_review.ShotSpan(3, 7.0, 11.0, 4.0),
+    )
+
+    candidates = source_review.candidates_from_shots(
+        spans,
+        count=3,
+        segment_seconds=3.4,
+    )
+
+    assert len(candidates) == 3
+    assert candidates[0].start >= 0.0
+    assert candidates[0].end <= 2.0
+    assert candidates[1].start >= 2.0
+    assert candidates[1].end <= 7.0
+    assert candidates[2].start >= 7.0
+    assert candidates[2].end <= 11.0
