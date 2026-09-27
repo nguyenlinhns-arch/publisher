@@ -174,6 +174,25 @@ if (-not (Test-Path -LiteralPath $SmokeOutput -PathType Leaf)) {
 & $BundledFfprobe.FullName -v error -select_streams v:0 -show_entries "stream=codec_name,width,height,avg_frame_rate" -of json $SmokeOutput
 Assert-NativeSuccess "ffprobe smoke output từ LinhEdit.exe"
 
+$VisualOutput = Join-Path $SmokeDir "visual_master_no_audio.mp4"
+$VisualProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "render",
+    "--project", $SmokeProject,
+    "--output", $VisualOutput,
+    "--visual-master"
+) -Wait -PassThru
+if ($VisualProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe visual master smoke test thất bại với mã $($VisualProcess.ExitCode)."
+}
+if (-not (Test-Path -LiteralPath $VisualOutput -PathType Leaf)) {
+    throw "LinhEdit.exe không tạo visual master smoke output."
+}
+$AudioProbe = & $BundledFfprobe.FullName -v error -select_streams a:0 -show_entries "stream=codec_name" -of "csv=p=0" $VisualOutput
+Assert-NativeSuccess "ffprobe visual master output"
+if ($AudioProbe) {
+    throw "Visual master không được chứa audio stream."
+}
+
 Copy-Item -LiteralPath (Join-Path $Root "linh_edit\README.md") -Destination (Join-Path $AppDir "README.txt") -Force
 Copy-Item -LiteralPath $HubLauncher -Destination (Join-Path $AppDir "MO_UNG_DUNG.bat") -Force
 Copy-Item -LiteralPath $HubCheck -Destination (Join-Path $AppDir "CHECK_THAY_LINH_HUB.ps1") -Force
