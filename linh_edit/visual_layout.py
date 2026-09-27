@@ -6,11 +6,15 @@ from typing import Any
 
 from PIL import Image, ImageFilter, ImageStat
 
+from .subject_detection import detect_subject
+
 
 @dataclass(frozen=True, slots=True)
 class LayoutSuggestion:
     subject_x: float
     subject_y: float
+    subject_kind: str
+    subject_confidence: float
     reframe_x: float
     reframe_y: float
     negative_space: str
@@ -100,6 +104,14 @@ def analyze_layout(frame: Path, *, target_aspect: float = 9 / 16) -> LayoutSugge
         gray = image.convert("L")
         width, height = image.size
         subject_x, subject_y, confidence = _edge_centroid(gray)
+        subject_kind = "saliency"
+        subject_confidence = confidence
+        detected = detect_subject(frame)
+        if detected is not None and detected.confidence >= max(0.45, confidence):
+            subject_x = detected.x
+            subject_y = detected.y
+            subject_kind = detected.kind
+            subject_confidence = detected.confidence
 
         regions = {
             "LEFT": (0.04, 0.12, 0.46, 0.62),
@@ -148,6 +160,8 @@ def analyze_layout(frame: Path, *, target_aspect: float = 9 / 16) -> LayoutSugge
     return LayoutSuggestion(
         subject_x=round(subject_x, 4),
         subject_y=round(subject_y, 4),
+        subject_kind=subject_kind,
+        subject_confidence=round(subject_confidence, 4),
         reframe_x=round(reframe_x, 4),
         reframe_y=round(reframe_y, 4),
         negative_space=negative,
