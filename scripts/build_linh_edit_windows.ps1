@@ -182,12 +182,32 @@ $ProjectPayload = @{
     duck_ratio = 8.0
     duck_attack_ms = 25.0
     duck_release_ms = 450.0
+    auto_master_audio = $true
+    master_lufs = -14.0
+    master_true_peak = -1.5
+    master_lra = 11.0
     caption_coverage_target = 0.65
+    auto_hdr_to_sdr = $true
     transcript = "Buoi sang toi di tren con duong vao lang. Sau do toi gap nguoi dan va tiep tuc cong viec."
     output_dir = $SmokeDir
     dirty = $false
 }
 $ProjectPayload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SmokeProject -Encoding utf8
+
+$PipelineProject = Join-Path $SmokeDir "pipeline.linhedit.json"
+Copy-Item -LiteralPath $SmokeProject -Destination $PipelineProject -Force
+$PipelineProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "optimize-all",
+    "--project", $PipelineProject,
+    "--no-render"
+) -Wait -PassThru
+if ($PipelineProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe optimize-all smoke test thất bại với mã $($PipelineProcess.ExitCode)."
+}
+$PipelineReceipt = Join-Path $SmokeDir "pipeline_pipeline_receipt.json"
+if (-not (Test-Path -LiteralPath $PipelineReceipt -PathType Leaf)) {
+    throw "LinhEdit.exe không tạo optimize-all receipt."
+}
 
 $CaptionProcess = Start-Process -FilePath $Exe -ArgumentList @(
     "caption-apply",
@@ -226,6 +246,18 @@ if (-not (Test-Path -LiteralPath $SmokeOutput -PathType Leaf)) {
 }
 & $BundledFfprobe.FullName -v error -select_streams v:0 -show_entries "stream=codec_name,width,height,avg_frame_rate" -of json $SmokeOutput
 Assert-NativeSuccess "ffprobe smoke output từ LinhEdit.exe"
+$EditorialQa = [System.IO.Path]::ChangeExtension($SmokeOutput, ".editorial_qa.json")
+if (-not (Test-Path -LiteralPath $EditorialQa -PathType Leaf)) {
+    throw "LinhEdit.exe không tạo editorial QA report."
+}
+$QaProcess = Start-Process -FilePath $Exe -ArgumentList @(
+    "qa-analyze",
+    "--project", $SmokeProject,
+    "--output", $SmokeOutput
+) -Wait -PassThru
+if ($QaProcess.ExitCode -ne 0) {
+    throw "LinhEdit.exe qa-analyze smoke test thất bại."
+}
 
 $ProxyProcess = Start-Process -FilePath $Exe -ArgumentList @(
     "proxy-build",
