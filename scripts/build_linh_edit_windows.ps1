@@ -137,11 +137,17 @@ if ($Process.ExitCode -ne 0) {
 $SmokeDir = Join-Path $Root "build\linh-edit-smoke"
 New-Item -ItemType Directory -Force -Path $SmokeDir | Out-Null
 $SmokeVideo = Join-Path $SmokeDir "clip.mp4"
+$SmokeVoice = Join-Path $SmokeDir "voice.wav"
+$SmokeMusic = Join-Path $SmokeDir "music.wav"
 $SmokeProject = Join-Path $SmokeDir "project.linhedit.json"
 $SmokeOutput = Join-Path $SmokeDir "final.mp4"
 
 & $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "testsrc2=size=1080x1920:rate=30" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 2 -c:v libx264 -pix_fmt yuv420p -c:a aac $SmokeVideo
 Assert-NativeSuccess "Tạo media smoke test Windows"
+& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "sine=frequency=700:sample_rate=48000" -t 2 -c:a pcm_s16le $SmokeVoice
+Assert-NativeSuccess "Tạo voice smoke test"
+& $Ffmpeg -y -hide_banner -loglevel error -f lavfi -i "sine=frequency=120:sample_rate=48000" -t 2 -c:a pcm_s16le $SmokeMusic
+Assert-NativeSuccess "Tạo music smoke test"
 
 $Clip = @{
     path = $SmokeVideo
@@ -166,9 +172,16 @@ $ProjectPayload = @{
     timeline = @($Clip)
     texts = @()
     sfx = @()
-    voiceover = ""
-    music = ""
+    voiceover = $SmokeVoice
+    music = $SmokeMusic
     music_gain = 0.14
+    voice_gain = 1.0
+    auto_duck_music = $true
+    duck_threshold = 0.025
+    duck_ratio = 8.0
+    duck_attack_ms = 25.0
+    duck_release_ms = 450.0
+    caption_coverage_target = 0.65
     output_dir = $SmokeDir
     dirty = $false
 }
