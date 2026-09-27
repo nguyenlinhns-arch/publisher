@@ -19,13 +19,14 @@ from .checkpoint import create_checkpoint
 from .media import MediaAudit, audit_media_info, infer_role, probe
 from .proxy import ensure_proxy
 from .shot_detection import ShotSpan, detect_shots
+from .subject_detection import track_subject_video
 from .planner import build_rough_cut
 from .project import MediaItem, ProjectState
 from .visual_layout import analyze_layout
 from .visual_metrics import analyze_frame, annotate_duplicate_groups
 
 REVIEW_SCHEMA = "linh-edit.source-review.v2"
-REVIEW_ENGINE_VERSION = 4
+REVIEW_ENGINE_VERSION = 5
 REVIEW_DECISIONS = {"PENDING", "SHORTLIST", "KEEP", "REJECT"}
 
 
@@ -207,6 +208,7 @@ def _enrich_candidates(
     base: tuple[CandidateWindow, ...],
     frames: tuple[Path, ...],
     layout_frames: tuple[Path, ...] | None = None,
+    analysis_source: Path | None = None,
 ) -> tuple[CandidateWindow, ...]:
     metrics = tuple(analyze_frame(path) for path in frames)
     layout_frames = layout_frames or frames
@@ -218,7 +220,26 @@ def _enrich_candidates(
             result.append(item)
             continue
         metric = metrics[index]
-        layout = layouts[index] if index < len(layouts) else analyze_layout(frames[index])
+        tracked = None
+        if analysis_source is not None:
+            try:
+                tracked = track_subject_video(
+                    analysis_source,
+                    start=item.start,
+                    end=item.end,
+                    samples=5,
+                )
+            except Exception:
+                tracked = None
+        layout_frame = (
+            layout_frames[index]
+            if index < len(layout_frames)
+            else frames[index]
+        )
+        layout = analyze_layout(
+            layout_frame,
+            subject_override=tracked,
+        )
         duplicate_of = duplicate_map[index]
         score = metric.technical_score
         warnings = list(metric.warnings)
@@ -460,6 +481,7 @@ def review_video(
         base_candidates,
         frames,
         native_frames,
+        analysis_source,
     )
 
     audit_warnings = list(audit.warnings)
