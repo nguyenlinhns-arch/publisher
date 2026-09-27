@@ -26,10 +26,11 @@ def test_project_schema_v2_migrates_audio_defaults(tmp_path: Path):
 
     project = ProjectState.load(path)
 
-    assert project.schema_version == 3
+    assert project.schema_version == 4
     assert project.auto_duck_music is True
     assert project.voice_gain == 1.0
     assert project.caption_coverage_target == 0.65
+    assert project.revision == 0
 
 
 def test_project_to_plan_carries_ducking_settings(tmp_path: Path):
