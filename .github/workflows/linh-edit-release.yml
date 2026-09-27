@@ -1,0 +1,47 @@
+name: Linh Edit 1.1 Release
+
+on:
+  push:
+    branches:
+      - linh-local-editor-v2
+    paths:
+      - ".github/workflows/linh-edit-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch pinned FFmpeg
+        shell: powershell
+        run: .\scripts\fetch_ffprobe.ps1
+      - name: Build and smoke-test Linh Edit
+        shell: powershell
+        run: .\scripts\build_linh_edit_windows.ps1 -SkipFetch
+      - name: Package release
+        shell: powershell
+        run: |
+          $Zip = "LinhEdit-1.1.0-Windows-x64.zip"
+          if (Test-Path $Zip) { Remove-Item $Zip -Force }
+          Compress-Archive -Path dist\LinhEdit\* -DestinationPath $Zip -CompressionLevel Optimal
+      - name: Publish or refresh prerelease
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $Tag = "linh-edit-v1.1.0"
+          $Zip = "LinhEdit-1.1.0-Windows-x64.zip"
+          gh release view $Tag --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $Tag $Zip --clobber --repo "${{ github.repository }}"
+          } else {
+            gh release create $Tag $Zip --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Linh Edit 1.1.0" --notes "Unified local editor: Travel, Talk, News/Editorial and Recruitment. Includes legacy News/Editorial import, article URL ingestion, contact sheet review, Hook typography, local QA and true no-audio visual master export." --prerelease
+          }
