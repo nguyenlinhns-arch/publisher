@@ -10,6 +10,16 @@ from .tools import resolve_tool
 
 
 @dataclass(frozen=True, slots=True)
+class MediaAudit:
+    path: Path
+    score: float
+    reject: bool
+    reasons: tuple[str, ...]
+    warnings: tuple[str, ...]
+    needs_visual_review: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class MediaInfo:
     path: Path
     duration: float
@@ -73,7 +83,7 @@ def probe(path: Path) -> MediaInfo:
 
 
 def infer_role(path: Path) -> str:
-    value = path.stem.casefold()
+    value = path.as_posix().casefold()
     rules = [
         (r"thác|núi|cao nguyên|landscape|toàn cảnh", "place"),
         (r"cầu|sông|đèo|đường|road|xe|di chuyển", "road_reset"),
@@ -85,6 +95,63 @@ def infer_role(path: Path) -> str:
         if re.search(pattern, value):
             return role
     return "detail"
+
+
+def audit_video(path: Path) -> MediaAudit:
+    info = probe(path)
+    reasons: list[str] = []
+    warnings: list[str] = []
+    score = 0.50
+
+    if info.duration < 0.8:
+        reasons.append("duration_under_0_8s")
+    elif info.duration < 2.0:
+        warnings.append("very_short_clip")
+        score -= 0.08
+    else:
+        score += 0.05
+
+    if info.width <= 0 or info.height <= 0:
+        reasons.append("invalid_geometry")
+    else:
+        long_edge = max(info.width, info.height)
+        short_edge = min(info.width, info.height)
+        if info.height > info.width:
+            score += 0.12
+        else:
+            warnings.append("landscape_requires_reframe")
+            score -= 0.03
+        if long_edge >= 2160 and short_edge >= 1080:
+            score += 0.12
+        elif long_edge >= 1280 and short_edge >= 720:
+            score += 0.05
+        else:
+            warnings.append("low_resolution")
+            score -= 0.16
+            if long_edge < 854 or short_edge < 480:
+                reasons.append("resolution_below_480p")
+
+    if 29.5 <= info.fps <= 30.5:
+        score += 0.08
+    elif info.fps >= 24.0:
+        score += 0.03
+    elif info.fps > 0:
+        warnings.append("low_fps")
+        score -= 0.10
+
+    if info.video_codec in {"h264", "hevc", "av1", "vp9"}:
+        score += 0.03
+    else:
+        warnings.append("unusual_video_codec")
+
+    return MediaAudit(
+        path=info.path,
+        score=max(0.0, min(1.0, round(score, 3))),
+        reject=bool(reasons),
+        reasons=tuple(reasons),
+        warnings=tuple(warnings),
+        needs_visual_review=True,
+    )
 
 
 def default_segment_duration(role: str, available: float) -> float:
