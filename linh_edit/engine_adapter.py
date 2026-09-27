@@ -14,7 +14,13 @@ def _timeline_duration(project: ProjectState) -> float:
     return sum(x.duration for x in project.timeline)
 
 
-def project_to_plan(project: ProjectState, plan_path: Path, *, preview: bool = False) -> Path:
+def project_to_plan(
+    project: ProjectState,
+    plan_path: Path,
+    *,
+    preview: bool = False,
+    include_audio: bool = True,
+) -> Path:
     width, height = ((540, 960) if preview else (1080, 1920))
     crf = 25 if preview else 18
     preset = "veryfast" if preview else "medium"
@@ -57,6 +63,7 @@ def project_to_plan(project: ProjectState, plan_path: Path, *, preview: bool = F
             "crf": crf,
             "preset": preset,
             "audio_bitrate": "128k" if preview else "192k",
+            "include_audio": bool(include_audio),
         },
     }
     plan_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,8 +74,19 @@ def project_to_plan(project: ProjectState, plan_path: Path, *, preview: bool = F
     return plan_path
 
 
-def render_project(project: ProjectState, output: Path, *, preview: bool = False) -> Path:
+def render_project(
+    project: ProjectState,
+    output: Path,
+    *,
+    preview: bool = False,
+    include_audio: bool = True,
+) -> Path:
     plan_path = output.with_suffix(".plan.json")
-    project_to_plan(project, plan_path, preview=preview)
+    project_to_plan(
+        project,
+        plan_path,
+        preview=preview,
+        include_audio=include_audio,
+    )
     plan = load_plan(plan_path)
     return render_plan(plan, output)
