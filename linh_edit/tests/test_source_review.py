@@ -213,3 +213,55 @@ def test_promote_requires_keep_decision(tmp_path):
         assert "KEEP" in str(exc)
     else:
         raise AssertionError("Promotion must require KEEP.")
+
+
+def test_global_duplicate_annotation_marks_cross_source_match():
+    items = [
+        {
+            "candidates": [
+                {"fingerprint": "0000000000000000", "global_duplicate_of": ""}
+            ]
+        },
+        {
+            "candidates": [
+                {"fingerprint": "0000000000000000", "global_duplicate_of": ""}
+            ]
+        },
+    ]
+
+    source_review._annotate_global_duplicates(items)
+
+    assert items[0]["candidates"][0]["global_duplicate_of"] == ""
+    assert items[1]["candidates"][0]["global_duplicate_of"] == "1:1"
+
+
+def test_enriched_candidates_receive_technical_rank(tmp_path, monkeypatch):
+    frames = []
+    for index in range(3):
+        path = tmp_path / f"frame-{index}.jpg"
+        Image.new("RGB", (270, 480), (80 + index * 40, 100, 120)).save(path)
+        frames.append(path)
+
+    scores = [0.25, 0.90, 0.55]
+
+    def fake_metrics(path):
+        index = int(path.stem.split("-")[-1])
+        return source_review.analyze_frame.__annotations__ and __import__(
+            "linh_edit.visual_metrics",
+            fromlist=["FrameMetrics"],
+        ).FrameMetrics(
+            brightness=0.5,
+            contrast=0.5,
+            edge_energy=0.5,
+            technical_score=scores[index],
+            dhash=f"{index + 1:016x}",
+            warnings=(),
+        )
+
+    monkeypatch.setattr(source_review, "analyze_frame", fake_metrics)
+    base = source_review.candidate_windows(12.0, count=3, segment_seconds=3.4)
+
+    enriched = source_review._enrich_candidates(base, tuple(frames))
+
+    assert [item.technical_rank for item in enriched] == [3, 1, 2]
+    assert enriched[1].fingerprint
