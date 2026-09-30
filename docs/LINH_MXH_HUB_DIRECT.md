@@ -72,7 +72,10 @@ Chỉ khai báo các nền tảng thực sự thuộc luồng đó.
 - Engine tái sử dụng idempotency của Repository theo account/video/nội dung/phút đăng.
 - Có thêm receipt idempotency ở cấp job Linh MXH.
 - Retry cùng job trả receipt cũ; không tạo thêm bài.
-- Nếu remote outcome UNKNOWN/PARTIAL, không blind retry.
+- Nếu một nền tảng đã `scheduled/published` còn nền tảng kia vẫn `pending/retry_wait`,
+  Hub chỉ chạy tiếp nền tảng còn thiếu; không replay nền tảng đã thành công.
+- Nếu remote outcome UNKNOWN/PARTIAL hoặc đang `processing/uploading/awaiting_confirmation`,
+  chỉ readback; không blind retry.
 
 ## Trạng thái receipt
 
