@@ -59,9 +59,14 @@ def main(argv: list[str] | None = None) -> int:
         if receipt.final_status in {
             "DONE",
             "DONE_EXISTING",
+            "SUBMITTED_UNVERIFIED",
             "PREPARED",
             "PLANNED",
         }:
+            # SUBMITTED_UNVERIFIED means MXH Video Tool may already have
+            # submitted the provider mutation. Returning success prevents the
+            # Hub worker from blind-retrying the same remote action; the status
+            # field still requires later authoritative readback.
             return 0
         return 3
     except (LinhMXHError, OSError, ValueError, json.JSONDecodeError) as exc:
