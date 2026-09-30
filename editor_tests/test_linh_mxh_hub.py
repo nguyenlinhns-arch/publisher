@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
 
 from mxh_publisher.config import AppConfig
 from mxh_publisher.models import DeliveryStatus, Platform
@@ -321,9 +322,10 @@ def test_existing_partial_stream_recovers_pending_platform(tmp_path: Path) -> No
 def test_dispatcher_isolates_platform_failures_and_skips_done_platform(
     tmp_path: Path, monkeypatch
 ) -> None:
-    from mxh_publisher.services import orchestrator as orchestrator_module
-
     calls: list[str] = []
+
+    class _FakeOrchestrationError(RuntimeError):
+        pass
 
     class _RepoStub:
         def __init__(self) -> None:
@@ -345,7 +347,7 @@ def test_dispatcher_isolates_platform_failures_and_skips_done_platform(
             calls.append("tiktok")
             if calls.count("tiktok") == 1:
                 self.repository.states[Platform.TIKTOK] = DeliveryStatus.RETRY_WAIT
-                raise orchestrator_module.OrchestrationError("TikTok needs login")
+                raise _FakeOrchestrationError("TikTok needs login")
             self.repository.states[Platform.TIKTOK] = DeliveryStatus.SCHEDULED
             return SimpleNamespace(message="TikTok scheduled")
 
@@ -357,10 +359,13 @@ def test_dispatcher_isolates_platform_failures_and_skips_done_platform(
         def close(self) -> None:
             pass
 
-    monkeypatch.setattr(
-        orchestrator_module,
-        "PublishingOrchestrator",
-        _FakeOrchestrator,
+    fake_module = ModuleType("mxh_publisher.services.orchestrator")
+    fake_module.OrchestrationError = _FakeOrchestrationError
+    fake_module.PublishingOrchestrator = _FakeOrchestrator
+    monkeypatch.setitem(
+        sys.modules,
+        "mxh_publisher.services.orchestrator",
+        fake_module,
     )
 
     config = AppConfig(
