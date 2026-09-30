@@ -403,3 +403,65 @@ def test_dispatcher_isolates_platform_failures_and_skips_done_platform(
         "tiktok": "scheduled",
     }
 
+class _SafePreparedDispatcher:
+    def readback(self, post_id: str, stream: StreamSpec):
+        return {
+            "status": "PREPARED",
+            "deliveries": {
+                "facebook": "scheduled",
+                "tiktok": "retry_wait",
+            },
+        }
+
+    def __call__(self, post_id: str, stream: StreamSpec):
+        return {
+            "status": "PREPARED",
+            "deliveries": {
+                "facebook": "scheduled",
+                "tiktok": "retry_wait",
+            },
+        }
+
+
+def test_safe_partial_retry_remains_prepared_not_needs_action(tmp_path: Path) -> None:
+    repository = Repository(tmp_path / "publisher.sqlite3")
+    now = datetime(2026, 9, 26, 7, 0, tzinfo=TZ)
+    source_path, source_sha = _video(tmp_path, "safe-partial.mp4", b"safe-partial")
+    repository.create_post(
+        video_path=str(source_path),
+        video_sha256=source_sha,
+        title="Video safe partial",
+        caption="Video safe partial",
+    )
+    request = DualStreamRequest(
+        video_title="Video safe partial",
+        stream_2=StreamSpec(
+            "stream-2",
+            {
+                Platform.FACEBOOK.value: "222",
+                Platform.TIKTOK.value: "@stream2",
+            },
+        ),
+        stream_1=StreamSpec(
+            "stream-1",
+            {
+                Platform.FACEBOOK.value: "111",
+                Platform.TIKTOK.value: "@stream1",
+            },
+        ),
+    )
+
+    first = schedule_video_dual_stream(repository, request, now=now)
+    assert first.final_status == "PREPARED"
+
+    receipt = schedule_video_dual_stream(
+        repository,
+        request,
+        now=now,
+        remote_dispatcher=_SafePreparedDispatcher(),
+    )
+
+    assert receipt.final_status == "PREPARED"
+    assert receipt.stream_2_status == "PREPARED"
+    assert receipt.stream_1_status == "PREPARED"
+
