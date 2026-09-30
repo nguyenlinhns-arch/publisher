@@ -547,19 +547,28 @@ class RepositoryHubScheduler:
                             ),
                         }
 
-                    # PENDING is authoritative evidence that this local delivery
-                    # has not entered a remote mutation yet. This is the only
-                    # existing-row recovery path allowed to dispatch.
+                    # Only delivery states that prove no unsafe remote mutation
+                    # is in flight may be resumed automatically. This also
+                    # supports partial recovery: a scheduled/published platform
+                    # is preserved while only pending/retry_wait destinations run.
                     deliveries = result.get("deliveries")
                     states = (
                         {str(value).lower() for value in deliveries.values()}
                         if isinstance(deliveries, Mapping)
                         else set()
                     )
+                    safe_recovery_states = {
+                        "pending",
+                        "retry_wait",
+                        "scheduled",
+                        "published",
+                    }
+                    retryable_states = {"pending", "retry_wait"}
                     if (
                         str(result.get("status") or "").upper() == "PREPARED"
                         and states
-                        and states <= {"pending"}
+                        and states <= safe_recovery_states
+                        and states & retryable_states
                     ):
                         try:
                             result = dict(remote_dispatcher(post_id, stream))
@@ -667,32 +676,63 @@ class OrchestratorDispatcher:
         )
         orchestrator = PublishingOrchestrator(self.repository, config)
         messages: list[str] = []
+        platform_errors: dict[str, str] = {}
+        done_states = {DeliveryStatus.SCHEDULED, DeliveryStatus.PUBLISHED}
+        safe_attempt_states = {DeliveryStatus.PENDING, DeliveryStatus.RETRY_WAIT}
+        unsafe_replay_states = {
+            DeliveryStatus.PREPARING,
+            DeliveryStatus.UPLOADING,
+            DeliveryStatus.PROCESSING,
+            DeliveryStatus.AWAITING_CONFIRMATION,
+            DeliveryStatus.UNKNOWN,
+        }
+        actions = (
+            (Platform.TIKTOK, orchestrator.prepare_tiktok),
+            (Platform.FACEBOOK, orchestrator.schedule_facebook),
+        )
         try:
-            if Platform.TIKTOK in destinations:
-                result = orchestrator.prepare_tiktok(post_id)
-                messages.append(result.message)
-            if Platform.FACEBOOK in destinations:
-                result = orchestrator.schedule_facebook(post_id)
-                messages.append(result.message)
-        except OrchestrationError as exc:
-            deliveries = self._delivery_states(post_id, destinations)
-            return {
-                "status": self._classify_delivery_states(deliveries),
-                "message": str(exc),
-                "deliveries": deliveries,
-                "bridge": "video_publish_bridge",
-                "executor": "mxh_video_tool",
-            }
+            for platform, action in actions:
+                if platform not in destinations:
+                    continue
+                delivery = self.repository.get_delivery_for_platform(
+                    post_id, platform
+                )
+                if delivery.status in done_states:
+                    messages.append(
+                        f"{platform.value}: đã xác nhận {delivery.status.value}; bỏ qua."
+                    )
+                    continue
+                if delivery.status in unsafe_replay_states:
+                    messages.append(
+                        f"{platform.value}: {delivery.status.value}; chỉ đối soát, không gửi lại."
+                    )
+                    continue
+                if delivery.status not in safe_attempt_states:
+                    platform_errors[platform.value] = (
+                        f"Trạng thái {delivery.status.value}; không tự động gửi lại."
+                    )
+                    continue
+                try:
+                    result = action(post_id)
+                    messages.append(result.message)
+                except OrchestrationError as exc:
+                    # A failure on one destination must not block an independent
+                    # destination in the same stream. Its repository state
+                    # decides whether a later run may retry safely.
+                    platform_errors[platform.value] = str(exc)
         finally:
             orchestrator.close()
         deliveries = self._delivery_states(post_id, destinations)
-        return {
+        response: dict[str, Any] = {
             "status": self._classify_delivery_states(deliveries),
             "message": " ".join(messages).strip(),
             "deliveries": deliveries,
             "bridge": "video_publish_bridge",
             "executor": "mxh_video_tool",
         }
+        if platform_errors:
+            response["errors"] = platform_errors
+        return response
 
     def readback(self, post_id: str, stream: StreamSpec) -> Mapping[str, Any]:
         """Read MXH Video Tool delivery state without issuing a provider mutation."""
@@ -722,9 +762,19 @@ class OrchestratorDispatcher:
             "awaiting_confirmation",
         }:
             return "SUBMITTED_UNVERIFIED"
-        if states & {"needs_action", "retry_wait"}:
+        if "needs_action" in states:
             return "NEEDS_ACTION"
-        if states and states <= {"pending"}:
+        safe_recovery_states = {
+            "pending",
+            "retry_wait",
+            "scheduled",
+            "published",
+        }
+        if (
+            states
+            and states <= safe_recovery_states
+            and states & {"pending", "retry_wait"}
+        ):
             return "PREPARED"
         return "PREPARED"
 
