@@ -3,8 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
+import sys
+from types import ModuleType, SimpleNamespace
 
-from mxh_publisher.models import Platform
+from mxh_publisher.config import AppConfig
+from mxh_publisher.models import DeliveryStatus, Platform
 from mxh_publisher.repository import Repository
 from mxh_publisher.services.linh_mxh_hub import (
     DualStreamRequest,
@@ -235,6 +238,230 @@ def test_mxh_delivery_classifier_keeps_processing_non_retryable() -> None:
     assert classify({"facebook": "processing"}) == "SUBMITTED_UNVERIFIED"
     assert classify({"facebook": "unknown"}) == "SUBMITTED_UNVERIFIED"
     assert classify({"facebook": "awaiting_confirmation"}) == "SUBMITTED_UNVERIFIED"
-    assert classify({"facebook": "retry_wait"}) == "NEEDS_ACTION"
+    assert classify({"facebook": "retry_wait"}) == "PREPARED"
     assert classify({"facebook": "failed"}) == "ERROR"
     assert classify({"facebook": "scheduled", "tiktok": "published"}) == "SCHEDULED"
+    assert classify({"facebook": "scheduled", "tiktok": "pending"}) == "PREPARED"
+    assert classify({"facebook": "scheduled", "tiktok": "retry_wait"}) == "PREPARED"
+    assert (
+        classify({"facebook": "scheduled", "tiktok": "processing"})
+        == "SUBMITTED_UNVERIFIED"
+    )
+
+class _PartialRecoveryDispatcher:
+    def __init__(self) -> None:
+        self.dispatch_calls: list[tuple[str, str]] = []
+
+    def readback(self, post_id: str, stream: StreamSpec):
+        return {
+            "status": "PREPARED",
+            "deliveries": {
+                "facebook": "scheduled",
+                "tiktok": "pending",
+            },
+            "bridge": "video_publish_bridge",
+            "executor": "mxh_video_tool",
+        }
+
+    def __call__(self, post_id: str, stream: StreamSpec):
+        self.dispatch_calls.append((post_id, stream.stream_id))
+        return {
+            "status": "SCHEDULED",
+            "deliveries": {
+                "facebook": "scheduled",
+                "tiktok": "scheduled",
+            },
+            "bridge": "video_publish_bridge",
+            "executor": "mxh_video_tool",
+        }
+
+
+def test_existing_partial_stream_recovers_pending_platform(tmp_path: Path) -> None:
+    repository = Repository(tmp_path / "publisher.sqlite3")
+    now = datetime(2026, 9, 26, 7, 0, tzinfo=TZ)
+    source_path, source_sha = _video(tmp_path, "partial.mp4", b"partial-source")
+    repository.create_post(
+        video_path=str(source_path),
+        video_sha256=source_sha,
+        title="Video partial",
+        caption="Video partial",
+    )
+    request = DualStreamRequest(
+        video_title="Video partial",
+        stream_2=StreamSpec(
+            "stream-2",
+            {
+                Platform.FACEBOOK.value: "222",
+                Platform.TIKTOK.value: "@stream2",
+            },
+        ),
+        stream_1=StreamSpec(
+            "stream-1",
+            {
+                Platform.FACEBOOK.value: "111",
+                Platform.TIKTOK.value: "@stream1",
+            },
+        ),
+    )
+
+    prepared = schedule_video_dual_stream(repository, request, now=now)
+    assert prepared.final_status == "PREPARED"
+
+    dispatcher = _PartialRecoveryDispatcher()
+    recovered = schedule_video_dual_stream(
+        repository,
+        request,
+        now=now,
+        remote_dispatcher=dispatcher,
+    )
+
+    assert recovered.final_status == "DONE_EXISTING"
+    assert len(dispatcher.dispatch_calls) == 2
+
+
+def test_dispatcher_isolates_platform_failures_and_skips_done_platform(
+    tmp_path: Path, monkeypatch
+) -> None:
+    calls: list[str] = []
+
+    class _FakeOrchestrationError(RuntimeError):
+        pass
+
+    class _RepoStub:
+        def __init__(self) -> None:
+            self.states = {
+                Platform.TIKTOK: DeliveryStatus.PENDING,
+                Platform.FACEBOOK: DeliveryStatus.PENDING,
+            }
+
+        def get_delivery_for_platform(self, post_id: str, platform: Platform):
+            return SimpleNamespace(status=self.states[platform])
+
+    repo = _RepoStub()
+
+    class _FakeOrchestrator:
+        def __init__(self, repository, config) -> None:
+            self.repository = repository
+
+        def prepare_tiktok(self, post_id: str):
+            calls.append("tiktok")
+            if calls.count("tiktok") == 1:
+                self.repository.states[Platform.TIKTOK] = DeliveryStatus.RETRY_WAIT
+                raise _FakeOrchestrationError("TikTok needs login")
+            self.repository.states[Platform.TIKTOK] = DeliveryStatus.SCHEDULED
+            return SimpleNamespace(message="TikTok scheduled")
+
+        def schedule_facebook(self, post_id: str):
+            calls.append("facebook")
+            self.repository.states[Platform.FACEBOOK] = DeliveryStatus.SCHEDULED
+            return SimpleNamespace(message="Facebook scheduled")
+
+        def close(self) -> None:
+            pass
+
+    fake_module = ModuleType("mxh_publisher.services.orchestrator")
+    fake_module.OrchestrationError = _FakeOrchestrationError
+    fake_module.PublishingOrchestrator = _FakeOrchestrator
+    monkeypatch.setitem(
+        sys.modules,
+        "mxh_publisher.services.orchestrator",
+        fake_module,
+    )
+
+    config = AppConfig(
+        root_dir=tmp_path,
+        database_path=tmp_path / "publisher.sqlite3",
+        media_dir=tmp_path / "media",
+        logs_dir=tmp_path / "logs",
+        screenshots_dir=tmp_path / "screenshots",
+        browser_profile_dir=tmp_path / "browser_profile",
+        facebook_page_id="222",
+        tiktok_account_id="@stream2",
+    )
+    dispatcher = OrchestratorDispatcher(repo, config)
+    stream = StreamSpec(
+        "stream-2",
+        {
+            Platform.FACEBOOK.value: "222",
+            Platform.TIKTOK.value: "@stream2",
+        },
+    )
+
+    first = dispatcher("post-1", stream)
+    assert first["status"] == "PREPARED"
+    assert calls == ["tiktok", "facebook"]
+    assert first["deliveries"] == {
+        "facebook": "scheduled",
+        "tiktok": "retry_wait",
+    }
+
+    second = dispatcher("post-1", stream)
+    assert second["status"] == "SCHEDULED"
+    assert calls == ["tiktok", "facebook", "tiktok"]
+    assert second["deliveries"] == {
+        "facebook": "scheduled",
+        "tiktok": "scheduled",
+    }
+
+class _SafePreparedDispatcher:
+    def readback(self, post_id: str, stream: StreamSpec):
+        return {
+            "status": "PREPARED",
+            "deliveries": {
+                "facebook": "scheduled",
+                "tiktok": "retry_wait",
+            },
+        }
+
+    def __call__(self, post_id: str, stream: StreamSpec):
+        return {
+            "status": "PREPARED",
+            "deliveries": {
+                "facebook": "scheduled",
+                "tiktok": "retry_wait",
+            },
+        }
+
+
+def test_safe_partial_retry_remains_prepared_not_needs_action(tmp_path: Path) -> None:
+    repository = Repository(tmp_path / "publisher.sqlite3")
+    now = datetime(2026, 9, 26, 7, 0, tzinfo=TZ)
+    source_path, source_sha = _video(tmp_path, "safe-partial.mp4", b"safe-partial")
+    repository.create_post(
+        video_path=str(source_path),
+        video_sha256=source_sha,
+        title="Video safe partial",
+        caption="Video safe partial",
+    )
+    request = DualStreamRequest(
+        video_title="Video safe partial",
+        stream_2=StreamSpec(
+            "stream-2",
+            {
+                Platform.FACEBOOK.value: "222",
+                Platform.TIKTOK.value: "@stream2",
+            },
+        ),
+        stream_1=StreamSpec(
+            "stream-1",
+            {
+                Platform.FACEBOOK.value: "111",
+                Platform.TIKTOK.value: "@stream1",
+            },
+        ),
+    )
+
+    first = schedule_video_dual_stream(repository, request, now=now)
+    assert first.final_status == "PREPARED"
+
+    receipt = schedule_video_dual_stream(
+        repository,
+        request,
+        now=now,
+        remote_dispatcher=_SafePreparedDispatcher(),
+    )
+
+    assert receipt.final_status == "PREPARED"
+    assert receipt.stream_2_status == "PREPARED"
+    assert receipt.stream_1_status == "PREPARED"
+
