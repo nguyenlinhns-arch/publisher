@@ -454,9 +454,14 @@ class RepositoryHubScheduler:
         cached = self.repository.get_setting(receipt_key, default=None)
         if isinstance(cached, Mapping):
             try:
-                return DualStreamReceipt(**dict(cached))
+                cached_receipt = DualStreamReceipt(**dict(cached))
             except TypeError:
-                pass
+                cached_receipt = None
+            if cached_receipt is not None and cached_receipt.final_status in {
+                "DONE",
+                "DONE_EXISTING",
+            }:
+                return cached_receipt
 
         source = self.repository.get_post(plan.source_post_id)
         if not self.request.commit:
@@ -504,11 +509,9 @@ class RepositoryHubScheduler:
         remote: dict[str, Any] = {}
         stream_2_status = "EXISTING" if plan.stream_2.existing else "PREPARED"
         stream_1_status = "EXISTING" if plan.stream_1.existing else "PREPARED"
-        final_status = (
-            "DONE_EXISTING"
-            if plan.stream_2.existing and plan.stream_1.existing
-            else "PREPARED"
-        )
+        # A local schedule is not a provider receipt. Existing local rows remain
+        # PREPARED until MXH Video Tool readback confirms the remote state.
+        final_status = "PREPARED"
         if remote_dispatcher is not None:
             dispatch_errors = False
             for key, post_id, stream, existing in (
@@ -528,7 +531,42 @@ class RepositoryHubScheduler:
                 if post_id is None:
                     continue
                 if existing:
-                    remote[key] = {"status": "EXISTING"}
+                    readback = getattr(remote_dispatcher, "readback", None)
+                    if callable(readback):
+                        try:
+                            result = dict(readback(post_id, stream))
+                        except Exception as exc:
+                            result = {"status": "ERROR", "error": str(exc)}
+                            dispatch_errors = True
+                    else:
+                        result = {
+                            "status": "SUBMITTED_UNVERIFIED",
+                            "message": (
+                                "Local schedule exists but MXH Video Tool readback "
+                                "is unavailable; no mutation was replayed."
+                            ),
+                        }
+
+                    # PENDING is authoritative evidence that this local delivery
+                    # has not entered a remote mutation yet. This is the only
+                    # existing-row recovery path allowed to dispatch.
+                    deliveries = result.get("deliveries")
+                    states = (
+                        {str(value).lower() for value in deliveries.values()}
+                        if isinstance(deliveries, Mapping)
+                        else set()
+                    )
+                    if (
+                        str(result.get("status") or "").upper() == "PREPARED"
+                        and states
+                        and states <= {"pending"}
+                    ):
+                        try:
+                            result = dict(remote_dispatcher(post_id, stream))
+                        except Exception as exc:
+                            result = {"status": "ERROR", "error": str(exc)}
+                            dispatch_errors = True
+                    remote[key] = result
                     continue
                 try:
                     result = dict(remote_dispatcher(post_id, stream))
@@ -541,12 +579,31 @@ class RepositoryHubScheduler:
                 for item in remote.values()
                 if isinstance(item, Mapping)
             }
-            if dispatch_errors or "ERROR" in statuses or "UNKNOWN" in statuses:
+            if dispatch_errors or statuses & {"ERROR", "FAILED"}:
                 final_status = "PARTIAL"
-            elif statuses and statuses <= {"SCHEDULED", "PUBLISHED", "EXISTING"}:
-                final_status = "DONE"
-            else:
+            elif statuses and statuses <= {"SCHEDULED", "PUBLISHED"}:
+                final_status = (
+                    "DONE_EXISTING"
+                    if plan.stream_2.existing and plan.stream_1.existing
+                    else "DONE"
+                )
+            elif statuses & {
+                "UNKNOWN",
+                "SUBMITTED_UNVERIFIED",
+                "PROCESSING",
+                "PREPARING",
+                "UPLOADING",
+                "AWAITING_CONFIRMATION",
+            }:
+                # Mutation may already have reached the provider. This is not a
+                # retryable failure and must only advance through readback.
+                final_status = "SUBMITTED_UNVERIFIED"
+            elif statuses & {"NEEDS_ACTION", "RETRY_WAIT"}:
                 final_status = "NEEDS_ACTION"
+            elif statuses:
+                final_status = "NEEDS_ACTION"
+            else:
+                final_status = "PREPARED"
             stream_2_status = str(
                 remote.get("stream_2", {}).get("status") or stream_2_status
             )
@@ -575,7 +632,12 @@ class RepositoryHubScheduler:
 
 
 class OrchestratorDispatcher:
-    """Existing publisher engine as a no-MXH-GUI remote dispatch fallback."""
+    """MXH Video Tool backend executor used by Hub's videoPublish bridge.
+
+    The Hub owns planning, idempotency and orchestration. Remote mutations stay
+    inside the MXH Video Tool publishing backend and are never treated as
+    successful until delivery readback reaches scheduled/published.
+    """
 
     def __init__(
         self,
@@ -613,30 +675,58 @@ class OrchestratorDispatcher:
                 result = orchestrator.schedule_facebook(post_id)
                 messages.append(result.message)
         except OrchestrationError as exc:
+            deliveries = self._delivery_states(post_id, destinations)
             return {
-                "status": "ERROR",
+                "status": self._classify_delivery_states(deliveries),
                 "message": str(exc),
-                "deliveries": self._delivery_states(post_id, destinations),
+                "deliveries": deliveries,
+                "bridge": "video_publish_bridge",
+                "executor": "mxh_video_tool",
             }
         finally:
             orchestrator.close()
         deliveries = self._delivery_states(post_id, destinations)
-        states = set(deliveries.values())
-        if states and states <= {"scheduled", "published"}:
-            status = "SCHEDULED"
-        elif "unknown" in states:
-            status = "UNKNOWN"
-        elif states & {"awaiting_confirmation", "needs_action", "processing"}:
-            status = "NEEDS_ACTION"
-        elif states & {"failed", "retry_wait"}:
-            status = "ERROR"
-        else:
-            status = "PREPARED"
         return {
-            "status": status,
+            "status": self._classify_delivery_states(deliveries),
             "message": " ".join(messages).strip(),
             "deliveries": deliveries,
+            "bridge": "video_publish_bridge",
+            "executor": "mxh_video_tool",
         }
+
+    def readback(self, post_id: str, stream: StreamSpec) -> Mapping[str, Any]:
+        """Read MXH Video Tool delivery state without issuing a provider mutation."""
+
+        destinations = stream.platform_destinations()
+        deliveries = self._delivery_states(post_id, destinations)
+        return {
+            "status": self._classify_delivery_states(deliveries),
+            "message": "MXH Video Tool readback only; no remote mutation issued.",
+            "deliveries": deliveries,
+            "bridge": "video_publish_bridge",
+            "executor": "mxh_video_tool",
+        }
+
+    @staticmethod
+    def _classify_delivery_states(deliveries: Mapping[str, str]) -> str:
+        states = {str(value).lower() for value in deliveries.values()}
+        if states and states <= {"scheduled", "published"}:
+            return "SCHEDULED"
+        if "failed" in states:
+            return "ERROR"
+        if states & {
+            "unknown",
+            "processing",
+            "preparing",
+            "uploading",
+            "awaiting_confirmation",
+        }:
+            return "SUBMITTED_UNVERIFIED"
+        if states & {"needs_action", "retry_wait"}:
+            return "NEEDS_ACTION"
+        if states and states <= {"pending"}:
+            return "PREPARED"
+        return "PREPARED"
 
     def _delivery_states(
         self,
