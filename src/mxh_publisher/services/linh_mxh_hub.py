@@ -607,6 +607,15 @@ class RepositoryHubScheduler:
                 # Mutation may already have reached the provider. This is not a
                 # retryable failure and must only advance through readback.
                 final_status = "SUBMITTED_UNVERIFIED"
+            elif statuses and statuses <= {
+                "PREPARED",
+                "SCHEDULED",
+                "PUBLISHED",
+            }:
+                # PREPARED is a safe resumable state: at least one destination
+                # has not started or explicitly returned to retry_wait. Keep the
+                # job successful so the next run can resume only that destination.
+                final_status = "PREPARED"
             elif statuses & {"NEEDS_ACTION", "RETRY_WAIT"}:
                 final_status = "NEEDS_ACTION"
             elif statuses:
