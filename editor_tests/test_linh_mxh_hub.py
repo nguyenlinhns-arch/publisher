@@ -8,6 +8,7 @@ from mxh_publisher.models import Platform
 from mxh_publisher.repository import Repository
 from mxh_publisher.services.linh_mxh_hub import (
     DualStreamRequest,
+    OrchestratorDispatcher,
     RepositoryHubScheduler,
     StreamSpec,
     schedule_video_dual_stream,
@@ -151,3 +152,89 @@ def test_dual_stream_never_schedules_inside_minimum_lead(tmp_path: Path) -> None
     assert plan.stream_1.scheduled_at == datetime(
         2026, 9, 29, 9, 0, tzinfo=TZ
     )
+
+
+
+class _ReceiptDispatcher:
+    def __init__(self) -> None:
+        self.dispatch_calls: list[tuple[str, str]] = []
+        self.verified = False
+
+    def __call__(self, post_id: str, stream: StreamSpec):
+        self.dispatch_calls.append((post_id, stream.stream_id))
+        return {
+            "status": "SUBMITTED_UNVERIFIED",
+            "deliveries": {"facebook": "processing"},
+            "bridge": "video_publish_bridge",
+            "executor": "mxh_video_tool",
+        }
+
+    def readback(self, post_id: str, stream: StreamSpec):
+        if self.verified:
+            return {
+                "status": "SCHEDULED",
+                "deliveries": {"facebook": "scheduled"},
+                "bridge": "video_publish_bridge",
+                "executor": "mxh_video_tool",
+            }
+        return {
+            "status": "SUBMITTED_UNVERIFIED",
+            "deliveries": {"facebook": "processing"},
+            "bridge": "video_publish_bridge",
+            "executor": "mxh_video_tool",
+        }
+
+
+def test_submitted_unverified_reconciles_without_duplicate_dispatch(tmp_path: Path) -> None:
+    repository = Repository(tmp_path / "publisher.sqlite3")
+    now = datetime(2026, 9, 26, 7, 0, tzinfo=TZ)
+    source_path, source_sha = _video(tmp_path, "source.mp4", b"receipt-source")
+    repository.create_post(
+        video_path=str(source_path),
+        video_sha256=source_sha,
+        title="Video receipt",
+        caption="Video receipt",
+    )
+    request = DualStreamRequest(
+        video_title="Video receipt",
+        stream_2=StreamSpec(
+            "stream-2",
+            {Platform.FACEBOOK.value: "222"},
+        ),
+        stream_1=StreamSpec(
+            "stream-1",
+            {Platform.FACEBOOK.value: "111"},
+        ),
+    )
+    dispatcher = _ReceiptDispatcher()
+
+    first = schedule_video_dual_stream(
+        repository,
+        request,
+        now=now,
+        remote_dispatcher=dispatcher,
+    )
+    assert first.final_status == "SUBMITTED_UNVERIFIED"
+    assert len(dispatcher.dispatch_calls) == 2
+
+    dispatcher.verified = True
+    second = schedule_video_dual_stream(
+        repository,
+        request,
+        now=now,
+        remote_dispatcher=dispatcher,
+    )
+    assert second.final_status == "DONE_EXISTING"
+    assert len(dispatcher.dispatch_calls) == 2
+    assert second.remote["stream_2"]["status"] == "SCHEDULED"
+    assert second.remote["stream_1"]["status"] == "SCHEDULED"
+
+
+def test_mxh_delivery_classifier_keeps_processing_non_retryable() -> None:
+    classify = OrchestratorDispatcher._classify_delivery_states
+    assert classify({"facebook": "processing"}) == "SUBMITTED_UNVERIFIED"
+    assert classify({"facebook": "unknown"}) == "SUBMITTED_UNVERIFIED"
+    assert classify({"facebook": "awaiting_confirmation"}) == "SUBMITTED_UNVERIFIED"
+    assert classify({"facebook": "retry_wait"}) == "NEEDS_ACTION"
+    assert classify({"facebook": "failed"}) == "ERROR"
+    assert classify({"facebook": "scheduled", "tiktok": "published"}) == "SCHEDULED"

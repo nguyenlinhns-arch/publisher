@@ -2,8 +2,11 @@
 
 Action chuẩn: `schedule_video_dual_stream`.
 
-Mục tiêu: Hub thực hiện toàn bộ việc chọn đúng video, tìm ngày trống và đặt hai luồng
-mà không cần mở cửa sổ MXH Video Tool.
+Mục tiêu: Hub thực hiện việc chọn đúng video, tìm ngày trống và điều phối hai luồng.
+Mọi mutation Facebook/TikTok phải đi qua backend của MXH Video Tool bằng
+`videoPublish` / `video_publish_bridge`. Cửa sổ GUI không cần ở foreground,
+nhưng MXH Video Tool bridge là executor bắt buộc; Hub không tự thay thế bằng một
+publisher/provider path khác.
 
 ## Cách gọi
 
@@ -78,10 +81,14 @@ Chỉ khai báo các nền tảng thực sự thuộc luồng đó.
 - `DONE`: remote dispatcher xác nhận tất cả đích ở trạng thái scheduled/published/existing.
 - `DONE_EXISTING`: hai lịch đã tồn tại đúng yêu cầu.
 - `NEEDS_ACTION`: có đích cần thao tác/xác nhận thêm.
-- `PARTIAL`: có lỗi hoặc kết quả remote chưa chắc chắn.
+- `SUBMITTED_UNVERIFIED`: MXH Video Tool đã có thể gửi mutation nhưng provider
+  chưa có receipt xác minh; chỉ readback, tuyệt đối không blind retry.
+- `NEEDS_ACTION`: trạng thái cho biết chưa thể tự tiếp tục an toàn.
+- `PARTIAL`: có lỗi xác định ở ít nhất một đích.
 - `ERROR`: request/validation lỗi.
 
 Chỉ `DONE` và `DONE_EXISTING` được coi là hoàn tất toàn bộ.
+`SUBMITTED_UNVERIFIED` không phải lỗi retry; lần chạy sau phải đối soát trước.
 
 ## Thứ tự thực thi
 
@@ -90,10 +97,11 @@ Chỉ `DONE` và `DONE_EXISTING` được coi là hoàn tất toàn bộ.
 3. Query lịch và chọn ngày Luồng 1.
 4. Preflight chống trùng.
 5. Tạo hai local schedule.
-6. Dispatch remote theo từng stream profile.
-7. Ghi một receipt cuối.
-8. Không mở MXH Video Tool GUI.
+6. Giao mutation cho MXH Video Tool backend theo từng stream profile.
+7. Đọc delivery/provider state và ghi receipt.
+8. Nếu receipt chưa authoritative, giữ `SUBMITTED_UNVERIFIED` và chỉ reconcile.
+9. Không yêu cầu cửa sổ MXH Video Tool ở foreground.
 
-Nếu remote dispatcher hiện tại phải dùng Chrome, Chrome có thể được dùng như lớp
-publisher; yêu cầu "không mở MXH Video Tool" vẫn được giữ. Khi Hub có native action/API
-cho từng nền tảng, inject dispatcher đó để bỏ cả thao tác trình duyệt.
+Chrome/provider UI (nếu MXH Video Tool cần) thuộc trách nhiệm của MXH Video Tool.
+Hub không gọi trực tiếp provider và không replay mutation chỉ vì timeout hoặc tiến
+trình con trả về trạng thái chưa xác minh.
