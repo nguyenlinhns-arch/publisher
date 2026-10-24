@@ -6,13 +6,13 @@ on:
       - 'scripts/zalo_linh_release*.py'
       - 'tests/test_zalo_release.py'
       - 'zalo-linh/channels/**'
-      - '.github/workflows/zalo-linh-release*.yml'
+      - '.github/workflows/zalo-linh-*.yml'
   pull_request:
     paths:
       - 'scripts/zalo_linh_release*.py'
       - 'tests/test_zalo_release.py'
       - 'zalo-linh/channels/**'
-      - '.github/workflows/zalo-linh-release*.yml'
+      - '.github/workflows/zalo-linh-*.yml'
 
 permissions:
   contents: read
