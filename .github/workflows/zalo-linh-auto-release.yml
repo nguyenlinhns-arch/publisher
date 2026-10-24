@@ -1,0 +1,99 @@
+name: Zalo Linh automatic release request
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'zalo-linh/release-requests/*.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zalo-linh-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'nguyenlinhns-arch/publisher' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: zalo-linh-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read exactly one approved request with no shell interpolation
+        id: request
+        env:
+          REQUEST_BEFORE: ${{ github.event.before }}
+          REQUEST_HEAD: ${{ github.sha }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, re, subprocess
+          a = os.environ['REQUEST_BEFORE']
+          b = os.environ['REQUEST_HEAD']
+          changed = subprocess.check_output([
+              'git', 'diff', '--name-only', a, b, '--',
+              'zalo-linh/release-requests/*.json'], text=True).splitlines()
+          if len(changed) != 1:
+              raise SystemExit('EXPECTED_EXACTLY_ONE_RELEASE_REQUEST')
+          p = pathlib.Path(changed[0])
+          if p.parent.as_posix() != 'zalo-linh/release-requests':
+              raise SystemExit('REQUEST_PATH_UNTRUSTED')
+          d = json.loads(p.read_text(encoding='utf-8'))
+          keys = {'schema','channel','version','source_file_id','sha256',
+                  'qa_file_id','approval_state'}
+          if set(d) != keys or d['schema'] != 'zalo-linh.release-request.v1' \
+             or d['channel'] not in ('stable','beta') \
+             or d['approval_state'] != 'APPROVED_BY_OWNER':
+              raise SystemExit('REQUEST_NOT_APPROVED_OR_SCHEMA_INVALID')
+          if not re.fullmatch(r'(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})', d['version']):
+              raise SystemExit('REQUEST_VERSION_INVALID')
+          if not re.fullmatch('[a-f0-9]{64}', d['sha256']):
+              raise SystemExit('REQUEST_SHA256_INVALID')
+          for key in ('source_file_id','qa_file_id'):
+              if d[key] and not re.fullmatch('[A-Za-z0-9_-]{10,150}',d[key]):
+                  raise SystemExit('DRIVE_FILE_ID_INVALID')
+          if d['channel'] == 'stable' and not d['qa_file_id']:
+              raise SystemExit('STABLE_REQUIRES_WINDOWS_QA_RECEIPT')
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
+              for key in ('channel','version','source_file_id','sha256','qa_file_id'):
+                  out.write(f'{key}={d[key]}\n')
+          PY
+      - name: Install only fixed publisher dependencies
+        run: python -m pip install --disable-pip-version-check 'cryptography>=44,<50' 'google-api-python-client>=2,<3' 'google-auth>=2,<4'
+      - name: Verify Windows QA and publish signed release (fail closed)
+        env:
+          ZALO_LINH_DRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.ZALO_LINH_DRIVE_SERVICE_ACCOUNT_JSON }}
+          ZALO_LINH_SIGNING_SEED_B64: ${{ secrets.ZALO_LINH_SIGNING_SEED_B64 }}
+          ZALO_LINH_STAGING_FOLDER_ID: ${{ secrets.ZALO_LINH_STAGING_FOLDER_ID }}
+          ZALO_LINH_RELEASES_FOLDER_ID: ${{ secrets.ZALO_LINH_RELEASES_FOLDER_ID }}
+          ZALO_LINH_STABLE_FILE_ID: ${{ secrets.ZALO_LINH_STABLE_FILE_ID }}
+          RELEASE_CHANNEL: ${{ steps.request.outputs.channel }}
+          RELEASE_VERSION: ${{ steps.request.outputs.version }}
+          RELEASE_SOURCE: ${{ steps.request.outputs.source_file_id }}
+          RELEASE_SHA: ${{ steps.request.outputs.sha256 }}
+          RELEASE_QA: ${{ steps.request.outputs.qa_file_id }}
+        shell: bash
+        run: |
+          python scripts/zalo_linh_release_drive.py \
+            --channel "$RELEASE_CHANNEL" --version "$RELEASE_VERSION" \
+            --source-file-id "$RELEASE_SOURCE" --sha256 "$RELEASE_SHA" \
+            --qa-file-id "$RELEASE_QA" --output "zalo-linh/channels/$RELEASE_CHANNEL.json"
+      - name: Mirror signed metadata only (never app source)
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if [ '${{ steps.request.outputs.channel }}' = stable ]; then
+            cp zalo-linh/channels/stable.json zalo-linh/stable.json
+          fi
+          git add zalo-linh/channels/
+          if [ '${{ steps.request.outputs.channel }}' = stable ]; then git add zalo-linh/stable.json; fi
+          git diff --cached --quiet || { git commit -m 'chore(zalo-linh): publish validated signed channel'; git push; }
