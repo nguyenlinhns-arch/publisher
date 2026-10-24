@@ -3,8 +3,14 @@
   "version": "0.9.21",
   "status": "REVIEW_ONLY",
   "installable": false,
-  "artifact_name": "ZALO_LINH_0921_RC1_STAGING_UNSIGNED_20261024.zip",
-  "sha256": "f350fe0ee95ca3070dfc17f7df52e0c65073f5d282eadb569cfe7fb7a3337d26",
-  "size": 18079,
-  "reason": "Patch-toolkit only: no complete VERSION.txt + payload_manifest.json release, no owner signature, no Windows live E2E. The installed updater must NEVER consume this beta descriptor."
+  "artifact_name": "ZALO_LINH_0921_FULL_RELEASE_CANDIDATE_UNSIGNED_20261024.zip",
+  "source_file_id": "1SqkKtH-RHP3A52pq_ybCrCeXfM8ppVpw",
+  "sha256": "54a70dce0c526dda7d6b00d794e0f57a6d91842043732a91e01daaf2c088e9a5",
+  "size": 70083,
+  "source_files": 28,
+  "format_verified": true,
+  "offline_qa": "23/23 PASS",
+  "real_windows_e2e": "PENDING",
+  "signed": false,
+  "reason": "Full 0.9.21 app ZIP with payload_manifest verified, not authorized for auto-install until real Windows E2E/rollback and Ed25519 signature. Stable feed unchanged."
 }
