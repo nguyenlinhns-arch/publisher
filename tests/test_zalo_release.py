@@ -61,7 +61,7 @@ def test_correct_canonical_domain_and_newline():
 
 def test_reject_old_as_upgrade():
     with pytest.raises(ReleaseError, match='DOWNGRADE'):
-        verify_release(SIGNED_0914, SIGNED_ZIP.read_bytes(), installed_minimum='0.9.20')
+        verify_release(SIGNED_0914, b'not-used-because-downgrade-gate-first', installed_minimum='0.9.20')
 
 
 def test_reject_forged_feed_signature():
@@ -82,7 +82,7 @@ def test_reject_external_url():
 
 def test_reject_tampered_zip():
     with pytest.raises(ReleaseError, match='SIGNED_PACKAGE'):
-        verify_release(SIGNED_0914, SIGNED_ZIP.read_bytes() + b'x')
+        verify_release(SIGNED_0914, b'tampered-zip')
 
 
 def test_candidate_full_zip_accepts():
