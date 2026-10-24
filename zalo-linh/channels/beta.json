@@ -1,0 +1,10 @@
+{
+  "schema": "zalo-linh.channel-beta.v1",
+  "version": "0.9.21",
+  "status": "REVIEW_ONLY",
+  "installable": false,
+  "artifact_name": "ZALO_LINH_0921_RC1_STAGING_UNSIGNED_20261024.zip",
+  "sha256": "f350fe0ee95ca3070dfc17f7df52e0c65073f5d282eadb569cfe7fb7a3337d26",
+  "size": 18079,
+  "reason": "Patch-toolkit only: no complete VERSION.txt + payload_manifest.json release, no owner signature, no Windows live E2E. The installed updater must NEVER consume this beta descriptor."
+}
