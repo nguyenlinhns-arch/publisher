@@ -1,0 +1,79 @@
+name: Zalo Linh signed release channels
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        type: choice
+        required: true
+        description: 'beta = review metadata only; stable = signed Drive release'
+        options: [beta, stable]
+      version:
+        required: true
+        type: string
+        description: 'Exactly 0.9.21+; strictly increasing'
+      source_file_id:
+        required: true
+        type: string
+        description: 'Private Drive staging ZIP file ID (not a URL)'
+      expected_sha256:
+        required: true
+        type: string
+        description: 'Pinned SHA256 of complete ZIP'
+      qa_file_id:
+        required: false
+        type: string
+        description: 'Private Drive Windows E2E PASS report (mandatory for stable)'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zalo-linh-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The 'zalo-linh-production' environment should be protected by owner
+    # reviewers. The action will reject missing/incorrect signer secrets.
+    environment: ${{ inputs.channel == 'stable' && 'zalo-linh-production' || 'zalo-linh-beta' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install publisher dependencies
+        run: python -m pip install --disable-pip-version-check 'cryptography>=44,<50' 'google-api-python-client>=2,<3' 'google-auth>=2,<4'
+      - name: Verify ZIP, QA evidence and publish through signed local-update feed
+        env:
+          ZALO_LINH_DRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.ZALO_LINH_DRIVE_SERVICE_ACCOUNT_JSON }}
+          ZALO_LINH_SIGNING_SEED_B64: ${{ secrets.ZALO_LINH_SIGNING_SEED_B64 }}
+          ZALO_LINH_STAGING_FOLDER_ID: ${{ secrets.ZALO_LINH_STAGING_FOLDER_ID }}
+          ZALO_LINH_RELEASES_FOLDER_ID: ${{ secrets.ZALO_LINH_RELEASES_FOLDER_ID }}
+          ZALO_LINH_STABLE_FILE_ID: ${{ secrets.ZALO_LINH_STABLE_FILE_ID }}
+          CHANNEL: ${{ inputs.channel }}
+          VERSION: ${{ inputs.version }}
+          SOURCE_ID: ${{ inputs.source_file_id }}
+          EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+          QA_FILE_ID: ${{ inputs.qa_file_id }}
+        shell: bash
+        run: |
+          python scripts/zalo_linh_release_drive.py \
+            --channel "$CHANNEL" --version "$VERSION" \
+            --source-file-id "$SOURCE_ID" --sha256 "$EXPECTED_SHA256" \
+            --qa-file-id "$QA_FILE_ID" --output "zalo-linh/channels/$CHANNEL.json"
+      - name: Mirror only channel metadata to GitHub
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if [ "${{ inputs.channel }}" = "stable" ]; then
+            cp zalo-linh/channels/stable.json zalo-linh/stable.json
+          fi
+          git add zalo-linh/channels/
+          if [ "${{ inputs.channel }}" = "stable" ]; then git add zalo-linh/stable.json; fi
+          git diff --cached --quiet || { git commit -m 'Zalo Linh verified ${{ inputs.channel }} release metadata'; git push; }
