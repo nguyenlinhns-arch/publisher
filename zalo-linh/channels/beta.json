@@ -1,16 +1,17 @@
 {
   "schema": "zalo-linh.channel-beta.v1",
-  "version": "0.9.21",
+  "version": "0.9.22",
   "status": "REVIEW_ONLY",
   "installable": false,
-  "artifact_name": "ZALO_LINH_0921_FULL_RELEASE_CANDIDATE_UNSIGNED_20261024.zip",
-  "source_file_id": "1SqkKtH-RHP3A52pq_ybCrCeXfM8ppVpw",
-  "sha256": "54a70dce0c526dda7d6b00d794e0f57a6d91842043732a91e01daaf2c088e9a5",
-  "size": 70083,
-  "source_files": 28,
+  "artifact_name": "ZALO_LINH_0922_ONE_CLICK_CHAT_RELEASE_UNSIGNED_20261024.zip",
+  "source_file_id": "1BNHUlOJbMla3G1CnwmV_hCh8sKflqzUL",
+  "sha256": "1bff74744243e3e40793732866dd70a51074a635c9ec69460a17dd1e326d2ff1",
+  "size": 73756,
+  "source_files": 29,
   "format_verified": true,
-  "offline_qa": "23/23 PASS",
+  "offline_qa": "16 Python + 5 JS DOM + 4 Go PASS",
   "real_windows_e2e": "PENDING",
   "signed": false,
-  "reason": "Full 0.9.21 app ZIP with payload_manifest verified, not authorized for auto-install until real Windows E2E/rollback and Ed25519 signature. Stable feed unchanged."
+  "owner_local_installer": "ZALO_LINH_0922_CAP_NHAT_MOT_LAN_WINDOWS.exe",
+  "reason": "One-click open/read inside unified inbox. Full payload verified; not authorized for unattended installation until Windows E2E and owner-held Ed25519 signature. Guard stable feed must remain unchanged."
 }
