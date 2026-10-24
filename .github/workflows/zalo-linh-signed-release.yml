@@ -34,6 +34,7 @@ concurrency:
 
 jobs:
   publish:
+    if: github.repository == 'nguyenlinhns-arch/publisher' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # The 'zalo-linh-production' environment should be protected by owner
