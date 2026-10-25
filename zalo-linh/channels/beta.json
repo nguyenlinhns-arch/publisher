@@ -1,7 +1,7 @@
 {
   "schema": "zalo-linh.channel-beta.v1",
   "version": "0.9.22",
-  "status": "REVIEW_ONLY",
+  "status": "BLOCKED_WIN32_STARTUP_FAILED",
   "installable": false,
   "artifact_name": "ZALO_LINH_0922_ONE_CLICK_CHAT_RELEASE_UNSIGNED_20261024.zip",
   "source_file_id": "1BNHUlOJbMla3G1CnwmV_hCh8sKflqzUL",
@@ -10,8 +10,9 @@
   "source_files": 29,
   "format_verified": true,
   "offline_qa": "16 Python + 5 JS DOM + 4 Go PASS",
-  "real_windows_e2e": "PENDING",
+  "real_windows_e2e": "FAIL_SINGLE_WINDOW_EMBED_SLOT1_2026-10-25T08:39:38+07:00",
   "signed": false,
   "owner_local_installer": "ZALO_LINH_0922_CAP_NHAT_MOT_LAN_WINDOWS.exe",
-  "reason": "One-click open/read inside unified inbox. Full payload verified; not authorized for unattended installation until Windows E2E and owner-held Ed25519 signature. Guard stable feed must remain unchanged."
+  "reason": "Live PC 2026-10-25 08:39:21 startup 0.9.22 MAIN_UI_READY then SINGLE_WINDOW_EMBED_FAILED_SLOT1. Signed stable launcher READY_FAILED, automatically rolled back 0.9.22->0.9.21 at 08:39:38. Do not publish or install beta; investigate Win32 embed before release.",
+  "rollback_to": "0.9.21"
 }
